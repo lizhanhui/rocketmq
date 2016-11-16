@@ -824,11 +824,11 @@ public class CommitLog {
             CommitLog.log.info(this.getServiceName() + " service started");
             while (!this.isStoped()) {
                 int interval = CommitLog.this.defaultMessageStore.getMessageStoreConfig().getCommitIntervalCommitLog();
-                int flushPhysicQueueLeastPages = CommitLog.this.defaultMessageStore.getMessageStoreConfig().getFlushCommitLogLeastPages();
+                int commitDataLeastPages = CommitLog.this.defaultMessageStore.getMessageStoreConfig().getCommitCommitLogLeastPages();
 
                 try {
                     long begin = System.currentTimeMillis();
-                    boolean result = CommitLog.this.mappedFileQueue.commit(flushPhysicQueueLeastPages);
+                    boolean result = CommitLog.this.mappedFileQueue.commit(commitDataLeastPages);
                     if (!result) {
                         //now wake up flush thread.
                         wakeupService(flushCommitLogService);

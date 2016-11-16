@@ -86,6 +86,8 @@ public class MessageStoreConfig {
     private boolean checkCRCOnRecover = true;
     // How many pages are to be flushed when flush CommitLog
     private int flushCommitLogLeastPages = 4;
+    // How many pages are to be committed when commit data to file
+    private int commitCommitLogLeastPages = 4;
     // Flush page size when the disk in warming state
     private int flushLeastPagesWhenWarmMapedFile = 1024 / 4 * 16;
     // How many pages are to be flushed when flush ConsumeQueue
@@ -715,5 +717,13 @@ public class MessageStoreConfig {
 
     public void setUseReentrantLockWhenPutMessage(final boolean useReentrantLockWhenPutMessage) {
         this.useReentrantLockWhenPutMessage = useReentrantLockWhenPutMessage;
+    }
+
+    public int getCommitCommitLogLeastPages() {
+        return commitCommitLogLeastPages;
+    }
+
+    public void setCommitCommitLogLeastPages(final int commitCommitLogLeastPages) {
+        this.commitCommitLogLeastPages = commitCommitLogLeastPages;
     }
 }
