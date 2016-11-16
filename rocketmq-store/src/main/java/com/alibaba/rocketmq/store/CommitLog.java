@@ -814,6 +814,8 @@ public class CommitLog {
 
     class CommitRealTimeService extends FlushCommitLogService {
 
+        private long lastCommitTimestamp = 0;
+
         @Override
         public String getServiceName() {
             return CommitRealTimeService.class.getSimpleName();
@@ -824,18 +826,29 @@ public class CommitLog {
             CommitLog.log.info(this.getServiceName() + " service started");
             while (!this.isStoped()) {
                 int interval = CommitLog.this.defaultMessageStore.getMessageStoreConfig().getCommitIntervalCommitLog();
+
                 int commitDataLeastPages = CommitLog.this.defaultMessageStore.getMessageStoreConfig().getCommitCommitLogLeastPages();
 
+                int commitDataThoroughInterval =
+                        CommitLog.this.defaultMessageStore.getMessageStoreConfig().getCommitCommitLogThoroughInterval();
+
+                long begin = System.currentTimeMillis();
+                if (begin >= (this.lastCommitTimestamp + commitDataThoroughInterval)) {
+                    this.lastCommitTimestamp = begin;
+                    commitDataLeastPages = 0;
+                }
+
                 try {
-                    long begin = System.currentTimeMillis();
                     boolean result = CommitLog.this.mappedFileQueue.commit(commitDataLeastPages);
+                    long end = System.currentTimeMillis();
                     if (!result) {
+                        this.lastCommitTimestamp = end; // result = false means some data committed.
                         //now wake up flush thread.
                         wakeupService(flushCommitLogService);
                     }
-                    long past = System.currentTimeMillis() - begin;
-                    if (past > 500) {
-                        log.info("Commit data to file costs {} ms", past);
+
+                    if (end - begin > 500) {
+                        log.info("Commit data to file costs {} ms", end - begin);
                     }
                     this.waitForRunning(interval);
                 } catch (Throwable e) {
