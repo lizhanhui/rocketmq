@@ -17,7 +17,6 @@
 package com.alibaba.rocketmq.store;
 
 import com.alibaba.rocketmq.common.ServiceThread;
-import com.alibaba.rocketmq.common.ThreadFactoryImpl;
 import com.alibaba.rocketmq.common.UtilAll;
 import com.alibaba.rocketmq.common.constant.LoggerName;
 import com.alibaba.rocketmq.common.message.MessageAccessor;
@@ -37,7 +36,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -72,12 +72,6 @@ public class CommitLog {
 
     private ReentrantLock putMessageNormalLock = new ReentrantLock(); // NonfairSync
 
-    private final ExecutorService threadWakeUpService = new ThreadPoolExecutor(1, 1,
-            0L, TimeUnit.MILLISECONDS,
-            new LinkedBlockingQueue<Runnable>(10000),
-            new ThreadFactoryImpl("ThreadWakeUpService_"));
-
-
     public CommitLog(final DefaultMessageStore defaultMessageStore) {
         this.mappedFileQueue = new MappedFileQueue(defaultMessageStore.getMessageStoreConfig().getStorePathCommitLog(),
                 defaultMessageStore.getMessageStoreConfig().getMapedFileSizeCommitLog(), defaultMessageStore.getAllocateMappedFileService());
@@ -109,8 +103,6 @@ public class CommitLog {
     }
 
     public void shutdown() {
-        this.threadWakeUpService.shutdownNow();
-
         if (defaultMessageStore.getMessageStoreConfig().isTransientStorePoolEnable()) {
             this.commitLogService.shutdown();
         }
@@ -668,13 +660,15 @@ public class CommitLog {
                     putMessageResult.setPutMessageStatus(PutMessageStatus.FLUSH_DISK_TIMEOUT);
                 }
             } else {
-                wakeupService(service);
+                service.wakeup();
             }
         }
         // Asynchronous flush
         else {
             if (!this.defaultMessageStore.getMessageStoreConfig().isTransientStorePoolEnable()) {
-                wakeupService(flushCommitLogService);
+                flushCommitLogService.wakeup();
+            } else {
+                commitLogService.wakeup();
             }
         }
 
@@ -844,7 +838,7 @@ public class CommitLog {
                     if (!result) {
                         this.lastCommitTimestamp = end; // result = false means some data committed.
                         //now wake up flush thread.
-                        wakeupService(flushCommitLogService);
+                        flushCommitLogService.wakeup();
                     }
 
                     if (end - begin > 500) {
@@ -994,9 +988,8 @@ public class CommitLog {
         public void putRequest(final GroupCommitRequest request) {
             synchronized (this) {
                 this.requestsWrite.add(request);
-                if (!this.hasNotified) {
-                    this.hasNotified = true;
-                    this.notify();
+                if (hasNotified.compareAndSet(false, true)) {
+                    waitPoint.countDown(); // notify
                 }
             }
         }
@@ -1280,19 +1273,6 @@ public class CommitLog {
         }
 
         return diff;
-    }
-
-    private void wakeupService(final ServiceThread service) {
-        try {
-            threadWakeUpService.submit(new Runnable() {
-                @Override
-                public void run() {
-                    service.wakeup();
-                }
-            });
-        } catch (Throwable e) {
-            log.warn("Can't submit wakeup task to threadWakeUpService");
-        }
     }
 
     /**

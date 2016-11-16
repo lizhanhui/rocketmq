@@ -37,7 +37,7 @@ public abstract class ServiceThread implements Runnable {
 
     protected volatile boolean stopped = false;
 
-    private final CountDownLatch waitPoint = new CountDownLatch(1);
+    protected final CountDownLatch waitPoint = new CountDownLatch(1);
 
 
     public ServiceThread() {
@@ -61,9 +61,9 @@ public abstract class ServiceThread implements Runnable {
         this.stopped = true;
         stlog.info("shutdown thread " + this.getServiceName() + " interrupt " + interrupt);
 
-
-        waitPoint.countDown(); // notify
-        hasNotified.compareAndSet(false, true);
+        if (hasNotified.compareAndSet(false, true)) {
+            waitPoint.countDown(); // notify
+        }
 
         try {
             if (interrupt) {
@@ -94,8 +94,9 @@ public abstract class ServiceThread implements Runnable {
         this.stopped = true;
         stlog.info("stop thread " + this.getServiceName() + " interrupt " + interrupt);
 
-        waitPoint.countDown(); // notify
-        hasNotified.compareAndSet(false, true);
+        if (hasNotified.compareAndSet(false, true)) {
+            waitPoint.countDown(); // notify
+        }
 
         if (interrupt) {
             this.thread.interrupt();
@@ -108,8 +109,9 @@ public abstract class ServiceThread implements Runnable {
     }
 
     public void wakeup() {
-        waitPoint.countDown(); // notify
-        hasNotified.compareAndSet(false, true);
+        if (hasNotified.compareAndSet(false, true)) {
+            waitPoint.countDown(); // notify
+        }
     }
 
     protected void waitForRunning(long interval) {
