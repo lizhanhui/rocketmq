@@ -262,9 +262,8 @@ public class HAService {
         public void putRequest(final GroupCommitRequest request) {
             synchronized (this) {
                 this.requestsWrite.add(request);
-                if (!this.hasNotified) {
-                    this.hasNotified = true;
-                    this.notify();
+                if (hasNotified.compareAndSet(false, true)) {
+                    waitPoint.countDown(); // notify
                 }
             }
         }
