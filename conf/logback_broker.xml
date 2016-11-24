@@ -106,7 +106,7 @@
         <appender-ref ref="RocketmqWaterMarkAppender_inner"/>
     </appender>
 
-    <appender name="RocketmqStoreAppender"
+    <appender name="RocketmqStoreAppender_inner"
               class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${user.home}/logs/rocketmqlogs/store.log</file>
         <append>true</append>
