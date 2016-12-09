@@ -79,14 +79,10 @@ public class MappedFile extends ReferenceResource {
      */
     private ByteBuffer writeBuffer = null;
     private TransientStorePool transientStorePool = null;
-    private int commitMaxInterval = 5000;
-    private long lastCommitTimestamp = System.currentTimeMillis();
 
-
-    public MappedFile(final String fileName, final int fileSize, final TransientStorePool transientStorePool, int commitMaxInterval) throws IOException {
+    public MappedFile(final String fileName, final int fileSize, final TransientStorePool transientStorePool) throws IOException {
         this(fileName, fileSize);
         this.writeBuffer = transientStorePool.borrowBuffer();
-        this.commitMaxInterval = commitMaxInterval;
         this.transientStorePool = transientStorePool;
     }
 
@@ -301,13 +297,11 @@ public class MappedFile extends ReferenceResource {
             if (this.hold()) {
                 int lastCommittedPosition = this.committedPosition.get() + this.commitCompensation;
 
-                //use -Dsun.nio.PageAlignDirectMemory=true ensure DirectMemory pageAligned
-                //, so we only back 0.x page size.
                 int value = this.wrotePosition.get() - this.wrotePosition.get() % OS_PAGE_SIZE;
 
                 int newValue = -1; // avoid dispatch noise.
-                // commitLeastPages=0 means must flush to FileChannel immediately
-                if (commitLeastPages == 0 || isFull() || value <= lastCommittedPosition || isCommitTimeout()) {
+                // commitLeastPages=0 means must commit all data to FileChannel immediately
+                if (commitLeastPages == 0 || isFull() || value <= lastCommittedPosition) {
                     value = this.wrotePosition.get();
                 } else {
                     value -= OS_PAGE_SIZE;
@@ -347,7 +341,6 @@ public class MappedFile extends ReferenceResource {
                         this.fileChannel.write(byteBuffer);
                         commitCompensation = newValue == -1 ? 0 : value - newValue;
                         this.committedPosition.set(newValue == -1 ? value : newValue);
-                        this.lastCommitTimestamp = System.currentTimeMillis();
                     } catch (Throwable e) {
                         log.error("Error occurred when flush data to FileChannel.", e);
                     }
@@ -387,7 +380,7 @@ public class MappedFile extends ReferenceResource {
         int flush = this.committedPosition.get();
         int write = this.wrotePosition.get();
 
-        if (this.isFull() || isCommitTimeout()) {
+        if (this.isFull()) {
             return true;
         }
 
@@ -396,10 +389,6 @@ public class MappedFile extends ReferenceResource {
         }
 
         return write > flush;
-    }
-
-    private boolean isCommitTimeout() {
-        return System.currentTimeMillis() - lastCommitTimestamp > commitMaxInterval;
     }
 
     public int getFlushedPosition() {

@@ -49,10 +49,7 @@ public class MessageStoreConfig {
     // Only used if TransientStorePool enabled
     // flush data to FileChannel
     @ImportantField
-    private int commitIntervalCommitLog = 50;
-
-    // Should commit anyway if 3 seconds is elapsed.
-    private int commitMaxInterval = 3000;
+    private int commitIntervalCommitLog = 200;
 
     private boolean useReentrantLockWhenPutMessage = false;
 
@@ -86,11 +83,14 @@ public class MessageStoreConfig {
     private boolean checkCRCOnRecover = true;
     // How many pages are to be flushed when flush CommitLog
     private int flushCommitLogLeastPages = 4;
+    // How many pages are to be committed when commit data to file
+    private int commitCommitLogLeastPages = 4;
     // Flush page size when the disk in warming state
     private int flushLeastPagesWhenWarmMapedFile = 1024 / 4 * 16;
     // How many pages are to be flushed when flush ConsumeQueue
     private int flushConsumeQueueLeastPages = 2;
     private int flushCommitLogThoroughInterval = 1000 * 10;
+    private int commitCommitLogThoroughInterval = 200;
     private int flushConsumeQueueThoroughInterval = 1000 * 60;
     @ImportantField
     private int maxTransferBytesOnMessageInMemory = 1024 * 256;
@@ -693,14 +693,6 @@ public class MessageStoreConfig {
         this.commitIntervalCommitLog = commitIntervalCommitLog;
     }
 
-    public int getCommitMaxInterval() {
-        return commitMaxInterval;
-    }
-
-    public void setCommitMaxInterval(final int commitMaxInterval) {
-        this.commitMaxInterval = commitMaxInterval;
-    }
-
     public boolean isFastFailIfNoBufferInStorePool() {
         return fastFailIfNoBufferInStorePool;
     }
@@ -715,5 +707,21 @@ public class MessageStoreConfig {
 
     public void setUseReentrantLockWhenPutMessage(final boolean useReentrantLockWhenPutMessage) {
         this.useReentrantLockWhenPutMessage = useReentrantLockWhenPutMessage;
+    }
+
+    public int getCommitCommitLogLeastPages() {
+        return commitCommitLogLeastPages;
+    }
+
+    public void setCommitCommitLogLeastPages(final int commitCommitLogLeastPages) {
+        this.commitCommitLogLeastPages = commitCommitLogLeastPages;
+    }
+
+    public int getCommitCommitLogThoroughInterval() {
+        return commitCommitLogThoroughInterval;
+    }
+
+    public void setCommitCommitLogThoroughInterval(final int commitCommitLogThoroughInterval) {
+        this.commitCommitLogThoroughInterval = commitCommitLogThoroughInterval;
     }
 }

@@ -1578,7 +1578,7 @@ public class DefaultMessageStore implements MessageStore {
         public void run() {
             DefaultMessageStore.log.info(this.getServiceName() + " service started");
 
-            while (!this.isStoped()) {
+            while (!this.isStopped()) {
                 try {
                     int interval = DefaultMessageStore.this.getMessageStoreConfig().getFlushIntervalConsumeQueue();
                     this.waitForRunning(interval);
@@ -1721,7 +1721,7 @@ public class DefaultMessageStore implements MessageStore {
         public void run() {
             DefaultMessageStore.log.info(this.getServiceName() + " service started");
 
-            while (!this.isStoped()) {
+            while (!this.isStopped()) {
                 try {
                     Thread.sleep(1);
                     this.doReput();

@@ -86,7 +86,7 @@ public class PullMessageService extends ServiceThread {
     public void run() {
         log.info(this.getServiceName() + " service started");
 
-        while (!this.isStoped()) {
+        while (!this.isStopped()) {
             try {
                 PullRequest pullRequest = this.pullRequestQueue.take();
                 if (pullRequest != null) {
