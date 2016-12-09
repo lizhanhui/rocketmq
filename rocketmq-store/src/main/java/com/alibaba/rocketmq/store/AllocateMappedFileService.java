@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ServiceLoader;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.PriorityBlockingQueue;
@@ -180,7 +181,13 @@ public class AllocateMappedFileService extends ServiceThread {
 
                 MappedFile mappedFile;
                 if (messageStore.getMessageStoreConfig().isTransientStorePoolEnable()) {
-                    mappedFile = new MappedFile(req.getFilePath(), req.getFileSize(), messageStore.getTransientStorePool());
+                    try {
+                        mappedFile = ServiceLoader.load(MappedFile.class).iterator().next();
+                        mappedFile.init(req.getFilePath(), req.getFileSize(), messageStore.getTransientStorePool());
+                    } catch (RuntimeException e) {
+                        log.warn("Use default implementation.");
+                        mappedFile = new MappedFile(req.getFilePath(), req.getFileSize(), messageStore.getTransientStorePool());
+                    }
                 } else {
                     mappedFile = new MappedFile(req.getFilePath(), req.getFileSize());
                 }
@@ -194,8 +201,8 @@ public class AllocateMappedFileService extends ServiceThread {
 
                 // pre write mappedFile
                 if (mappedFile.getFileSize() >= this.messageStore.getMessageStoreConfig()
-                        .getMapedFileSizeCommitLog() //
-                        && //
+                        .getMapedFileSizeCommitLog()
+                        &&
                         this.messageStore.getMessageStoreConfig().isWarmMapedFileEnable()) {
                     mappedFile.warmMappedFile(this.messageStore.getMessageStoreConfig().getFlushDiskType(),
                             this.messageStore.getMessageStoreConfig().getFlushLeastPagesWhenWarmMapedFile());
