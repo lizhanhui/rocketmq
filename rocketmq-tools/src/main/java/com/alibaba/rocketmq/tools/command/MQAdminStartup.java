@@ -36,7 +36,6 @@ import com.alibaba.rocketmq.tools.command.offset.CloneGroupOffsetCommand;
 import com.alibaba.rocketmq.tools.command.offset.ResetOffsetByTimeCommand;
 import com.alibaba.rocketmq.tools.command.stats.StatsAllSubCommand;
 import com.alibaba.rocketmq.tools.command.topic.*;
-import com.alibaba.rocketmq.tools.github.SyncDocsToGithubSubCommand;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
@@ -163,7 +162,6 @@ public class MQAdminStartup {
         initCommand(new StartMonitoringSubCommand());
         initCommand(new StatsAllSubCommand());
 
-        initCommand(new SyncDocsToGithubSubCommand());
         initCommand(new AllocateMQSubCommand());
 
         initCommand(new CheckMsgSendRTCommand());
