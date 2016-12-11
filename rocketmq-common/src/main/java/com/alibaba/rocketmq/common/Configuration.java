@@ -70,7 +70,7 @@ public class Configuration {
      * register config object
      *
      * @param configObject
-     * @return
+     * @return the current Configuration object
      */
     public Configuration registerConfig(Object configObject) {
         try {
@@ -96,7 +96,7 @@ public class Configuration {
      * register config properties
      *
      * @param extProperties
-     * @return
+     * @return the current Configuration object
      */
     public Configuration registerConfig(Properties extProperties) {
         if (extProperties == null) {

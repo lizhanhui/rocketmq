@@ -270,7 +270,7 @@ public class MappedFile extends ReferenceResource {
      * @param flushLeastPages
 
      *
-     * @return
+     * @return The current flushed position
      */
     public int flush(final int flushLeastPages) {
         if (this.isAbleToFlush(flushLeastPages)) {

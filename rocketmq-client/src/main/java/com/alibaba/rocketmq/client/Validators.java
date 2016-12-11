@@ -42,7 +42,7 @@ public class Validators {
      * @param origin
      * @param patternStr
      *
-     * @return
+     * @return The resulting {@code String}
      */
     public static String getGroupWithRegularExpression(String origin, String patternStr) {
         Pattern pattern = Pattern.compile(patternStr);
@@ -78,7 +78,8 @@ public class Validators {
      * @param origin
      * @param pattern
      *
-     * @return
+     * @return <tt>true</tt> if, and only if, the entire origin sequence
+     *          matches this matcher's pattern
      */
     public static boolean regularExpressionMatcher(String origin, Pattern pattern) {
         if (pattern == null) {

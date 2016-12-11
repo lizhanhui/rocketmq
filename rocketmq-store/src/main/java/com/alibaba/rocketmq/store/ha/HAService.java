@@ -82,11 +82,6 @@ public class HAService {
     }
 
 
-    /**
-
-     *
-     * @return
-     */
     public boolean isSlaveOK(final long masterPutWhere) {
         boolean result = this.connectionCount.get() > 0;
         result =

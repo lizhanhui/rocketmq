@@ -41,7 +41,7 @@ public interface AllocateMessageQueueStrategy {
      * @param cidAll
      *         consumer set in current consumer group
      *
-     * @return
+     * @return The allocate result of given strategy
      */
      List<MessageQueue> allocate(//
                                        final String consumerGroup,//
@@ -54,7 +54,7 @@ public interface AllocateMessageQueueStrategy {
     /**
      * Algorithm name
      *
-     * @return
+     * @return The strategy name
      */
      String getName();
 }

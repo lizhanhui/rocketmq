@@ -35,7 +35,7 @@ public interface MessageListenerConcurrently extends MessageListener {
      *         DefaultMQPushConsumer.consumeMessageBatchMaxSize=1，you can modify here
      * @param context
      *
-     * @return
+     * @return The consume status
      */
     ConsumeConcurrentlyStatus consumeMessage(final List<MessageExt> msgs,
                                              final ConsumeConcurrentlyContext context);

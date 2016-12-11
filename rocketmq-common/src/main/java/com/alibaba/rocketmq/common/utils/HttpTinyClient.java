@@ -105,7 +105,7 @@ public class HttpTinyClient {
      * @param readTimeoutMs
 
      *
-     * @return
+     * @return the http response of given http post request
      *
      * @throws java.io.IOException
      */

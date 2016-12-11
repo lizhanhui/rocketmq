@@ -259,7 +259,7 @@ public interface MQAdminExt extends MQAdmin {
      *
      * @param nameServers
      *
-     * @return
+     * @return The fetched name server config
      *
      * @throws InterruptedException
      * @throws RemotingTimeoutException

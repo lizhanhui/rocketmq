@@ -30,7 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 
 /**
- * @auther lansheng.zj
+ * @author lansheng.zj
  */
 public class Store {
     public final static int MessageMagicCode = 0xAABBCCDD ^ 1880681586 + 8;

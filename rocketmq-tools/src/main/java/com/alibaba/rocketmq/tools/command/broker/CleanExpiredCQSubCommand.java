@@ -26,7 +26,7 @@ import org.apache.commons.cli.Options;
 
 
 /**
- * @auther lansheng.zj
+ * @author lansheng.zj
  */
 public class CleanExpiredCQSubCommand implements SubCommand {
 

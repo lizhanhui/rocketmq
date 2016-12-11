@@ -35,7 +35,7 @@ public interface MessageListenerOrderly extends MessageListener {
      *         DefaultMQPushConsumer.consumeMessageBatchMaxSize=1，you can modify here
      * @param context
      *
-     * @return
+     * @return The consume status
      */
     ConsumeOrderlyStatus consumeMessage(final List<MessageExt> msgs,
                                         final ConsumeOrderlyContext context);
