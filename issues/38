@@ -17,11 +17,11 @@ Broker关闭了自动创建Topic功能，导致Producer向Broker发送消息，�
 ## 解决方案三（推荐开源社区用户使用）
 使用命令行手工创建Topic到某台Broker
 
-	sh mqadmin updateTopic -topic "192.168.1.1:10911" -t Topic1 -r 10 -w 10
+	sh mqadmin updateTopic -b "192.168.1.1:10911" -t Topic1 -r 10 -w 10
 
 或
 
 
 使用命令行手工创建Topic到某个集群
 
-	sh mqadmin updateTopic -defaultTopic cluster1 -t Topic1 -r 10 -w 10
+	sh mqadmin updateTopic -c cluster1 -t Topic1 -r 10 -w 10

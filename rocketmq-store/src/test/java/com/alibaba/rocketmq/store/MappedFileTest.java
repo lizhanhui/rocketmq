@@ -34,17 +34,14 @@ public class MappedFileTest {
 
     private static final String StoreMessage = "Once, there was a chance for me!";
 
-
     @BeforeClass
     public static void setUpBeforeClass() throws Exception {
 
     }
 
-
     @AfterClass
     public static void tearDownAfterClass() throws Exception {
     }
-
 
     @Test
     public void test_write_read() {
@@ -62,18 +59,10 @@ public class MappedFileTest {
             System.out.println("Read: " + readString);
             assertTrue(readString.equals(StoreMessage));
 
-
             mappedFile.shutdown(1000);
-
-
             assertTrue(!mappedFile.isAvailable());
-
             selectMappedBufferResult.release();
-
-
             assertTrue(mappedFile.isCleanupOver());
-
-
             assertTrue(mappedFile.destroy(1000));
         } catch (IOException e) {
             e.printStackTrace();

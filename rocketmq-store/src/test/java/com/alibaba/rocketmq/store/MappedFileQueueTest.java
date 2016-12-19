@@ -34,21 +34,17 @@ public class MappedFileQueueTest {
     public static void setUpBeforeClass() throws Exception {
     }
 
-
     @AfterClass
     public static void tearDownAfterClass() throws Exception {
     }
-
 
     @Before
     public void setUp() throws Exception {
     }
 
-
     @After
     public void tearDown() throws Exception {
     }
-
 
     @Test
     public void test_getLastMapedFile() {
@@ -129,7 +125,6 @@ public class MappedFileQueueTest {
         System.out.println("MappedFileQueue.findMappedFileByOffset() OK");
     }
 
-
     @Test
     public void test_commit() {
         final String fixedMsg = "0123456789abcdef";
@@ -143,7 +138,6 @@ public class MappedFileQueueTest {
             boolean result = mappedFile.appendMessage(fixedMsg.getBytes());
             assertTrue(result);
         }
-
 
         boolean result = mappedFileQueue.flush(0);
         assertFalse(result);
@@ -180,7 +174,6 @@ public class MappedFileQueueTest {
         System.out.println("MappedFileQueue.flush() OK");
     }
 
-
     @Test
     public void test_getMapedMemorySize() {
         final String fixedMsg = "abcd";
@@ -196,7 +189,6 @@ public class MappedFileQueueTest {
         }
 
         assertEquals(fixedMsg.length() * 1024, mappedFileQueue.getMappedMemorySize());
-
         mappedFileQueue.shutdown(1000);
         mappedFileQueue.destroy();
         System.out.println("MappedFileQueue.getMappedMemorySize() OK");

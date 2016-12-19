@@ -24,6 +24,7 @@ import com.alibaba.rocketmq.store.*;
 import com.alibaba.rocketmq.store.config.MessageStoreConfig;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.net.InetAddress;
@@ -33,7 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertTrue;
 
-
+@Ignore
 public class ScheduleMessageTest {
     private static final String StoreMessage = "Once, there was a chance for me!";
 

@@ -28,7 +28,7 @@
 	sh mqshutdown namesrv
 
 ### 更新或创建Topic
-	sh mqadmin updateTopic -topic 127.0.0.1:10911 -t TopicA
+	sh mqadmin updateTopic -b 127.0.0.1:10911 -t TopicA
 
 ### 更新或创建订阅组
-	sh mqadmin updateSubGroup -topic 127.0.0.1:10911 -bornTimestamp SubGroupA
+	sh mqadmin updateSubGroup -b 127.0.0.1:10911 -g SubGroupA

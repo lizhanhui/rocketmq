@@ -5,7 +5,7 @@
   this work for additional information regarding copyright ownership.
   The ASF licenses this file to You under the Apache License, Version 2.0
   (the "License"); you may not use this file except in compliance with
-  the License.  You may obtain producerGroup copy of the License at
+  the License.  You may obtain a copy of the License at
 
       http://www.apache.org/licenses/LICENSE-2.0
 
@@ -22,7 +22,7 @@
         <file>${user.home}/logs/rocketmqlogs/broker_default.log</file>
         <append>true</append>
         <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
-            <fileNamePattern>${user.home}/logs/rocketmqlogs/otherdays/broker_default.%properties.log
+            <fileNamePattern>${user.home}/logs/rocketmqlogs/otherdays/broker_default.%i.log
             </fileNamePattern>
             <minIndex>1</minIndex>
             <maxIndex>10</maxIndex>
@@ -32,7 +32,7 @@
             <maxFileSize>100MB</maxFileSize>
         </triggeringPolicy>
         <encoder>
-            <pattern>%defaultTopicQueueNums{yyy-MM-dd HH:mm:ss,GMT+8} %p %t - %m%n</pattern>
+            <pattern>%d{yyy-MM-dd HH:mm:ss,GMT+8} %p %t - %m%n</pattern>
             <charset class="java.nio.charset.Charset">UTF-8</charset>
         </encoder>
     </appender>
@@ -42,7 +42,7 @@
         <file>${user.home}/logs/rocketmqlogs/broker.log</file>
         <append>true</append>
         <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
-            <fileNamePattern>${user.home}/logs/rocketmqlogs/otherdays/broker.%properties.log
+            <fileNamePattern>${user.home}/logs/rocketmqlogs/otherdays/broker.%i.log
             </fileNamePattern>
             <minIndex>1</minIndex>
             <maxIndex>20</maxIndex>
@@ -52,7 +52,7 @@
             <maxFileSize>128MB</maxFileSize>
         </triggeringPolicy>
         <encoder>
-            <pattern>%defaultTopicQueueNums{yyy-MM-dd HH:mm:ss,GMT+8} %p %t - %m%n</pattern>
+            <pattern>%d{yyy-MM-dd HH:mm:ss,GMT+8} %p %t - %m%n</pattern>
             <charset class="java.nio.charset.Charset">UTF-8</charset>
         </encoder>
     </appender>
@@ -65,7 +65,7 @@
         <file>${user.home}/logs/rocketmqlogs/protection.log</file>
         <append>true</append>
         <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
-            <fileNamePattern>${user.home}/logs/rocketmqlogs/otherdays/protection.%properties.log
+            <fileNamePattern>${user.home}/logs/rocketmqlogs/otherdays/protection.%i.log
             </fileNamePattern>
             <minIndex>1</minIndex>
             <maxIndex>10</maxIndex>
@@ -75,7 +75,7 @@
             <maxFileSize>100MB</maxFileSize>
         </triggeringPolicy>
         <encoder>
-            <pattern>%defaultTopicQueueNums{yyy-MM-dd HH:mm:ss,GMT+8} - %m%n</pattern>
+            <pattern>%d{yyy-MM-dd HH:mm:ss,GMT+8} - %m%n</pattern>
             <charset class="java.nio.charset.Charset">UTF-8</charset>
         </encoder>
     </appender>
@@ -88,7 +88,7 @@
         <file>${user.home}/logs/rocketmqlogs/watermark.log</file>
         <append>true</append>
         <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
-            <fileNamePattern>${user.home}/logs/rocketmqlogs/otherdays/watermark.%properties.log
+            <fileNamePattern>${user.home}/logs/rocketmqlogs/otherdays/watermark.%i.log
             </fileNamePattern>
             <minIndex>1</minIndex>
             <maxIndex>10</maxIndex>
@@ -98,7 +98,7 @@
             <maxFileSize>100MB</maxFileSize>
         </triggeringPolicy>
         <encoder>
-            <pattern>%defaultTopicQueueNums{yyy-MM-dd HH:mm:ss,GMT+8} - %m%n</pattern>
+            <pattern>%d{yyy-MM-dd HH:mm:ss,GMT+8} - %m%n</pattern>
             <charset class="java.nio.charset.Charset">UTF-8</charset>
         </encoder>
     </appender>
@@ -111,7 +111,7 @@
         <file>${user.home}/logs/rocketmqlogs/store.log</file>
         <append>true</append>
         <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
-            <fileNamePattern>${user.home}/logs/rocketmqlogs/otherdays/store.%properties.log
+            <fileNamePattern>${user.home}/logs/rocketmqlogs/otherdays/store.%i.log
             </fileNamePattern>
             <minIndex>1</minIndex>
             <maxIndex>10</maxIndex>
@@ -121,7 +121,7 @@
             <maxFileSize>128MB</maxFileSize>
         </triggeringPolicy>
         <encoder>
-            <pattern>%defaultTopicQueueNums{yyy-MM-dd HH:mm:ss,GMT+8} %p %t - %m%n</pattern>
+            <pattern>%d{yyy-MM-dd HH:mm:ss,GMT+8} %p %t - %m%n</pattern>
             <charset class="java.nio.charset.Charset">UTF-8</charset>
         </encoder>
     </appender>
@@ -134,7 +134,7 @@
         <file>${user.home}/logs/rocketmqlogs/remoting.log</file>
         <append>true</append>
         <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
-            <fileNamePattern>${user.home}/logs/rocketmqlogs/otherdays/remoting.%properties.log
+            <fileNamePattern>${user.home}/logs/rocketmqlogs/otherdays/remoting.%i.log
             </fileNamePattern>
             <minIndex>1</minIndex>
             <maxIndex>10</maxIndex>
@@ -144,7 +144,7 @@
             <maxFileSize>100MB</maxFileSize>
         </triggeringPolicy>
         <encoder>
-            <pattern>%defaultTopicQueueNums{yyy-MM-dd HH:mm:ss,GMT+8} %p %t - %m%n</pattern>
+            <pattern>%d{yyy-MM-dd HH:mm:ss,GMT+8} %p %t - %m%n</pattern>
             <charset class="java.nio.charset.Charset">UTF-8</charset>
         </encoder>
     </appender>
@@ -157,7 +157,7 @@
         <file>${user.home}/logs/rocketmqlogs/storeerror.log</file>
         <append>true</append>
         <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
-            <fileNamePattern>${user.home}/logs/rocketmqlogs/otherdays/storeerror.%properties.log
+            <fileNamePattern>${user.home}/logs/rocketmqlogs/otherdays/storeerror.%i.log
             </fileNamePattern>
             <minIndex>1</minIndex>
             <maxIndex>10</maxIndex>
@@ -167,7 +167,7 @@
             <maxFileSize>100MB</maxFileSize>
         </triggeringPolicy>
         <encoder>
-            <pattern>%defaultTopicQueueNums{yyy-MM-dd HH:mm:ss,GMT+8} %p %t - %m%n</pattern>
+            <pattern>%d{yyy-MM-dd HH:mm:ss,GMT+8} %p %t - %m%n</pattern>
             <charset class="java.nio.charset.Charset">UTF-8</charset>
         </encoder>
     </appender>
@@ -181,7 +181,7 @@
         <file>${user.home}/logs/rocketmqlogs/transaction.log</file>
         <append>true</append>
         <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
-            <fileNamePattern>${user.home}/logs/rocketmqlogs/otherdays/transaction.%properties.log
+            <fileNamePattern>${user.home}/logs/rocketmqlogs/otherdays/transaction.%i.log
             </fileNamePattern>
             <minIndex>1</minIndex>
             <maxIndex>10</maxIndex>
@@ -191,7 +191,7 @@
             <maxFileSize>100MB</maxFileSize>
         </triggeringPolicy>
         <encoder>
-            <pattern>%defaultTopicQueueNums{yyy-MM-dd HH:mm:ss,GMT+8} %p %t - %m%n</pattern>
+            <pattern>%d{yyy-MM-dd HH:mm:ss,GMT+8} %p %t - %m%n</pattern>
             <charset class="java.nio.charset.Charset">UTF-8</charset>
         </encoder>
     </appender>
@@ -204,7 +204,7 @@
         <file>${user.home}/logs/rocketmqlogs/lock.log</file>
         <append>true</append>
         <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
-            <fileNamePattern>${user.home}/logs/rocketmqlogs/otherdays/lock.%properties.log
+            <fileNamePattern>${user.home}/logs/rocketmqlogs/otherdays/lock.%i.log
             </fileNamePattern>
             <minIndex>1</minIndex>
             <maxIndex>5</maxIndex>
@@ -214,7 +214,7 @@
             <maxFileSize>100MB</maxFileSize>
         </triggeringPolicy>
         <encoder>
-            <pattern>%defaultTopicQueueNums{yyy-MM-dd HH:mm:ss,GMT+8} %p %t - %m%n</pattern>
+            <pattern>%d{yyy-MM-dd HH:mm:ss,GMT+8} %p %t - %m%n</pattern>
             <charset class="java.nio.charset.Charset">UTF-8</charset>
         </encoder>
     </appender>
@@ -227,7 +227,7 @@
         <file>${user.home}/logs/rocketmqlogs/stats.log</file>
         <append>true</append>
         <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
-            <fileNamePattern>${user.home}/logs/rocketmqlogs/otherdays/stats.%properties.log
+            <fileNamePattern>${user.home}/logs/rocketmqlogs/otherdays/stats.%i.log
             </fileNamePattern>
             <minIndex>1</minIndex>
             <maxIndex>5</maxIndex>
@@ -237,7 +237,7 @@
             <maxFileSize>100MB</maxFileSize>
         </triggeringPolicy>
         <encoder>
-            <pattern>%defaultTopicQueueNums{yyy-MM-dd HH:mm:ss,GMT+8} %p - %m%n</pattern>
+            <pattern>%d{yyy-MM-dd HH:mm:ss,GMT+8} %p - %m%n</pattern>
             <charset class="java.nio.charset.Charset">UTF-8</charset>
         </encoder>
     </appender>
@@ -247,7 +247,7 @@
         <file>${user.home}/logs/rocketmqlogs/commercial.log</file>
         <append>true</append>
         <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
-            <fileNamePattern>${user.home}/logs/rocketmqlogs/otherdays/commercial.%properties.log
+            <fileNamePattern>${user.home}/logs/rocketmqlogs/otherdays/commercial.%i.log
             </fileNamePattern>
             <minIndex>1</minIndex>
             <maxIndex>10</maxIndex>
@@ -261,7 +261,7 @@
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <append>true</append>
         <encoder>
-            <pattern>%defaultTopicQueueNums{yyy-MM-dd HH\:mm\:ss,GMT+8} %p %t - %m%n</pattern>
+            <pattern>%d{yyy-MM-dd HH\:mm\:ss,GMT+8} %p %t - %m%n</pattern>
             <charset class="java.nio.charset.Charset">UTF-8</charset>
         </encoder>
     </appender>

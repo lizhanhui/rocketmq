@@ -33,11 +33,9 @@ public class StoreCheckpointTest {
 
     }
 
-
     @AfterClass
     public static void tearDownAfterClass() throws Exception {
     }
-
 
     @Test
     public void test_write_read() {
@@ -51,9 +49,7 @@ public class StoreCheckpointTest {
 
             long diff = physicMsgTimestamp - storeCheckpoint.getMinTimestamp();
             assertTrue(diff == 3000);
-
             storeCheckpoint.shutdown();
-
             storeCheckpoint = new StoreCheckpoint("target/checkpoint_test/0000");
             assertTrue(physicMsgTimestamp == storeCheckpoint.getPhysicMsgTimestamp());
             assertTrue(logicsMsgTimestamp == storeCheckpoint.getLogicsMsgTimestamp());
@@ -61,6 +57,5 @@ public class StoreCheckpointTest {
             e.printStackTrace();
             assertTrue(false);
         }
-
     }
 }
