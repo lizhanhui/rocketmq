@@ -145,6 +145,11 @@ public class MessageClientIDSetter {
     }
 
     public static void main(String[] args) throws Exception {
+        for (int i = 0; i< Short.MAX_VALUE * 2; i++) {
+            short b = (short) i;
+            System.out.println(b);
+        }
+        System.exit(-1);
         final CountDownLatch latch = new CountDownLatch(20);
         Runnable runnable = new Runnable() {
             public void run() {
