@@ -42,7 +42,7 @@ public class Producer {
                         return null;
                     }
                 };
-                System.out.printf("%s", sendResult);
+                System.out.printf("%s%n", sendResult);
             } catch (Exception e) {
                 e.printStackTrace();
                 Thread.sleep(1000);

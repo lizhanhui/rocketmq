@@ -42,7 +42,7 @@ import java.util.zip.InflaterInputStream;
 public class UtilAll {
     public static final String YYYY_MM_DD_HH_MM_SS = "yyyy-MM-dd HH:mm:ss";
     public static final String YYYY_MM_DD_HH_MM_SS_SSS = "yyyy-MM-dd#HH:mm:ss:SSS";
-    public static final String YYYY_MMDD_HHMMSS = "YYYY_MMDD_HHMMSS";
+    public static final String YYYY_MMDD_HHMMSS = "yyyyMMddHHmmss";
 
 
     public static int getPid() {
