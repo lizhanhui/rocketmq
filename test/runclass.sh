@@ -21,7 +21,7 @@ JAVA_OPT_5="-Djava.ext.dirs=${BASE_DIR}/lib"
 JAVA_OPT_6="-cp ${CLASSPATH}"
 
 if [ -z "$JAVA_HOME" ]; then
-  JAVA_HOME=/opt/taobao/java
+  JAVA_HOME=/usr/java
 fi
 
 JAVA="$JAVA_HOME/bin/java"

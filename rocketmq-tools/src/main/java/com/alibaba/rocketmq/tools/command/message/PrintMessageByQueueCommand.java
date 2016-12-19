@@ -24,16 +24,18 @@ import com.alibaba.rocketmq.common.UtilAll;
 import com.alibaba.rocketmq.common.message.MessageExt;
 import com.alibaba.rocketmq.common.message.MessageQueue;
 import com.alibaba.rocketmq.remoting.RPCHook;
-import com.alibaba.rocketmq.srvutil.ServerUtil;
 import com.alibaba.rocketmq.tools.command.SubCommand;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
-import org.apache.commons.cli.PosixParser;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.UnsupportedEncodingException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class PrintMessageByQueueCommand implements SubCommand {
@@ -253,17 +255,5 @@ public class PrintMessageByQueueCommand implements SubCommand {
         public int compareTo(final TagCountBean o) {
             return (int) (o.getCount().get() - this.count.get());
         }
-    }
-
-
-    public static void main(String[] args) {
-        PrintMessageByQueueCommand cmd = new PrintMessageByQueueCommand();
-        Options options = ServerUtil.buildCommandlineOptions(new Options());
-        String[] subargs =
-                new String[]{"-t Jodie_topic_1023", "-a taobaodaily-03", "-i 0", "-f true", "-b 2016-11-10#16:54:16:902", "-e 2016-11-10#16:59:16:902"};
-        final CommandLine commandLine =
-                ServerUtil.parseCmdLine("mqadmin " + cmd.commandName(), subargs,
-                        cmd.buildCommandlineOptions(options), new PosixParser());
-        cmd.execute(commandLine, options, null);
     }
 }
