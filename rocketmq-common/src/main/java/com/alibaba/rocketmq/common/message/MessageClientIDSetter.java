@@ -21,7 +21,6 @@ import com.alibaba.rocketmq.common.UtilAll;
 import java.nio.ByteBuffer;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class MessageClientIDSetter {
@@ -138,34 +137,6 @@ public class MessageClientIDSetter {
         byte[] fakeIP = new byte[4];
         bb.get(fakeIP);
         return fakeIP;
-    }
-
-    private static void printIP(byte[] ip) {
-        String str = UtilAll.ipToIPv4Str(ip);
-    }
-
-    public static void main(String[] args) throws Exception {
-        for (int i = 0; i< Short.MAX_VALUE * 2; i++) {
-            short b = (short) i;
-            System.out.println(b);
-        }
-        System.exit(-1);
-        final CountDownLatch latch = new CountDownLatch(20);
-        Runnable runnable = new Runnable() {
-            public void run() {
-                for (int i = 0; i < 500000; i++) {
-                    createUniqID();
-                }
-                latch.countDown();
-            }
-        };
-        long begin = System.currentTimeMillis();
-        for (int i = 0; i < 20; i++) {
-            Thread t = new Thread(runnable);
-            t.start();
-        }
-        latch.await();
-        long end = System.currentTimeMillis();
     }
 }
     

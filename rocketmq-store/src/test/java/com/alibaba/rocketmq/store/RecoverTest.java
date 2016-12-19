@@ -73,16 +73,12 @@ public class RecoverTest {
 
     public void writeMessage(boolean normal, boolean first) throws Exception {
         System.out.println("================================================================");
-        long totalMsgs = 1000;
+        long totalMsgs = 100;
         QUEUE_TOTAL = 3;
 
-
         MessageBody = StoreMessage.getBytes();
-
         MessageStoreConfig messageStoreConfig = new MessageStoreConfig();
-
         messageStoreConfig.setMapedFileSizeCommitLog(1024 * 32);
-
         messageStoreConfig.setMapedFileSizeConsumeQueue(100 * 20);
         messageStoreConfig.setMessageIndexEnable(false);
 
@@ -93,51 +89,32 @@ public class RecoverTest {
             this.storeWrite2 = messageStore;
         }
 
-
         boolean loadResult = messageStore.load();
         assertTrue(loadResult);
-
-
         messageStore.start();
-
-
         for (long i = 0; i < totalMsgs; i++) {
-
             PutMessageResult result = messageStore.putMessage(buildMessage());
-
             System.out.println(i + "\t" + result.getAppendMessageResult().getMsgId());
         }
 
         if (normal) {
-
             messageStore.shutdown();
         }
-
         System.out.println("========================writeMessage OK========================================");
     }
 
     public void readMessage(final long msgCnt) throws Exception {
         System.out.println("================================================================");
         QUEUE_TOTAL = 3;
-
-
         MessageBody = StoreMessage.getBytes();
-
         MessageStoreConfig messageStoreConfig = new MessageStoreConfig();
-
         messageStoreConfig.setMapedFileSizeCommitLog(1024 * 32);
-
         messageStoreConfig.setMapedFileSizeConsumeQueue(100 * 20);
         messageStoreConfig.setMessageIndexEnable(false);
-
         storeRead = new DefaultMessageStore(messageStoreConfig, null, null, null);
-
         boolean loadResult = storeRead.load();
         assertTrue(loadResult);
-
-
         storeRead.start();
-
 
         long readCnt = 0;
         for (int queueId = 0; queueId < QUEUE_TOTAL; queueId++) {
@@ -157,29 +134,22 @@ public class RecoverTest {
 
         System.out.println("readCnt = " + readCnt);
         assertTrue(readCnt == msgCnt);
-
         System.out.println("========================readMessage OK========================================");
     }
 
     private void destroy() {
         if (storeWrite1 != null) {
-
             storeWrite1.shutdown();
-
             storeWrite1.destroy();
         }
 
         if (storeWrite2 != null) {
-
             storeWrite2.shutdown();
-
             storeWrite2.destroy();
         }
 
         if (storeRead != null) {
-
             storeRead.shutdown();
-
             storeRead.destroy();
         }
     }
@@ -212,9 +182,6 @@ public class RecoverTest {
         }
     }
 
-    /**
-
-     */
     @Test
     public void test_recover_normally_write() throws Exception {
         this.writeMessage(true, true);
@@ -225,10 +192,6 @@ public class RecoverTest {
         this.destroy();
     }
 
-
-    /**
-
-     */
     @Test
     public void test_recover_abnormally() throws Exception {
         this.writeMessage(false, true);
@@ -237,10 +200,6 @@ public class RecoverTest {
         this.destroy();
     }
 
-
-    /**
-
-     */
     @Test
     public void test_recover_abnormally_write() throws Exception {
         this.writeMessage(false, true);
