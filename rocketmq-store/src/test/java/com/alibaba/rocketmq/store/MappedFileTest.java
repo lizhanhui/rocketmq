@@ -49,7 +49,7 @@ public class MappedFileTest {
     @Test
     public void test_write_read() {
         try {
-            MappedFile mappedFile = new MappedFile("./unit_test_store/MappedFileTest/000", 1024 * 64);
+            MappedFile mappedFile = new MappedFile("target/unit_test_store/MappedFileTest/000", 1024 * 64);
             boolean result = mappedFile.appendMessage(StoreMessage.getBytes());
             assertTrue(result);
             System.out.println("write OK");
@@ -83,7 +83,7 @@ public class MappedFileTest {
     @Ignore
     public void test_jvm_crashed() {
         try {
-            MappedFile mappedFile = new MappedFile("./unit_test_store/MappedFileTest/10086", 1024 * 64);
+            MappedFile mappedFile = new MappedFile("target/unit_test_store/MappedFileTest/10086", 1024 * 64);
             boolean result = mappedFile.appendMessage(StoreMessage.getBytes());
             assertTrue(result);
             System.out.println("write OK");

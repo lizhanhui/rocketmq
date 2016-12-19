@@ -55,7 +55,7 @@ public class MappedFileQueueTest {
         final String fixedMsg = "0123456789abcdef";
         System.out.println("================================================================");
         MappedFileQueue mappedFileQueue =
-                new MappedFileQueue("./unit_test_store/a/", 1024, null);
+                new MappedFileQueue("target/unit_test_store/a/", 1024, null);
 
         for (int i = 0; i < 1024; i++) {
             MappedFile mappedFile = mappedFileQueue.getLastMappedFile(0);
@@ -78,7 +78,7 @@ public class MappedFileQueueTest {
         final String fixedMsg = "abcd";
         System.out.println("================================================================");
         MappedFileQueue mappedFileQueue =
-                new MappedFileQueue("./unit_test_store/b/", 1024, null);
+                new MappedFileQueue("target/unit_test_store/b/", 1024, null);
 
         for (int i = 0; i < 1024; i++) {
             MappedFile mappedFile = mappedFileQueue.getLastMappedFile(0);
@@ -135,7 +135,7 @@ public class MappedFileQueueTest {
         final String fixedMsg = "0123456789abcdef";
         System.out.println("================================================================");
         MappedFileQueue mappedFileQueue =
-                new MappedFileQueue("./unit_test_store/c/", 1024, null);
+                new MappedFileQueue("target/unit_test_store/c/", 1024, null);
 
         for (int i = 0; i < 1024; i++) {
             MappedFile mappedFile = mappedFileQueue.getLastMappedFile(0);
@@ -186,7 +186,7 @@ public class MappedFileQueueTest {
         final String fixedMsg = "abcd";
         System.out.println("================================================================");
         MappedFileQueue mappedFileQueue =
-                new MappedFileQueue("./unit_test_store/d/", 1024, null);
+                new MappedFileQueue("target/unit_test_store/d/", 1024, null);
 
         for (int i = 0; i < 1024; i++) {
             MappedFile mappedFile = mappedFileQueue.getLastMappedFile(0);
