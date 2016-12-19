@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.alibaba.rocketmq.remoting.netty;
 
@@ -29,7 +29,15 @@ import com.alibaba.rocketmq.remoting.exception.RemotingTimeoutException;
 import com.alibaba.rocketmq.remoting.exception.RemotingTooMuchRequestException;
 import com.alibaba.rocketmq.remoting.protocol.RemotingCommand;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -41,8 +49,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.SocketAddress;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
@@ -53,9 +70,9 @@ import java.util.concurrent.locks.ReentrantLock;
  * @author shijia.wxr
  */
 public class NettyRemotingClient extends NettyRemotingAbstract implements RemotingClient {
-    private static final Logger log = LoggerFactory.getLogger(RemotingHelper.RemotingLogName);
+    private static final Logger log = LoggerFactory.getLogger(RemotingHelper.ROCKETMQ_REMOTING);
 
-    private static final long LockTimeoutMillis = 3000;
+    private static final long LOCK_TIMEOUT_MILLIS = 3000;
 
     private final NettyClientConfig nettyClientConfig;
     private final Bootstrap bootstrap = new Bootstrap();
@@ -133,32 +150,25 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
                 });
 
         Bootstrap handler = this.bootstrap.group(this.eventLoopGroupWorker).channel(NioSocketChannel.class)//
-                //
                 .option(ChannelOption.TCP_NODELAY, true)
-                //
                 .option(ChannelOption.SO_KEEPALIVE, false)
-                //
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, nettyClientConfig.getConnectTimeoutMillis())
-                //
                 .option(ChannelOption.SO_SNDBUF, nettyClientConfig.getClientSocketSndBufSize())
-                //
                 .option(ChannelOption.SO_RCVBUF, nettyClientConfig.getClientSocketRcvBufSize())
-                //
                 .handler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     public void initChannel(SocketChannel ch) throws Exception {
-                        ch.pipeline().addLast(//
-                                defaultEventExecutorGroup, //
-                                new NettyEncoder(), //
-                                new NettyDecoder(), //
-                                new IdleStateHandler(0, 0, nettyClientConfig.getClientChannelMaxIdleTimeSeconds()), //
-                                new NettyConnetManageHandler(), //
+                        ch.pipeline().addLast(
+                                defaultEventExecutorGroup,
+                                new NettyEncoder(),
+                                new NettyDecoder(),
+                                new IdleStateHandler(0, 0, nettyClientConfig.getClientChannelMaxIdleTimeSeconds()),
+                                new NettyConnetManageHandler(),
                                 new NettyClientHandler());
                     }
                 });
 
         this.timer.scheduleAtFixedRate(new TimerTask() {
-
             @Override
             public void run() {
                 try {
@@ -214,7 +224,7 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
         final String addrRemote = null == addr ? RemotingHelper.parseChannelRemoteAddr(channel) : addr;
 
         try {
-            if (this.lockChannelTables.tryLock(LockTimeoutMillis, TimeUnit.MILLISECONDS)) {
+            if (this.lockChannelTables.tryLock(LOCK_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)) {
                 try {
                     boolean removeItemFromTable = true;
                     final ChannelWrapper prevCW = this.channelTables.get(addrRemote);
@@ -242,7 +252,7 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
                     this.lockChannelTables.unlock();
                 }
             } else {
-                log.warn("closeChannel: try to lock channel table, but timeout, {}ms", LockTimeoutMillis);
+                log.warn("closeChannel: try to lock channel table, but timeout, {}ms", LOCK_TIMEOUT_MILLIS);
             }
         } catch (InterruptedException e) {
             log.error("closeChannel exception", e);
@@ -259,7 +269,7 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
             return;
 
         try {
-            if (this.lockChannelTables.tryLock(LockTimeoutMillis, TimeUnit.MILLISECONDS)) {
+            if (this.lockChannelTables.tryLock(LOCK_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)) {
                 try {
                     boolean removeItemFromTable = true;
                     ChannelWrapper prevCW = null;
@@ -292,7 +302,7 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
                     this.lockChannelTables.unlock();
                 }
             } else {
-                log.warn("closeChannel: try to lock channel table, but timeout, {}ms", LockTimeoutMillis);
+                log.warn("closeChannel: try to lock channel table, but timeout, {}ms", LOCK_TIMEOUT_MILLIS);
             }
         } catch (InterruptedException e) {
             log.error("closeChannel exception", e);
@@ -383,7 +393,7 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
         }
 
         final List<String> addrList = this.namesrvAddrList.get();
-        if (this.lockNamesrvChannel.tryLock(LockTimeoutMillis, TimeUnit.MILLISECONDS)) {
+        if (this.lockNamesrvChannel.tryLock(LOCK_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)) {
             try {
                 addr = this.namesrvAddrChoosed.get();
                 if (addr != null) {
@@ -412,7 +422,7 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
                 this.lockNamesrvChannel.unlock();
             }
         } else {
-            log.warn("getAndCreateNameserverChannel: try to lock name server, but timeout, {}ms", LockTimeoutMillis);
+            log.warn("getAndCreateNameserverChannel: try to lock name server, but timeout, {}ms", LOCK_TIMEOUT_MILLIS);
         }
 
         return null;
@@ -425,7 +435,7 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
         }
 
 
-        if (this.lockChannelTables.tryLock(LockTimeoutMillis, TimeUnit.MILLISECONDS)) {
+        if (this.lockChannelTables.tryLock(LOCK_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)) {
             try {
                 boolean createNewConnection = false;
                 cw = this.channelTables.get(addr);
@@ -433,19 +443,13 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
 
                     if (cw.isOK()) {
                         return cw.getChannel();
-                    }
-
-                    else if (!cw.getChannelFuture().isDone()) {
+                    } else if (!cw.getChannelFuture().isDone()) {
                         createNewConnection = false;
-                    }
-
-                    else {
+                    } else {
                         this.channelTables.remove(addr);
                         createNewConnection = true;
                     }
-                }
-
-                else {
+                } else {
                     createNewConnection = true;
                 }
 
@@ -461,7 +465,7 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
                 this.lockChannelTables.unlock();
             }
         } else {
-            log.warn("createChannel: try to lock channel table, but timeout, {}ms", LockTimeoutMillis);
+            log.warn("createChannel: try to lock channel table, but timeout, {}ms", LOCK_TIMEOUT_MILLIS);
         }
 
         if (cw != null) {

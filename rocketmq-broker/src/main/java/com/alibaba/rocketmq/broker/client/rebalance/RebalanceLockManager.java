@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.alibaba.rocketmq.broker.client.rebalance;
 
@@ -32,8 +32,8 @@ import java.util.concurrent.locks.ReentrantLock;
  * @author shijia.wxr
  */
 public class RebalanceLockManager {
-    private static final Logger log = LoggerFactory.getLogger(LoggerName.RebalanceLockLoggerName);
-    private final static long RebalanceLockMaxLiveTime = Long.parseLong(System.getProperty(
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.REBALANCE_LOCK_LOGGER_NAME);
+    private final static long REBALANCE_LOCK_MAX_LIVE_TIME = Long.parseLong(System.getProperty(
             "rocketmq.broker.rebalance.lockMaxLiveTime", "60000"));
     private final Lock lock = new ReentrantLock();
     private final ConcurrentHashMap<String/* group */, ConcurrentHashMap<MessageQueue, LockEntry>> mqLockTable =
@@ -96,9 +96,7 @@ public class RebalanceLockManager {
             } catch (InterruptedException e) {
                 log.error("putMessage exception", e);
             }
-        }
-
-        else {
+        } else {
 
         }
 
@@ -213,27 +211,27 @@ public class RebalanceLockManager {
                         if (null != lockEntry) {
                             if (lockEntry.getClientId().equals(clientId)) {
                                 groupValue.remove(mq);
-                                log.info("unlockBatch, Group: {} {} {}",//
-                                        group, //
-                                        mq, //
+                                log.info("unlockBatch, Group: {} {} {}",
+                                        group,
+                                        mq,
                                         clientId);
                             } else {
-                                log.warn("unlockBatch, but mq locked by other client: {}, Group: {} {} {}",//
-                                        lockEntry.getClientId(), //
-                                        group, //
-                                        mq, //
+                                log.warn("unlockBatch, but mq locked by other client: {}, Group: {} {} {}",
+                                        lockEntry.getClientId(),
+                                        group,
+                                        mq,
                                         clientId);
                             }
                         } else {
-                            log.warn("unlockBatch, but mq not locked, Group: {} {} {}",//
-                                    group, //
-                                    mq, //
+                            log.warn("unlockBatch, but mq not locked, Group: {} {} {}",
+                                    group,
+                                    mq,
                                     clientId);
                         }
                     }
                 } else {
-                    log.warn("unlockBatch, group not exist, Group: {} {}",//
-                            group, //
+                    log.warn("unlockBatch, group not exist, Group: {} {}",
+                            group,
                             clientId);
                 }
             } finally {
@@ -275,7 +273,7 @@ public class RebalanceLockManager {
 
         public boolean isExpired() {
             boolean expired =
-                    (System.currentTimeMillis() - this.lastUpdateTimestamp) > RebalanceLockMaxLiveTime;
+                    (System.currentTimeMillis() - this.lastUpdateTimestamp) > REBALANCE_LOCK_MAX_LIVE_TIME;
 
             return expired;
         }

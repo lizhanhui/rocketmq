@@ -33,7 +33,7 @@ import java.nio.channels.SocketChannel;
  * @author shijia.wxr
  */
 public class RemotingHelper {
-    public static final String RemotingLogName = "RocketmqRemoting";
+    public static final String ROCKETMQ_REMOTING = "RocketmqRemoting";
     public static final String DEFAULT_CHARSET = "UTF-8";
 
     public static String exceptionSimpleDesc(final Throwable e) {

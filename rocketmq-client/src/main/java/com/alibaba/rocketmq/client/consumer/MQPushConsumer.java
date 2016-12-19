@@ -76,10 +76,10 @@ public interface MQPushConsumer extends MQConsumer {
      *
      * @param topic
      * @param fullClassName
-     *         full class name，must extend
+     *         full class name,must extend
      *         com.alibaba.rocketmq.common.filter. MessageFilter
      * @param filterClassSource
-     *         class source code，used UTF-8 file encoding,must be responsible
+     *         class source code,used UTF-8 file encoding,must be responsible
      *         for your code safety
      *
      * @throws MQClientException

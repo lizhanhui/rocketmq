@@ -6,19 +6,22 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package com.alibaba.rocketmq.tools.command.message;
 
 import com.alibaba.rocketmq.common.MixAll;
-import com.alibaba.rocketmq.store.*;
+import com.alibaba.rocketmq.store.ConsumeQueue;
+import com.alibaba.rocketmq.store.MappedFile;
+import com.alibaba.rocketmq.store.MappedFileQueue;
+import com.alibaba.rocketmq.store.SelectMappedBufferResult;
 import com.alibaba.rocketmq.store.config.StorePathConfigHelper;
 
 import java.io.File;
@@ -28,23 +31,16 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
-
-/**
- * @author lansheng.zj
- */
 public class Store {
-    public final static int MessageMagicCode = 0xAABBCCDD ^ 1880681586 + 8;
-    private final static int BlankMagicCode = 0xBBCCDDEE ^ 1880681586 + 8;
-
+    public final static int MESSAGE_MAGIC_CODE = 0xAABBCCDD ^ 1880681586 + 8;
+    private final static int BLANK_MAGIC_CODE = 0xBBCCDDEE ^ 1880681586 + 8;
     private MappedFileQueue mapedFileQueue;
-
     private ConcurrentHashMap<String/* topic */, ConcurrentHashMap<Integer/* queueId */, ConsumeQueue>> consumeQueueTable;
 
     private String cStorePath;
     private int cSize;
     private String lStorePath;
     private int lSize;
-
 
     public Store(String cStorePath, int cSize, String lStorePath, int lSize) {
         this.cStorePath = cStorePath;
@@ -56,17 +52,15 @@ public class Store {
                 new ConcurrentHashMap<String/* topic */, ConcurrentHashMap<Integer/* queueId */, ConsumeQueue>>();
     }
 
-
     public boolean load() {
         boolean result = this.mapedFileQueue.load();
-        System.out.println("load commit log " + (result ? "OK" : "Failed"));
+        System.out.printf("load commit log " + (result ? "OK" : "Failed"));
         if (result) {
             result = loadConsumeQueue();
         }
-        System.out.println("load logics log " + (result ? "OK" : "Failed"));
+        System.out.printf("load logics log " + (result ? "OK" : "Failed"));
         return result;
     }
-
 
     private boolean loadConsumeQueue() {
         File dirLogic = new File(StorePathConfigHelper.getStorePathConsumeQueue(lStorePath));
@@ -80,11 +74,11 @@ public class Store {
                 if (fileQueueIdList != null) {
                     for (File fileQueueId : fileQueueIdList) {
                         int queueId = Integer.parseInt(fileQueueId.getName());
-                        ConsumeQueue logic = new ConsumeQueue(//
-                                topic,//
-                                queueId,//
-                                StorePathConfigHelper.getStorePathConsumeQueue(lStorePath),//
-                                lSize,//
+                        ConsumeQueue logic = new ConsumeQueue(
+                                topic,
+                                queueId,
+                                StorePathConfigHelper.getStorePathConsumeQueue(lStorePath),
+                                lSize,
                                 null);
                         this.putConsumeQueue(topic, queueId, logic);
                         if (!logic.load()) {
@@ -94,7 +88,7 @@ public class Store {
                 }
             }
         }
-        System.out.println("load logics queue all over, OK");
+        System.out.printf("load logics queue all over, OK");
         return true;
     }
 
@@ -121,7 +115,7 @@ public class Store {
             int msgCount = 0;
             int errorCount = 0;
 
-            System.out.println("start travel " + mapedFile.getFileName());
+            System.out.printf("start travel " + mapedFile.getFileName());
             long startTime = System.currentTimeMillis();
             ByteBuffer byteBuffer = mapedFile.sliceByteBuffer();
             while (byteBuffer.hasRemaining()) {
@@ -129,7 +123,7 @@ public class Store {
                 int totalSize = byteBuffer.getInt();
                 // 2 MAGICCODE
                 int magicCode = byteBuffer.getInt();
-                if (BlankMagicCode == magicCode) {
+                if (BLANK_MAGIC_CODE == magicCode) {
                     position = byteBuffer.limit();
                     break;
                 }
@@ -193,7 +187,7 @@ public class Store {
 
                 long currentPhyOffset = startOffset + position;
                 if (physicOffset != currentPhyOffset) {
-                    System.out.println(storeTime
+                    System.out.printf(storeTime
                             + " [fetal error] physicOffset != currentPhyOffset. position=" + position
                             + ", msgCount=" + msgCount + ", physicOffset=" + physicOffset
                             + ", currentPhyOffset=" + currentPhyOffset);
@@ -210,7 +204,7 @@ public class Store {
                     long offsetPy = smb.getByteBuffer().getLong();
                     int sizePy = smb.getByteBuffer().getInt();
                     if (physicOffset != offsetPy) {
-                        System.out.println(storeTime + " [fetal error] physicOffset != offsetPy. position="
+                        System.out.printf(storeTime + " [fetal error] physicOffset != offsetPy. position="
                                 + position + ", msgCount=" + msgCount + ", physicOffset=" + physicOffset
                                 + ", offsetPy=" + offsetPy);
                         errorCount++;
@@ -220,7 +214,7 @@ public class Store {
                         }
                     }
                     if (totalSize != sizePy) {
-                        System.out.println(storeTime + " [fetal error] totalSize != sizePy. position="
+                        System.out.printf(storeTime + " [fetal error] totalSize != sizePy. position="
                                 + position + ", msgCount=" + msgCount + ", totalSize=" + totalSize
                                 + ", sizePy=" + sizePy);
                         errorCount++;
@@ -238,11 +232,11 @@ public class Store {
                 byteBuffer.position(position);
             }
 
-            System.out.println("end travel " + mapedFile.getFileName() + ", total msg=" + msgCount
+            System.out.printf("end travel " + mapedFile.getFileName() + ", total msg=" + msgCount
                     + ", error count=" + errorCount + ", cost:" + (System.currentTimeMillis() - startTime));
         }
 
-        System.out.println("travel " + (success ? "ok" : "fail"));
+        System.out.printf("travel " + (success ? "ok" : "fail"));
     }
 
     public ConsumeQueue findConsumeQueue(String topic, int queueId) {
@@ -259,11 +253,11 @@ public class Store {
         }
         ConsumeQueue logic = map.get(queueId);
         if (null == logic) {
-            ConsumeQueue newLogic = new ConsumeQueue(//
-                    topic,//
-                    queueId,//
-                    StorePathConfigHelper.getStorePathConsumeQueue(lStorePath),//
-                    lSize,//
+            ConsumeQueue newLogic = new ConsumeQueue(
+                    topic,
+                    queueId,
+                    StorePathConfigHelper.getStorePathConsumeQueue(lStorePath),
+                    lSize,
                     null);
             ConsumeQueue oldLogic = map.putIfAbsent(queueId, newLogic);
             if (oldLogic != null) {

@@ -37,7 +37,7 @@ import java.util.concurrent.TimeUnit;
  * @author shijia.wxr
  */
 public class RebalancePushImpl extends RebalanceImpl {
-    private final static long UnlockDelayTimeMills = Long.parseLong(System.getProperty("rocketmq.client.unlockDelayTimeMills", "20000"));
+    private final static long UNLOCK_DELAY_TIME_MILLS = Long.parseLong(System.getProperty("rocketmq.client.unlockDelayTimeMills", "20000"));
     private final DefaultMQPushConsumerImpl defaultMQPushConsumerImpl;
 
 
@@ -95,7 +95,7 @@ public class RebalancePushImpl extends RebalanceImpl {
                     log.info("[{}]unlockDelay, execute at once {}", mq.hashCode(), mq);
                     RebalancePushImpl.this.unlock(mq, true);
                 }
-            }, UnlockDelayTimeMills, TimeUnit.MILLISECONDS);
+            }, UNLOCK_DELAY_TIME_MILLS, TimeUnit.MILLISECONDS);
         } else {
             this.unlock(mq, true);
         }
@@ -167,7 +167,7 @@ public class RebalancePushImpl extends RebalanceImpl {
                     } else {
                         try {
                             long timestamp = UtilAll.parseDate(this.defaultMQPushConsumerImpl.getDefaultMQPushConsumer().getConsumeTimestamp(),
-                                    UtilAll.yyyyMMddHHmmss).getTime();
+                                    UtilAll.YYYY_MMDD_HHMMSS).getTime();
                             result = this.mQClientFactory.getMQAdminImpl().searchOffset(mq, timestamp);
                         } catch (MQClientException e) {
                             result = -1;

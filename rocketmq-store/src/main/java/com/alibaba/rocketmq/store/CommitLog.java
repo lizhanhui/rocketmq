@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.alibaba.rocketmq.store;
 
@@ -46,14 +46,13 @@ import java.util.concurrent.locks.ReentrantLock;
  * Store all metadata downtime for recovery, data protection reliability
  *
  * @author shijia.wxr
- *
  */
 public class CommitLog {
     // Message's MAGIC CODE daa320a7
-    public final static int MessageMagicCode = 0xAABBCCDD ^ 1880681586 + 8;
-    private static final Logger log = LoggerFactory.getLogger(LoggerName.StoreLoggerName);
+    public final static int MESSAGE_MAGIC_CODE = 0xAABBCCDD ^ 1880681586 + 8;
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
     // End of file empty MAGIC CODE cbd43194
-    private final static int BlankMagicCode = 0xBBCCDDEE ^ 1880681586 + 8;
+    private final static int BLANK_MAGIC_CODE = 0xBBCCDDEE ^ 1880681586 + 8;
     private final MappedFileQueue mappedFileQueue;
     private final DefaultMessageStore defaultMessageStore;
     private final FlushCommitLogService flushCommitLogService;
@@ -120,7 +119,7 @@ public class CommitLog {
         return this.mappedFileQueue.getMaxOffset();
     }
 
-    public long remainHowManyDataToCommit(){
+    public long remainHowManyDataToCommit() {
         return this.mappedFileQueue.remainHowManyDataToCommit();
     }
 
@@ -143,7 +142,7 @@ public class CommitLog {
      * Read CommitLog data, use data replication
      */
     public SelectMappedBufferResult getData(final long offset) {
-        return this.getData(offset, (offset == 0));
+        return this.getData(offset, offset == 0);
     }
 
 
@@ -240,9 +239,9 @@ public class CommitLog {
             // 2 MAGIC CODE
             int magicCode = byteBuffer.getInt();
             switch (magicCode) {
-                case MessageMagicCode:
+                case MESSAGE_MAGIC_CODE:
                     break;
-                case BlankMagicCode:
+                case BLANK_MAGIC_CODE:
                     return new DispatchRequest(0, true /* success */);
                 default:
                     log.warn("found a illegal magic code 0x" + Integer.toHexString(magicCode));
@@ -362,17 +361,17 @@ public class CommitLog {
             }
 
             return new DispatchRequest(//
-                topic, // 1
-                queueId, // 2
-                physicOffset, // 3
-                totalSize, // 4
-                tagsCode, // 5
-                storeTimestamp, // 6
-                queueOffset, // 7
-                keys, // 8
-                uniqKey, //9
-                sysFlag, // 9
-                preparedTransactionOffset// 10
+                    topic, // 1
+                    queueId, // 2
+                    physicOffset, // 3
+                    totalSize, // 4
+                    tagsCode, // 5
+                    storeTimestamp, // 6
+                    queueOffset, // 7
+                    keys, // 8
+                    uniqKey, //9
+                    sysFlag, // 9
+                    preparedTransactionOffset// 10
             );
         } catch (Exception e) {
         }
@@ -496,12 +495,12 @@ public class CommitLog {
     private boolean isMappedFileMatchedRecover(final MappedFile mappedFile) {
         ByteBuffer byteBuffer = mappedFile.sliceByteBuffer();
 
-        int magicCode = byteBuffer.getInt(MessageDecoder.MessageMagicCodePostion);
-        if (magicCode != MessageMagicCode) {
+        int magicCode = byteBuffer.getInt(MessageDecoder.MESSAGE_MAGIC_CODE_POSTION);
+        if (magicCode != MESSAGE_MAGIC_CODE) {
             return false;
         }
 
-        long storeTimestamp = byteBuffer.getLong(MessageDecoder.MessageStoreTimestampPostion);
+        long storeTimestamp = byteBuffer.getLong(MessageDecoder.MESSAGE_STORE_TIMESTAMP_POSTION);
         if (0 == storeTimestamp) {
             return false;
         }
@@ -553,8 +552,8 @@ public class CommitLog {
         int queueId = msg.getQueueId();
 
         final int tranType = MessageSysFlag.getTransactionValue(msg.getSysFlag());
-        if (tranType == MessageSysFlag.TransactionNotType//
-                || tranType == MessageSysFlag.TransactionCommitType) {
+        if (tranType == MessageSysFlag.TRANSACTION_NOT_TYPE//
+                || tranType == MessageSysFlag.TRANSACTION_COMMIT_TYPE) {
             // Delay Delivery
             if (msg.getDelayTimeLevel() > 0) {
                 if (msg.getDelayTimeLevel() > this.defaultMessageStore.getScheduleMessageService().getMaxDelayLevel()) {
@@ -714,7 +713,7 @@ public class CommitLog {
             SelectMappedBufferResult result = this.getMessage(offset, size);
             if (null != result) {
                 try {
-                    return result.getByteBuffer().getLong(MessageDecoder.MessageStoreTimestampPostion);
+                    return result.getByteBuffer().getLong(MessageDecoder.MESSAGE_STORE_TIMESTAMP_POSTION);
                 } finally {
                     result.release();
                 }
@@ -739,19 +738,17 @@ public class CommitLog {
 
     public SelectMappedBufferResult getMessage(final long offset, final int size) {
         int mappedFileSize = this.defaultMessageStore.getMessageStoreConfig().getMapedFileSizeCommitLog();
-        MappedFile mappedFile = this.mappedFileQueue.findMappedFileByOffset(offset, (offset == 0));
+        MappedFile mappedFile = this.mappedFileQueue.findMappedFileByOffset(offset, offset == 0);
         if (mappedFile != null) {
             int pos = (int) (offset % mappedFileSize);
-            SelectMappedBufferResult result = mappedFile.selectMappedBuffer(pos, size);
-            return result;
+            return mappedFile.selectMappedBuffer(pos, size);
         }
-
         return null;
     }
 
     public long rollNextFile(final long offset) {
         int mappedFileSize = this.defaultMessageStore.getMessageStoreConfig().getMapedFileSizeCommitLog();
-        return (offset + mappedFileSize - offset % mappedFileSize);
+        return offset + mappedFileSize - offset % mappedFileSize;
     }
 
     public HashMap<String, Long> getTopicQueueTable() {
@@ -803,7 +800,7 @@ public class CommitLog {
     }
 
     abstract class FlushCommitLogService extends ServiceThread {
-        protected static final int RetryTimesOver = 10;
+        protected static final int RETRY_TIMES_OVER = 10;
     }
 
     class CommitRealTimeService extends FlushCommitLogService {
@@ -851,7 +848,7 @@ public class CommitLog {
             }
 
             boolean result = false;
-            for (int i = 0; i < RetryTimesOver && !result; i++) {
+            for (int i = 0; i < RETRY_TIMES_OVER && !result; i++) {
                 result = CommitLog.this.mappedFileQueue.commit(0);
                 CommitLog.log.info(this.getServiceName() + " service shutdown, retry " + (i + 1) + " times " + (result ? "OK" : "Not OK"));
             }
@@ -883,7 +880,7 @@ public class CommitLog {
                 if (currentTimeMillis >= (this.lastFlushTimestamp + flushPhysicQueueThoroughInterval)) {
                     this.lastFlushTimestamp = currentTimeMillis;
                     flushPhysicQueueLeastPages = 0;
-                    printFlushProgress = ((printTimes++ % 10) == 0);
+                    printFlushProgress = (printTimes++ % 10) == 0;
                 }
 
                 try {
@@ -915,7 +912,7 @@ public class CommitLog {
 
             // Normal shutdown, to ensure that all the flush before exit
             boolean result = false;
-            for (int i = 0; i < RetryTimesOver && !result; i++) {
+            for (int i = 0; i < RETRY_TIMES_OVER && !result; i++) {
                 result = CommitLog.this.mappedFileQueue.flush(0);
                 CommitLog.log.info(this.getServiceName() + " service shutdown, retry " + (i + 1) + " times " + (result ? "OK" : "Not OK"));
             }
@@ -1008,8 +1005,8 @@ public class CommitLog {
                     // There may be a message in the next file, so a maximum of
                     // two times the flush
                     boolean flushOK = false;
-                    for (int i = 0; (i < 2) && !flushOK; i++) {
-                        flushOK = (CommitLog.this.mappedFileQueue.getFlushedWhere() >= req.getNextOffset());
+                    for (int i = 0; i < 2 && !flushOK; i++) {
+                        flushOK = CommitLog.this.mappedFileQueue.getFlushedWhere() >= req.getNextOffset();
 
                         if (!flushOK) {
                             CommitLog.this.mappedFileQueue.flush(0);
@@ -1133,12 +1130,12 @@ public class CommitLog {
             switch (tranType) {
                 // Prepared and Rollback message is not consumed, will not enter the
                 // consumer queuec
-                case MessageSysFlag.TransactionPreparedType:
-                case MessageSysFlag.TransactionRollbackType:
+                case MessageSysFlag.TRANSACTION_PREPARED_TYPE:
+                case MessageSysFlag.TRANSACTION_ROLLBACK_TYPE:
                     queueOffset = 0L;
                     break;
-                case MessageSysFlag.TransactionNotType:
-                case MessageSysFlag.TransactionCommitType:
+                case MessageSysFlag.TRANSACTION_NOT_TYPE:
+                case MessageSysFlag.TRANSACTION_COMMIT_TYPE:
                 default:
                     break;
             }
@@ -1176,7 +1173,7 @@ public class CommitLog {
                 // 1 TOTALSIZE
                 this.msgStoreItemMemory.putInt(maxBlank);
                 // 2 MAGICCODE
-                this.msgStoreItemMemory.putInt(CommitLog.BlankMagicCode);
+                this.msgStoreItemMemory.putInt(CommitLog.BLANK_MAGIC_CODE);
                 // 3 The remaining space may be any value
                 //
 
@@ -1192,7 +1189,7 @@ public class CommitLog {
             // 1 TOTALSIZE
             this.msgStoreItemMemory.putInt(msgLen);
             // 2 MAGICCODE
-            this.msgStoreItemMemory.putInt(CommitLog.MessageMagicCode);
+            this.msgStoreItemMemory.putInt(CommitLog.MESSAGE_MAGIC_CODE);
             // 3 BODYCRC
             this.msgStoreItemMemory.putInt(msgInner.getBodyCRC());
             // 4 QUEUEID
@@ -1240,11 +1237,11 @@ public class CommitLog {
                     msgInner.getStoreTimestamp(), queueOffset, CommitLog.this.defaultMessageStore.now() - beginTimeMills);
 
             switch (tranType) {
-                case MessageSysFlag.TransactionPreparedType:
-                case MessageSysFlag.TransactionRollbackType:
+                case MessageSysFlag.TRANSACTION_PREPARED_TYPE:
+                case MessageSysFlag.TRANSACTION_ROLLBACK_TYPE:
                     break;
-                case MessageSysFlag.TransactionNotType:
-                case MessageSysFlag.TransactionCommitType:
+                case MessageSysFlag.TRANSACTION_NOT_TYPE:
+                case MessageSysFlag.TRANSACTION_COMMIT_TYPE:
                     // The next update ConsumeQueue information
                     CommitLog.this.topicQueueTable.put(key, ++queueOffset);
                     break;
@@ -1281,8 +1278,7 @@ public class CommitLog {
     private void lockForPutMessage() {
         if (this.defaultMessageStore.getMessageStoreConfig().isUseReentrantLockWhenPutMessage()) {
             putMessageNormalLock.lock();
-        }
-        else {
+        } else {
             boolean flag;
             do {
                 flag = this.putMessageSpinLock.compareAndSet(true, false);

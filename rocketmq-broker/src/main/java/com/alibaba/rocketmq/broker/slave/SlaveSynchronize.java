@@ -35,7 +35,7 @@ import java.io.IOException;
  * @author manhong.yqd
  */
 public class SlaveSynchronize {
-    private static final Logger log = LoggerFactory.getLogger(LoggerName.BrokerLoggerName);
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
     private final BrokerController brokerController;
     private volatile String masterAddr = null;
 

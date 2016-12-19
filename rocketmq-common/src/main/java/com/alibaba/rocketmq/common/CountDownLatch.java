@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package com.alibaba.rocketmq.common;
@@ -22,6 +22,7 @@ import java.util.concurrent.locks.AbstractQueuedSynchronizer;
 
 /**
  * Add reset feature for @see java.util.concurrent.CountDownLatch
+ *
  * @author xinyuzhou.zxy
  */
 public class CountDownLatch {
@@ -53,7 +54,7 @@ public class CountDownLatch {
                 int c = getState();
                 if (c == 0)
                     return false;
-                int nextc = c-1;
+                int nextc = c - 1;
                 if (compareAndSetState(c, nextc))
                     return nextc == 0;
             }
@@ -69,9 +70,12 @@ public class CountDownLatch {
     /**
      * Constructs a {@code CountDownLatch} initialized with the given count.
      *
-     * @param count the number of times {@link #countDown} must be invoked
-     *        before threads can pass through {@link #await}
-     * @throws IllegalArgumentException if {@code count} is negative
+     * @param count
+     *         the number of times {@link #countDown} must be invoked
+     *         before threads can pass through {@link #await}
+     *
+     * @throws IllegalArgumentException
+     *         if {@code count} is negative
      */
     public CountDownLatch(int count) {
         if (count < 0) throw new IllegalArgumentException("count < 0");
@@ -102,7 +106,8 @@ public class CountDownLatch {
      * then {@link InterruptedException} is thrown and the current thread's
      * interrupted status is cleared.
      *
-     * @throws InterruptedException if the current thread is interrupted
+     * @throws InterruptedException
+     *         if the current thread is interrupted
      *         while waiting
      */
     public void await() throws InterruptedException {
@@ -143,11 +148,16 @@ public class CountDownLatch {
      * is returned.  If the time is less than or equal to zero, the method
      * will not wait at all.
      *
-     * @param timeout the maximum time to wait
-     * @param unit the time unit of the {@code timeout} argument
+     * @param timeout
+     *         the maximum time to wait
+     * @param unit
+     *         the time unit of the {@code timeout} argument
+     *
      * @return {@code true} if the count reached zero and {@code false}
-     *         if the waiting time elapsed before the count reached zero
-     * @throws InterruptedException if the current thread is interrupted
+     * if the waiting time elapsed before the count reached zero
+     *
+     * @throws InterruptedException
+     *         if the current thread is interrupted
      *         while waiting
      */
     public boolean await(long timeout, TimeUnit unit)

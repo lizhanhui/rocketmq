@@ -33,7 +33,7 @@ import java.util.concurrent.TimeUnit;
  * @author shijia.wxr
  */
 public class ClientHousekeepingService implements ChannelEventListener {
-    private static final Logger log = LoggerFactory.getLogger(LoggerName.BrokerLoggerName);
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
     private final BrokerController brokerController;
 
     private ScheduledExecutorService scheduledExecutorService = Executors

@@ -33,7 +33,7 @@ import java.nio.ByteBuffer;
  *
  */
 public class NettyEncoder extends MessageToByteEncoder<RemotingCommand> {
-    private static final Logger log = LoggerFactory.getLogger(RemotingHelper.RemotingLogName);
+    private static final Logger log = LoggerFactory.getLogger(RemotingHelper.ROCKETMQ_REMOTING);
 
     @Override
     public void encode(ChannelHandlerContext ctx, RemotingCommand remotingCommand, ByteBuf out)

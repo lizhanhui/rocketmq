@@ -41,13 +41,12 @@ public class Producer {
 
             for (int i = 0; i < Integer.parseInt(msgCount); i++) {
                 try {
-                    Message msg = new Message(//
-                            topic,// topic
-                            tags,// tag
-                            keys,// key
-                            ("Hello RocketMQ " + i).getBytes(RemotingHelper.DEFAULT_CHARSET));// body
+                    Message msg = new Message(
+                            topic,
+                            tags,
+                            keys,
+                            ("Hello RocketMQ " + i).getBytes(RemotingHelper.DEFAULT_CHARSET));
                     SendResult sendResult = producer.send(msg);
-
                     System.out.printf("%-8d %s%n", i, sendResult);
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -61,7 +60,6 @@ public class Producer {
 
     public static CommandLine buildCommandline(String[] args) {
         final Options options = new Options();
-        // ////////////////////////////////////////////////////
         Option opt = new Option("h", "help", false, "Print help");
         opt.setRequired(false);
         options.addOption(opt);
@@ -85,8 +83,6 @@ public class Producer {
         opt = new Option("c", "msgCount", true, "Message Count");
         opt.setRequired(true);
         options.addOption(opt);
-
-        // ////////////////////////////////////////////////////
 
         PosixParser parser = new PosixParser();
         HelpFormatter hf = new HelpFormatter();

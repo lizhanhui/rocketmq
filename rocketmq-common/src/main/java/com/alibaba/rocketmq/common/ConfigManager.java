@@ -27,7 +27,7 @@ import java.io.IOException;
  * @author shijia.wxr
  */
 public abstract class ConfigManager {
-    private static final Logger plog = LoggerFactory.getLogger(LoggerName.CommonLoggerName);
+    private static final Logger PLOG = LoggerFactory.getLogger(LoggerName.COMMON_LOGGER_NAME);
 
 
     public abstract String encode();
@@ -42,11 +42,11 @@ public abstract class ConfigManager {
                 return this.loadBak();
             } else {
                 this.decode(jsonString);
-                plog.info("load {} OK", fileName);
+                PLOG.info("load {} OK", fileName);
                 return true;
             }
         } catch (Exception e) {
-            plog.error("load " + fileName + " Failed, and try to load backup file", e);
+            PLOG.error("load " + fileName + " Failed, and try to load backup file", e);
             return this.loadBak();
         }
     }
@@ -60,11 +60,11 @@ public abstract class ConfigManager {
             String jsonString = MixAll.file2String(fileName + ".bak");
             if (jsonString != null && jsonString.length() > 0) {
                 this.decode(jsonString);
-                plog.info("load " + fileName + " OK");
+                PLOG.info("load " + fileName + " OK");
                 return true;
             }
         } catch (Exception e) {
-            plog.error("load " + fileName + " Failed", e);
+            PLOG.error("load " + fileName + " Failed", e);
             return false;
         }
 
@@ -80,7 +80,7 @@ public abstract class ConfigManager {
             try {
                 MixAll.string2File(jsonString, fileName);
             } catch (IOException e) {
-                plog.error("persist file Exception, " + fileName, e);
+                PLOG.error("persist file Exception, " + fileName, e);
             }
         }
     }

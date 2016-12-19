@@ -56,7 +56,10 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.*;
 
 
@@ -64,9 +67,9 @@ import java.util.concurrent.*;
  * @author shijia.wxr
  */
 public class BrokerController {
-    private static final Logger log = LoggerFactory.getLogger(LoggerName.BrokerLoggerName);
-    private static final Logger logProtection = LoggerFactory.getLogger(LoggerName.ProtectionLoggerName);
-    private static final Logger logWaterMark = LoggerFactory.getLogger(LoggerName.WaterMarkLoggerName);
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
+    private static final Logger LOG_PROTECTION = LoggerFactory.getLogger(LoggerName.PROTECTION_LOGGER_NAME);
+    private static final Logger LOG_WATER_MARK = LoggerFactory.getLogger(LoggerName.WATER_MARK_LOGGER_NAME);
     private final BrokerConfig brokerConfig;
     private final NettyServerConfig nettyServerConfig;
     private final NettyClientConfig nettyClientConfig;
@@ -199,32 +202,32 @@ public class BrokerController {
             NettyServerConfig fastConfig = (NettyServerConfig) this.nettyServerConfig.clone();
             fastConfig.setListenPort(nettyServerConfig.getListenPort() - 2);
             this.fastRemotingServer = new NettyRemotingServer(fastConfig, this.clientHousekeepingService);
-            this.sendMessageExecutor = new BrokerFixedThreadPoolExecutor(//
-                    this.brokerConfig.getSendMessageThreadPoolNums(),//
-                    this.brokerConfig.getSendMessageThreadPoolNums(),//
-                    1000 * 60,//
-                    TimeUnit.MILLISECONDS,//
-                    this.sendThreadPoolQueue,//
+            this.sendMessageExecutor = new BrokerFixedThreadPoolExecutor(
+                    this.brokerConfig.getSendMessageThreadPoolNums(),
+                    this.brokerConfig.getSendMessageThreadPoolNums(),
+                    1000 * 60,
+                    TimeUnit.MILLISECONDS,
+                    this.sendThreadPoolQueue,
                     new ThreadFactoryImpl("SendMessageThread_"));
 
-            this.pullMessageExecutor = new BrokerFixedThreadPoolExecutor(//
-                    this.brokerConfig.getPullMessageThreadPoolNums(),//
-                    this.brokerConfig.getPullMessageThreadPoolNums(),//
-                    1000 * 60,//
-                    TimeUnit.MILLISECONDS,//
-                    this.pullThreadPoolQueue,//
+            this.pullMessageExecutor = new BrokerFixedThreadPoolExecutor(
+                    this.brokerConfig.getPullMessageThreadPoolNums(),
+                    this.brokerConfig.getPullMessageThreadPoolNums(),
+                    1000 * 60,
+                    TimeUnit.MILLISECONDS,
+                    this.pullThreadPoolQueue,
                     new ThreadFactoryImpl("PullMessageThread_"));
 
             this.adminBrokerExecutor =
                     Executors.newFixedThreadPool(this.brokerConfig.getAdminBrokerThreadPoolNums(), new ThreadFactoryImpl(
                             "AdminBrokerThread_"));
 
-            this.clientManageExecutor = new ThreadPoolExecutor(//
-                    this.brokerConfig.getClientManageThreadPoolNums(),//
-                    this.brokerConfig.getClientManageThreadPoolNums(),//
-                    1000 * 60,//
-                    TimeUnit.MILLISECONDS,//
-                    this.clientManagerThreadPoolQueue,//
+            this.clientManageExecutor = new ThreadPoolExecutor(
+                    this.brokerConfig.getClientManageThreadPoolNums(),
+                    this.brokerConfig.getClientManageThreadPoolNums(),
+                    1000 * 60,
+                    TimeUnit.MILLISECONDS,
+                    this.clientManagerThreadPoolQueue,
                     new ThreadFactoryImpl("ClientManageThread_"));
 
             this.consumerManageExecutor =
@@ -431,7 +434,7 @@ public class BrokerController {
                 if (fallBehindBytes > this.brokerConfig.getConsumerFallbehindThreshold()) {
                     final String[] split = next.getValue().getStatsKey().split("@");
                     final String group = split[2];
-                    logProtection.info("[PROTECT_BROKER] the consumer[{}] consume slowly, {} bytes, disable it", group, fallBehindBytes);
+                    LOG_PROTECTION.info("[PROTECT_BROKER] the consumer[{}] consume slowly, {} bytes, disable it", group, fallBehindBytes);
                     this.subscriptionGroupManager.disableConsume(group);
                 }
             }
@@ -460,8 +463,8 @@ public class BrokerController {
     }
 
     public void printWaterMark() {
-        logWaterMark.info("[WATERMARK] Send Queue Size: {} SlowTimeMills: {}", this.sendThreadPoolQueue.size(), headSlowTimeMills4SendThreadPoolQueue());
-        logWaterMark.info("[WATERMARK] Pull Queue Size: {} SlowTimeMills: {}", this.pullThreadPoolQueue.size(), headSlowTimeMills4PullThreadPoolQueue());
+        LOG_WATER_MARK.info("[WATERMARK] Send Queue Size: {} SlowTimeMills: {}", this.sendThreadPoolQueue.size(), headSlowTimeMills4SendThreadPoolQueue());
+        LOG_WATER_MARK.info("[WATERMARK] Pull Queue Size: {} SlowTimeMills: {}", this.pullThreadPoolQueue.size(), headSlowTimeMills4PullThreadPoolQueue());
     }
 
     public MessageStore getMessageStore() {
@@ -576,16 +579,15 @@ public class BrokerController {
     }
 
     private void unregisterBrokerAll() {
-        this.brokerOuterAPI.unregisterBrokerAll(//
-                this.brokerConfig.getBrokerClusterName(), //
-                this.getBrokerAddr(), //
-                this.brokerConfig.getBrokerName(), //
+        this.brokerOuterAPI.unregisterBrokerAll(
+                this.brokerConfig.getBrokerClusterName(),
+                this.getBrokerAddr(),
+                this.brokerConfig.getBrokerName(),
                 this.brokerConfig.getBrokerId());
     }
 
     public String getBrokerAddr() {
-        String addr = this.brokerConfig.getBrokerIP1() + ":" + this.nettyServerConfig.getListenPort();
-        return addr;
+        return this.brokerConfig.getBrokerIP1() + ":" + this.nettyServerConfig.getListenPort();
     }
 
     public void start() throws Exception {
@@ -655,15 +657,15 @@ public class BrokerController {
             topicConfigWrapper.setTopicConfigTable(topicConfigTable);
         }
 
-        RegisterBrokerResult registerBrokerResult = this.brokerOuterAPI.registerBrokerAll(//
-                this.brokerConfig.getBrokerClusterName(), //
-                this.getBrokerAddr(), //
-                this.brokerConfig.getBrokerName(), //
-                this.brokerConfig.getBrokerId(), //
-                this.getHAServerAddr(), //
-                topicConfigWrapper,//
-                this.filterServerManager.buildNewFilterServerList(),//
-                oneway,//
+        RegisterBrokerResult registerBrokerResult = this.brokerOuterAPI.registerBrokerAll(
+                this.brokerConfig.getBrokerClusterName(),
+                this.getBrokerAddr(),
+                this.brokerConfig.getBrokerName(),
+                this.brokerConfig.getBrokerId(),
+                this.getHAServerAddr(),
+                topicConfigWrapper,
+                this.filterServerManager.buildNewFilterServerList(),
+                oneway,
                 this.brokerConfig.getRegisterBrokerTimeoutMills());
 
         if (registerBrokerResult != null) {
@@ -688,8 +690,7 @@ public class BrokerController {
     }
 
     public String getHAServerAddr() {
-        String addr = this.brokerConfig.getBrokerIP2() + ":" + this.messageStoreConfig.getHaListenPort();
-        return addr;
+        return this.brokerConfig.getBrokerIP2() + ":" + this.messageStoreConfig.getHaListenPort();
     }
 
     public RebalanceLockManager getRebalanceLockManager() {

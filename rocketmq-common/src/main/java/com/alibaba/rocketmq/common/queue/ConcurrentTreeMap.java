@@ -33,7 +33,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * @author lansheng.zj
  */
 public class ConcurrentTreeMap<K, V> {
-    private static final Logger log = LoggerFactory.getLogger(LoggerName.BrokerLoggerName);
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
     private final ReentrantLock lock;
     private TreeMap<K, V> tree;
     private RoundQueue<K> roundQueue;

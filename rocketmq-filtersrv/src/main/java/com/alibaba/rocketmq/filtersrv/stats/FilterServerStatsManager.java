@@ -28,7 +28,7 @@ import java.util.concurrent.ScheduledExecutorService;
 
 
 public class FilterServerStatsManager {
-    private static final Logger log = LoggerFactory.getLogger(LoggerName.FiltersrvLoggerName);
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.FILTERSRV_LOGGER_NAME);
     private final ScheduledExecutorService scheduledExecutorService = Executors
             .newSingleThreadScheduledExecutor(new ThreadFactoryImpl("FSStatsThread"));
 

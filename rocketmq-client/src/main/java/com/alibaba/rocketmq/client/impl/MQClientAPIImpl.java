@@ -72,11 +72,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class MQClientAPIImpl {
 
     private final static Logger log = ClientLogger.getLog();
-    public static boolean sendSmartMsg = //
+    public static boolean sendSmartMsg =
             Boolean.parseBoolean(System.getProperty("com.alibaba.rocketmq.client.sendSmartMsg", "true"));
 
     static {
-        System.setProperty(RemotingCommand.RemotingVersionKey, Integer.toString(MQVersion.CurrentVersion));
+        System.setProperty(RemotingCommand.REMOTING_VERSION_KEY, Integer.toString(MQVersion.CURRENT_VERSION));
     }
 
     private final RemotingClient remotingClient;
@@ -826,12 +826,12 @@ public class MQClientAPIImpl {
     }
 
 
-    public void queryMessage(//
-                             final String addr, //
-                             final QueryMessageRequestHeader requestHeader, //
-                             final long timeoutMillis, //
-                             final InvokeCallback invokeCallback,//
-                             final Boolean isUnqiueKey
+    public void queryMessage(
+            final String addr,
+            final QueryMessageRequestHeader requestHeader,
+            final long timeoutMillis,
+            final InvokeCallback invokeCallback,
+            final Boolean isUnqiueKey
     ) throws RemotingException, MQBrokerException, InterruptedException {
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.QUERY_MESSAGE, requestHeader);
         request.addExtField(MixAll.UNIQUE_MSG_QUERY_FLAG, isUnqiueKey.toString());
@@ -850,13 +850,13 @@ public class MQClientAPIImpl {
     }
 
 
-    public void consumerSendMessageBack(//
-                                        final String addr, //
-                                        final MessageExt msg, //
-                                        final String consumerGroup, //
-                                        final int delayLevel, //
-                                        final long timeoutMillis, //
-                                        final int maxConsumeRetryTimes//
+    public void consumerSendMessageBack(
+            final String addr,
+            final MessageExt msg,
+            final String consumerGroup,
+            final int delayLevel,
+            final long timeoutMillis,
+            final int maxConsumeRetryTimes
     ) throws RemotingException, MQBrokerException, InterruptedException {
         ConsumerSendMsgBackRequestHeader requestHeader = new ConsumerSendMsgBackRequestHeader();
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.CONSUMER_SEND_MSG_BACK, requestHeader);

@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.alibaba.rocketmq.store;
 
@@ -53,7 +53,7 @@ import static com.alibaba.rocketmq.store.config.BrokerRole.SLAVE;
  * @author shijia.wxr
  */
 public class DefaultMessageStore implements MessageStore {
-    private static final Logger log = LoggerFactory.getLogger(LoggerName.StoreLoggerName);
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
 
     private final MessageFilter messageFilter = new DefaultMessageFilter();
 
@@ -144,8 +144,6 @@ public class DefaultMessageStore implements MessageStore {
 
 
     /**
-
-     *
      * @throws IOException
      */
     public boolean load() {
@@ -153,10 +151,7 @@ public class DefaultMessageStore implements MessageStore {
 
         try {
             boolean lastExitOK = !this.isTempFileExist();
-            log.info("last shutdown {}", (lastExitOK ? "normally" : "abnormally"));
-
-
-
+            log.info("last shutdown {}", lastExitOK ? "normally" : "abnormally");
 
             if (null != scheduleMessageService) {
                 result = result && this.scheduleMessageService.load();
@@ -192,8 +187,6 @@ public class DefaultMessageStore implements MessageStore {
     }
 
     /**
-
-     *
      * @throws Exception
      */
     public void start() throws Exception {
@@ -418,9 +411,9 @@ public class DefaultMessageStore implements MessageStore {
                         long maxPhyOffsetPulling = 0;
 
                         int i = 0;
-                        final int MaxFilterMessageCount = 16000;
+                        final int maxFilterMessageCount = 16000;
                         final boolean diskFallRecorded = this.messageStoreConfig.isDiskFallRecorded();
-                        for (; i < bufferConsumeQueue.getSize() && i < MaxFilterMessageCount; i += ConsumeQueue.CQStoreUnitSize) {
+                        for (; i < bufferConsumeQueue.getSize() && i < maxFilterMessageCount; i += ConsumeQueue.CQ_STORE_UNIT_SIZE) {
                             long offsetPy = bufferConsumeQueue.getByteBuffer().getLong();
                             int sizePy = bufferConsumeQueue.getByteBuffer().getInt();
                             long tagsCode = bufferConsumeQueue.getByteBuffer().getLong();
@@ -474,11 +467,11 @@ public class DefaultMessageStore implements MessageStore {
                             brokerStatsManager.recordDiskFallBehindSize(group, topic, queueId, fallBehind);
                         }
 
-                        nextBeginOffset = offset + (i / ConsumeQueue.CQStoreUnitSize);
+                        nextBeginOffset = offset + (i / ConsumeQueue.CQ_STORE_UNIT_SIZE);
 
 
                         long diff = maxOffsetPy - maxPhyOffsetPulling;
-                        long memory = (long) (StoreUtil.TotalPhysicalMemorySize
+                        long memory = (long) (StoreUtil.TOTAL_PHYSICAL_MEMORY_SIZE
                                 * (this.messageStoreConfig.getAccessMessageInMemoryMaxRatio() / 100.0));
                         getResult.setSuggestPullingFromSlave(diff > memory);
                     } finally {
@@ -492,9 +485,7 @@ public class DefaultMessageStore implements MessageStore {
                             + maxOffset + ", but access logic queue failed.");
                 }
             }
-        }
-
-        else {
+        } else {
             status = GetMessageStatus.NO_MATCHED_LOGIC_QUEUE;
             nextBeginOffset = nextOffsetCorrection(offset, 0);
         }
@@ -654,7 +645,7 @@ public class DefaultMessageStore implements MessageStore {
         if (logicQueue != null) {
             long minLogicOffset = logicQueue.getMinLogicOffset();
 
-            SelectMappedBufferResult result = logicQueue.getIndexBuffer(minLogicOffset / ConsumeQueue.CQStoreUnitSize);
+            SelectMappedBufferResult result = logicQueue.getIndexBuffer(minLogicOffset / ConsumeQueue.CQ_STORE_UNIT_SIZE);
             if (result != null) {
                 try {
                     final long phyOffset = result.getByteBuffer().getLong();
@@ -918,7 +909,7 @@ public class DefaultMessageStore implements MessageStore {
                 if (bufferConsumeQueue != null) {
                     try {
                         int i = 0;
-                        for (; i < bufferConsumeQueue.getSize(); i += ConsumeQueue.CQStoreUnitSize) {
+                        for (; i < bufferConsumeQueue.getSize(); i += ConsumeQueue.CQ_STORE_UNIT_SIZE) {
                             long offsetPy = bufferConsumeQueue.getByteBuffer().getLong();
                             final ByteBuffer msgIdMemory = ByteBuffer.allocate(MessageDecoder.MSG_ID_LENGTH);
                             String msgId =
@@ -951,7 +942,7 @@ public class DefaultMessageStore implements MessageStore {
             if (bufferConsumeQueue != null) {
                 try {
                     for (int i = 0; i < bufferConsumeQueue.getSize(); ) {
-                        i += ConsumeQueue.CQStoreUnitSize;
+                        i += ConsumeQueue.CQ_STORE_UNIT_SIZE;
                         long offsetPy = bufferConsumeQueue.getByteBuffer().getLong();
                         return checkInDiskByCommitOffset(offsetPy, maxOffsetPy);
                     }
@@ -1043,7 +1034,7 @@ public class DefaultMessageStore implements MessageStore {
     }
 
     private boolean checkInDiskByCommitOffset(long offsetPy, long maxOffsetPy) {
-        long memory = (long) (StoreUtil.TotalPhysicalMemorySize * (this.messageStoreConfig.getAccessMessageInMemoryMaxRatio() / 100.0));
+        long memory = (long) (StoreUtil.TOTAL_PHYSICAL_MEMORY_SIZE * (this.messageStoreConfig.getAccessMessageInMemoryMaxRatio() / 100.0));
         return (maxOffsetPy - offsetPy) > memory;
     }
 
@@ -1066,9 +1057,7 @@ public class DefaultMessageStore implements MessageStore {
             if ((messageTotal + 1) > this.messageStoreConfig.getMaxTransferCountOnMessageInDisk()) {
                 return true;
             }
-        }
-
-        else {
+        } else {
             if ((bufferTotal + sizePy) > this.messageStoreConfig.getMaxTransferBytesOnMessageInMemory()) {
                 return true;
             }
@@ -1088,8 +1077,6 @@ public class DefaultMessageStore implements MessageStore {
     }
 
     /**
-
-     *
      * @throws IOException
      */
     private void createTempFile() throws IOException {
@@ -1186,14 +1173,14 @@ public class DefaultMessageStore implements MessageStore {
                         int queueId;
                         try {
                             queueId = Integer.parseInt(fileQueueId.getName());
-                        }catch (NumberFormatException e) {
+                        } catch (NumberFormatException e) {
                             continue;
                         }
-                        ConsumeQueue logic = new ConsumeQueue(//
-                                topic, //
-                                queueId, //
-                                StorePathConfigHelper.getStorePathConsumeQueue(this.messageStoreConfig.getStorePathRootDir()), //
-                                this.getMessageStoreConfig().getMapedFileSizeConsumeQueue(), //
+                        ConsumeQueue logic = new ConsumeQueue(
+                                topic,
+                                queueId,
+                                StorePathConfigHelper.getStorePathConsumeQueue(this.messageStoreConfig.getStorePathRootDir()),
+                                this.getMessageStoreConfig().getMapedFileSizeConsumeQueue(),
                                 this);
                         this.putConsumeQueue(topic, queueId, logic);
                         if (!logic.load()) {
@@ -1215,9 +1202,7 @@ public class DefaultMessageStore implements MessageStore {
 
         if (lastExitOK) {
             this.commitLog.recoverNormally();
-        }
-
-        else {
+        } else {
             this.commitLog.recoverAbnormally();
         }
 
@@ -1300,13 +1285,13 @@ public class DefaultMessageStore implements MessageStore {
     public void doDispatch(DispatchRequest req) {
         final int tranType = MessageSysFlag.getTransactionValue(req.getSysFlag());
         switch (tranType) {
-            case MessageSysFlag.TransactionNotType:
-            case MessageSysFlag.TransactionCommitType:
+            case MessageSysFlag.TRANSACTION_NOT_TYPE:
+            case MessageSysFlag.TRANSACTION_COMMIT_TYPE:
                 DefaultMessageStore.this.putMessagePositionInfo(req.getTopic(), req.getQueueId(), req.getCommitLogOffset(), req.getMsgSize(),
                         req.getTagsCode(), req.getStoreTimestamp(), req.getConsumeQueueOffset());
                 break;
-            case MessageSysFlag.TransactionPreparedType:
-            case MessageSysFlag.TransactionRollbackType:
+            case MessageSysFlag.TRANSACTION_PREPARED_TYPE:
+            case MessageSysFlag.TRANSACTION_ROLLBACK_TYPE:
                 break;
         }
 
@@ -1327,11 +1312,11 @@ public class DefaultMessageStore implements MessageStore {
 
     class CleanCommitLogService {
 
-        private final static int MaxManualDeleteFileTimes = 20;
-        private final double DiskSpaceWarningLevelRatio =
+        private final static int MAX_MANUAL_DELETE_FILE_TIMES = 20;
+        private final double diskSpaceWarningLevelRatio =
                 Double.parseDouble(System.getProperty("rocketmq.broker.diskSpaceWarningLevelRatio", "0.90"));
 
-        private final double DiskSpaceCleanForciblyRatio =
+        private final double diskSpaceCleanForciblyRatio =
                 Double.parseDouble(System.getProperty("rocketmq.broker.diskSpaceCleanForciblyRatio", "0.85"));
         private long lastRedeleteTimestamp = 0;
 
@@ -1341,7 +1326,7 @@ public class DefaultMessageStore implements MessageStore {
 
 
         public void excuteDeleteFilesManualy() {
-            this.manualDeleteFileSeveralTimes = MaxManualDeleteFileTimes;
+            this.manualDeleteFileSeveralTimes = MAX_MANUAL_DELETE_FILE_TIMES;
             DefaultMessageStore.log.info("excuteDeleteFilesManualy was invoked");
         }
 
@@ -1370,7 +1355,7 @@ public class DefaultMessageStore implements MessageStore {
             if (timeup || spacefull || manualDelete) {
 
                 if (manualDelete)
-                    this.manualDeleteFileSeveralTimes --;
+                    this.manualDeleteFileSeveralTimes--;
 
 
                 boolean cleanAtOnce = DefaultMessageStore.this.getMessageStoreConfig().isCleanFileForciblyEnable() && this.cleanImmediately;
@@ -1388,9 +1373,7 @@ public class DefaultMessageStore implements MessageStore {
                 deleteCount = DefaultMessageStore.this.commitLog.deleteExpiredFile(fileReservedTime, deletePhysicFilesInterval,
                         destroyMapedFileIntervalForcibly, cleanAtOnce);
                 if (deleteCount > 0) {
-                }
-
-                else if (spacefull) {
+                } else if (spacefull) {
                     log.warn("disk space will be full soon, but delete file failed.");
                 }
             }
@@ -1411,6 +1394,7 @@ public class DefaultMessageStore implements MessageStore {
         public String getServiceName() {
             return CleanCommitLogService.class.getSimpleName();
         }
+
         private boolean isTimeToDelete() {
             String when = DefaultMessageStore.this.getMessageStoreConfig().getDeleteWhen();
             if (UtilAll.isItTimeToDo(when)) {
@@ -1420,6 +1404,7 @@ public class DefaultMessageStore implements MessageStore {
 
             return false;
         }
+
         private boolean isSpaceToDelete() {
             double ratio = DefaultMessageStore.this.getMessageStoreConfig().getDiskMaxUsedSpaceRatio() / 100.0;
 
@@ -1429,14 +1414,14 @@ public class DefaultMessageStore implements MessageStore {
             {
                 String storePathPhysic = DefaultMessageStore.this.getMessageStoreConfig().getStorePathCommitLog();
                 double physicRatio = UtilAll.getDiskPartitionSpaceUsedPercent(storePathPhysic);
-                if (physicRatio > DiskSpaceWarningLevelRatio) {
+                if (physicRatio > diskSpaceWarningLevelRatio) {
                     boolean diskok = DefaultMessageStore.this.runningFlags.getAndMakeDiskFull();
                     if (diskok) {
                         DefaultMessageStore.log.error("physic disk maybe full soon " + physicRatio + ", so mark disk full");
                     }
 
                     cleanImmediately = true;
-                } else if (physicRatio > DiskSpaceCleanForciblyRatio) {
+                } else if (physicRatio > diskSpaceCleanForciblyRatio) {
                     cleanImmediately = true;
                 } else {
                     boolean diskok = DefaultMessageStore.this.runningFlags.getAndMakeDiskOK();
@@ -1456,14 +1441,14 @@ public class DefaultMessageStore implements MessageStore {
                 String storePathLogics = StorePathConfigHelper
                         .getStorePathConsumeQueue(DefaultMessageStore.this.getMessageStoreConfig().getStorePathRootDir());
                 double logicsRatio = UtilAll.getDiskPartitionSpaceUsedPercent(storePathLogics);
-                if (logicsRatio > DiskSpaceWarningLevelRatio) {
+                if (logicsRatio > diskSpaceWarningLevelRatio) {
                     boolean diskok = DefaultMessageStore.this.runningFlags.getAndMakeDiskFull();
                     if (diskok) {
                         DefaultMessageStore.log.error("logics disk maybe full soon " + logicsRatio + ", so mark disk full");
                     }
 
                     cleanImmediately = true;
-                } else if (logicsRatio > DiskSpaceCleanForciblyRatio) {
+                } else if (logicsRatio > diskSpaceCleanForciblyRatio) {
                     cleanImmediately = true;
                 } else {
                     boolean diskok = DefaultMessageStore.this.runningFlags.getAndMakeDiskOK();
@@ -1489,6 +1474,7 @@ public class DefaultMessageStore implements MessageStore {
             this.manualDeleteFileSeveralTimes = manualDeleteFileSeveralTimes;
         }
     }
+
     class CleanConsumeQueueService {
         private long lastPhysicalMinOffset = 0;
 
@@ -1532,15 +1518,16 @@ public class DefaultMessageStore implements MessageStore {
             return CleanConsumeQueueService.class.getSimpleName();
         }
     }
+
     class FlushConsumeQueueService extends ServiceThread {
-        private static final int RetryTimesOver = 3;
+        private static final int RETRY_TIMES_OVER = 3;
         private long lastFlushTimestamp = 0;
 
 
         private void doFlush(int retryTimes) {
             int flushConsumeQueueLeastPages = DefaultMessageStore.this.getMessageStoreConfig().getFlushConsumeQueueLeastPages();
 
-            if (retryTimes == RetryTimesOver) {
+            if (retryTimes == RETRY_TIMES_OVER) {
                 flushConsumeQueueLeastPages = 0;
             }
 
@@ -1589,7 +1576,7 @@ public class DefaultMessageStore implements MessageStore {
             }
 
 
-            this.doFlush(RetryTimesOver);
+            this.doFlush(RETRY_TIMES_OVER);
 
             DefaultMessageStore.log.info(this.getServiceName() + " service end");
         }
@@ -1606,6 +1593,7 @@ public class DefaultMessageStore implements MessageStore {
             return 1000 * 60;
         }
     }
+
     class ReputMessageService extends ServiceThread {
 
         private volatile long reputFromOffset = 0;
@@ -1683,9 +1671,7 @@ public class DefaultMessageStore implements MessageStore {
                                                 .getSinglePutMessageTopicSizeTotal(dispatchRequest.getTopic())
                                                 .addAndGet(dispatchRequest.getMsgSize());
                                     }
-                                }
-
-                                else if (size == 0) {
+                                } else if (size == 0) {
                                     this.reputFromOffset = DefaultMessageStore.this.commitLog.rollNextFile(this.reputFromOffset);
                                     readSize = result.getSize();
                                 }
@@ -1695,14 +1681,13 @@ public class DefaultMessageStore implements MessageStore {
                                 if (size > 0) {
                                     log.error("[BUG]read total count not equals msg total size. reputFromOffset={}", reputFromOffset);
                                     this.reputFromOffset += size;
-                                }
-                                else {
+                                } else {
                                     doNext = false;
                                     if (DefaultMessageStore.this.brokerConfig.getBrokerId() == MixAll.MASTER_ID) {
                                         log.error("[BUG]the master dispatch message to consume queue error, COMMITLOG OFFSET: {}",
                                                 this.reputFromOffset);
 
-                                        this.reputFromOffset += (result.getSize() - readSize);
+                                        this.reputFromOffset += result.getSize() - readSize;
                                     }
                                 }
                             }
@@ -1752,7 +1737,7 @@ public class DefaultMessageStore implements MessageStore {
     }
 
 
-    public void unlockMappedFile(final MappedFile mappedFile){
+    public void unlockMappedFile(final MappedFile mappedFile) {
         this.scheduledExecutorService.schedule(new Runnable() {
             @Override
             public void run() {

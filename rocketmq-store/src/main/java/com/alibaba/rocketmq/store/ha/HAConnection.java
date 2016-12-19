@@ -34,7 +34,7 @@ import java.nio.channels.SocketChannel;
  * @author shijia.wxr
  */
 public class HAConnection {
-    private static final Logger log = LoggerFactory.getLogger(LoggerName.StoreLoggerName);
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
     private final HAService haService;
     private final SocketChannel socketChannel;
     private final String clientAddr;
@@ -94,10 +94,10 @@ public class HAConnection {
      * @author shijia.wxr
      */
     class ReadSocketService extends ServiceThread {
-        private static final int ReadMaxBufferSize = 1024 * 1024;
+        private static final int READ_MAX_BUFFER_SIZE = 1024 * 1024;
         private final Selector selector;
         private final SocketChannel socketChannel;
-        private final ByteBuffer byteBufferRead = ByteBuffer.allocate(ReadMaxBufferSize);
+        private final ByteBuffer byteBufferRead = ByteBuffer.allocate(READ_MAX_BUFFER_SIZE);
         private int processPostion = 0;
         private volatile long lastReadTimestamp = System.currentTimeMillis();
 
@@ -221,8 +221,8 @@ public class HAConnection {
         private final Selector selector;
         private final SocketChannel socketChannel;
 
-        private final int HEADER_SIZE = 8 + 4;
-        private final ByteBuffer byteBufferHeader = ByteBuffer.allocate(HEADER_SIZE);
+        private final int headerSize = 8 + 4;
+        private final ByteBuffer byteBufferHeader = ByteBuffer.allocate(headerSize);
         private long nextTransferFromWhere = -1;
         private SelectMappedBufferResult selectMappedBufferResult;
         private boolean lastWriteOver = true;
@@ -283,7 +283,7 @@ public class HAConnection {
 
                             // Build Header
                             this.byteBufferHeader.position(0);
-                            this.byteBufferHeader.limit(HEADER_SIZE);
+                            this.byteBufferHeader.limit(headerSize);
                             this.byteBufferHeader.putLong(this.nextTransferFromWhere);
                             this.byteBufferHeader.putInt(0);
                             this.byteBufferHeader.flip();
@@ -316,7 +316,7 @@ public class HAConnection {
 
                         // Build Header
                         this.byteBufferHeader.position(0);
-                        this.byteBufferHeader.limit(HEADER_SIZE);
+                        this.byteBufferHeader.limit(headerSize);
                         this.byteBufferHeader.putLong(thisOffset);
                         this.byteBufferHeader.putInt(size);
                         this.byteBufferHeader.flip();

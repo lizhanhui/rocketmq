@@ -102,7 +102,7 @@ public class BrokerConfig {
 
     private long startAcceptSendRequestTimeStamp = 0L;
 
-    private boolean traceOn=true;
+    private boolean traceOn = true;
 
     public boolean isTraceOn() {
         return traceOn;

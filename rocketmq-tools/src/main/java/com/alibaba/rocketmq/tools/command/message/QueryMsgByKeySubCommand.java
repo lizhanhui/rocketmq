@@ -39,12 +39,10 @@ public class QueryMsgByKeySubCommand implements SubCommand {
         return "queryMsgByKey";
     }
 
-
     @Override
     public String commandDesc() {
         return "Query Message by Key";
     }
-
 
     @Override
     public Options buildCommandlineOptions(Options options) {
@@ -82,9 +80,9 @@ public class QueryMsgByKeySubCommand implements SubCommand {
         admin.start();
 
         QueryResult queryResult = admin.queryMessage(topic, key, 64, 0, Long.MAX_VALUE);
-        System.out.printf("%-50s %4s %40s%n",//
-                "#Message ID",//
-                "#QID",//
+        System.out.printf("%-50s %4s %40s%n",
+                "#Message ID",
+                "#QID",
                 "#Offset");
         for (MessageExt msg : queryResult.getMessageList()) {
             System.out.printf("%-50s %4d %40d%n", msg.getMsgId(), msg.getQueueId(), msg.getQueueOffset());

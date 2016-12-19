@@ -38,8 +38,6 @@ public class PullMessageService extends ServiceThread {
                     return new Thread(r, "PullMessageServiceScheduledThread");
                 }
             });
-    ;
-
 
     public PullMessageService(MQClientInstance mQClientFactory) {
         this.mQClientFactory = mQClientFactory;

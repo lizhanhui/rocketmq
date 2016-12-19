@@ -56,7 +56,7 @@ public class MQAdminStartup {
     }
 
     public static void main0(String[] args, RPCHook rpcHook) {
-        System.setProperty(RemotingCommand.RemotingVersionKey, Integer.toString(MQVersion.CurrentVersion));
+        System.setProperty(RemotingCommand.REMOTING_VERSION_KEY, Integer.toString(MQVersion.CURRENT_VERSION));
 
 
         //PackageConflictDetect.detectFastjson();
@@ -79,7 +79,7 @@ public class MQAdminStartup {
                                 ServerUtil.printCommandLineHelp("mqadmin " + cmd.commandName(), options);
                             }
                         } else {
-                            System.out.println("The sub command \'" + args[1] + "\' not exist.");
+                            System.out.printf("The sub command \'" + args[1] + "\' not exist.%n");
                         }
                         break;
                     }
@@ -106,7 +106,7 @@ public class MQAdminStartup {
 
                         cmd.execute(commandLine, options, rpcHook);
                     } else {
-                        System.out.println("The sub command \'" + args[0] + "\' not exist.");
+                        System.out.printf("The sub command \'" + args[0] + "\' not exist.%n");
                     }
                     break;
             }
@@ -183,13 +183,13 @@ public class MQAdminStartup {
     }
 
     private static void printHelp() {
-        System.out.println("The most commonly used mqadmin commands are:");
+        System.out.printf("The most commonly used mqadmin commands are:%n");
 
         for (SubCommand cmd : subCommandList) {
             System.out.printf("   %-20s %s%n", cmd.commandName(), cmd.commandDesc());
         }
 
-        System.out.println("\nSee 'mqadmin help <command>' for more information on a specific command.");
+        System.out.printf("%nSee 'mqadmin help <command>' for more information on a specific command.");
     }
 
     private static SubCommand findSubCommand(final String name) {

@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.alibaba.rocketmq.tools.command.topic;
 
@@ -31,9 +31,7 @@ import java.util.Set;
 
 
 /**
- *
  * @author shijia.wxr
- *
  */
 public class UpdateTopicSubCommand implements SubCommand {
 
@@ -146,11 +144,11 @@ public class UpdateTopicSubCommand implements SubCommand {
                     String brokerName = CommandUtil.fetchBrokerNameByAddr(defaultMQAdminExt, addr);
                     String orderConf = brokerName + ":" + topicConfig.getWriteQueueNums();
                     defaultMQAdminExt.createOrUpdateOrderConf(topicConfig.getTopicName(), orderConf, false);
-                    System.out.println(String.format("set broker orderConf. isOrder=%s, orderConf=[%s]",
+                    System.out.printf(String.format("set broker orderConf. isOrder=%s, orderConf=[%s]",
                             isOrder, orderConf.toString()));
                 }
                 System.out.printf("create topic to %s success.%n", addr);
-                System.out.println(topicConfig);
+                System.out.printf("%s", topicConfig);
                 return;
 
             } else if (commandLine.hasOption('c')) {
@@ -177,11 +175,11 @@ public class UpdateTopicSubCommand implements SubCommand {
                     }
                     defaultMQAdminExt.createOrUpdateOrderConf(topicConfig.getTopicName(),
                             orderConf.toString(), true);
-                    System.out.println(String.format("set cluster orderConf. isOrder=%s, orderConf=[%s]",
+                    System.out.printf(String.format("set cluster orderConf. isOrder=%s, orderConf=[%s]",
                             isOrder, orderConf.toString()));
                 }
 
-                System.out.println(topicConfig);
+                System.out.printf("%s", topicConfig);
                 return;
             }
 

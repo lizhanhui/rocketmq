@@ -20,21 +20,21 @@ package com.alibaba.rocketmq.common.constant;
  * @author shijia.wxr
  */
 public class LoggerName {
-    public static final String FiltersrvLoggerName = "RocketmqFiltersrv";
-    public static final String NamesrvLoggerName = "RocketmqNamesrv";
-    public static final String BrokerLoggerName = "RocketmqBroker";
-    public static final String ClientLoggerName = "RocketmqClient";
-    public static final String ToolsLoggerName = "RocketmqTools";
-    public static final String CommonLoggerName = "RocketmqCommon";
-    public static final String StoreLoggerName = "RocketmqStore";
-    public static final String StoreErrorLoggerName = "RocketmqStoreError";
-    public static final String TransactionLoggerName = "RocketmqTransaction";
-    public static final String RebalanceLockLoggerName = "RocketmqRebalanceLock";
-    public static final String RocketmqStatsLoggerName = "RocketmqStats";
-    public static final String CommercialLoggerName = "RocketmqCommercial";
-    public static final String FlowControlLoggerName = "RocketmqFlowControl";
-    public static final String RocketmqAuthorizeLoggerName = "RocketmqAuthorize";
-    public static final String DuplicationLoggerName = "RocketmqDuplication";
-    public static final String ProtectionLoggerName = "RocketmqProtection";
-    public static final String WaterMarkLoggerName = "RocketmqWaterMark";
+    public static final String FILTERSRV_LOGGER_NAME = "RocketmqFiltersrv";
+    public static final String NAMESRV_LOGGER_NAME = "RocketmqNamesrv";
+    public static final String BROKER_LOGGER_NAME = "RocketmqBroker";
+    public static final String CLIENT_LOGGER_NAME = "RocketmqClient";
+    public static final String TOOLS_LOGGER_NAME = "RocketmqTools";
+    public static final String COMMON_LOGGER_NAME = "RocketmqCommon";
+    public static final String STORE_LOGGER_NAME = "RocketmqStore";
+    public static final String STORE_ERROR_LOGGER_NAME = "RocketmqStoreError";
+    public static final String TRANSACTION_LOGGER_NAME = "RocketmqTransaction";
+    public static final String REBALANCE_LOCK_LOGGER_NAME = "RocketmqRebalanceLock";
+    public static final String ROCKETMQ_STATS_LOGGER_NAME = "RocketmqStats";
+    public static final String COMMERCIAL_LOGGER_NAME = "RocketmqCommercial";
+    public static final String FLOW_CONTROL_LOGGER_NAME = "RocketmqFlowControl";
+    public static final String ROCKETMQ_AUTHORIZE_LOGGER_NAME = "RocketmqAuthorize";
+    public static final String DUPLICATION_LOGGER_NAME = "RocketmqDuplication";
+    public static final String PROTECTION_LOGGER_NAME = "RocketmqProtection";
+    public static final String WATER_MARK_LOGGER_NAME = "RocketmqWaterMark";
 }

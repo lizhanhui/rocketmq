@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package com.alibaba.rocketmq.common.stats;
@@ -45,26 +45,24 @@ public class MomentStatsItem {
 
 
     public void init() {
-
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
-                                                              @Override
-                                                              public void run() {
-                                                                  try {
-                                                                      printAtMinutes();
+            @Override
+            public void run() {
+                try {
+                    printAtMinutes();
 
-                                                                      MomentStatsItem.this.value.set(0);
-                                                                  } catch (Throwable e) {
-                                                                  }
-                                                              }
-                                                          }, Math.abs(UtilAll.computNextMinutesTimeMillis() - System.currentTimeMillis()), //
-                1000 * 60 * 5, TimeUnit.MILLISECONDS);
+                    MomentStatsItem.this.value.set(0);
+                } catch (Throwable e) {
+                }
+            }
+        }, Math.abs(UtilAll.computNextMinutesTimeMillis() - System.currentTimeMillis()), 1000 * 60 * 5, TimeUnit.MILLISECONDS);
     }
 
 
     public void printAtMinutes() {
-        log.info(String.format("[%s] [%s] Stats Every 5 Minutes, Value: %d", //
-                this.statsName,//
-                this.statsKey,//
+        log.info(String.format("[%s] [%s] Stats Every 5 Minutes, Value: %d",
+                this.statsName,
+                this.statsKey,
                 this.value.get()));
     }
 

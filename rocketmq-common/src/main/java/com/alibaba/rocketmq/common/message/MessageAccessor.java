@@ -53,8 +53,8 @@ public class MessageAccessor {
     }
 
 
-    public static void setOriginMessageId(final Message msg, String OriginMessageId) {
-        putProperty(msg, MessageConst.PROPERTY_ORIGIN_MESSAGE_ID, OriginMessageId);
+    public static void setOriginMessageId(final Message msg, String originMessageId) {
+        putProperty(msg, MessageConst.PROPERTY_ORIGIN_MESSAGE_ID, originMessageId);
     }
 
 

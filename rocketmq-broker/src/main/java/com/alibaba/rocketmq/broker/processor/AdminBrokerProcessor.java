@@ -66,14 +66,12 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author manhong.yqd
  */
 public class AdminBrokerProcessor implements NettyRequestProcessor {
-    private static final Logger log = LoggerFactory.getLogger(LoggerName.BrokerLoggerName);
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
     private final BrokerController brokerController;
-
 
     public AdminBrokerProcessor(final BrokerController brokerController) {
         this.brokerController = brokerController;
     }
-
 
     @Override
     public RemotingCommand processRequest(ChannelHandlerContext ctx, RemotingCommand request) throws RemotingCommandException {
@@ -82,17 +80,12 @@ public class AdminBrokerProcessor implements NettyRequestProcessor {
                 return this.updateAndCreateTopic(ctx, request);
             case RequestCode.DELETE_TOPIC_IN_BROKER:
                 return this.deleteTopic(ctx, request);
-
             case RequestCode.GET_ALL_TOPIC_CONFIG:
                 return this.getAllTopicConfig(ctx, request);
-
-
             case RequestCode.UPDATE_BROKER_CONFIG:
                 return this.updateBrokerConfig(ctx, request);
-
             case RequestCode.GET_BROKER_CONFIG:
                 return this.getBrokerConfig(ctx, request);
-
             case RequestCode.SEARCH_OFFSET_BY_TIMESTAMP:
                 return this.searchOffsetByTimestamp(ctx, request);
             case RequestCode.GET_MAX_OFFSET:
@@ -101,85 +94,56 @@ public class AdminBrokerProcessor implements NettyRequestProcessor {
                 return this.getMinOffset(ctx, request);
             case RequestCode.GET_EARLIEST_MSG_STORETIME:
                 return this.getEarliestMsgStoretime(ctx, request);
-
-
             case RequestCode.GET_BROKER_RUNTIME_INFO:
                 return this.getBrokerRuntimeInfo(ctx, request);
-
-
             case RequestCode.LOCK_BATCH_MQ:
                 return this.lockBatchMQ(ctx, request);
             case RequestCode.UNLOCK_BATCH_MQ:
                 return this.unlockBatchMQ(ctx, request);
-
-
             case RequestCode.UPDATE_AND_CREATE_SUBSCRIPTIONGROUP:
                 return this.updateAndCreateSubscriptionGroup(ctx, request);
             case RequestCode.GET_ALL_SUBSCRIPTIONGROUP_CONFIG:
                 return this.getAllSubscriptionGroup(ctx, request);
             case RequestCode.DELETE_SUBSCRIPTIONGROUP:
                 return this.deleteSubscriptionGroup(ctx, request);
-
-
             case RequestCode.GET_TOPIC_STATS_INFO:
                 return this.getTopicStatsInfo(ctx, request);
-
-
             case RequestCode.GET_CONSUMER_CONNECTION_LIST:
                 return this.getConsumerConnectionList(ctx, request);
-
             case RequestCode.GET_PRODUCER_CONNECTION_LIST:
                 return this.getProducerConnectionList(ctx, request);
-
             case RequestCode.GET_CONSUME_STATS:
                 return this.getConsumeStats(ctx, request);
             case RequestCode.GET_ALL_CONSUMER_OFFSET:
                 return this.getAllConsumerOffset(ctx, request);
-
-
             case RequestCode.GET_ALL_DELAY_OFFSET:
                 return this.getAllDelayOffset(ctx, request);
-
             case RequestCode.INVOKE_BROKER_TO_RESET_OFFSET:
                 return this.resetOffset(ctx, request);
-
-
             case RequestCode.INVOKE_BROKER_TO_GET_CONSUMER_STATUS:
                 return this.getConsumerStatus(ctx, request);
-
-
             case RequestCode.QUERY_TOPIC_CONSUME_BY_WHO:
                 return this.queryTopicConsumeByWho(ctx, request);
-
             case RequestCode.REGISTER_FILTER_SERVER:
                 return this.registerFilterServer(ctx, request);
-
             case RequestCode.QUERY_CONSUME_TIME_SPAN:
                 return this.queryConsumeTimeSpan(ctx, request);
             case RequestCode.GET_SYSTEM_TOPIC_LIST_FROM_BROKER:
                 return this.getSystemTopicListFromBroker(ctx, request);
-
-
             case RequestCode.CLEAN_EXPIRED_CONSUMEQUEUE:
                 return this.cleanExpiredConsumeQueue();
             case RequestCode.CLEAN_UNUSED_TOPIC:
                 return this.cleanUnusedTopic();
-
             case RequestCode.GET_CONSUMER_RUNNING_INFO:
                 return this.getConsumerRunningInfo(ctx, request);
-
             case RequestCode.QUERY_CORRECTION_OFFSET:
                 return this.queryCorrectionOffset(ctx, request);
-
             case RequestCode.CONSUME_MESSAGE_DIRECTLY:
                 return this.consumeMessageDirectly(ctx, request);
             case RequestCode.CLONE_GROUP_OFFSET:
                 return this.cloneGroupOffset(ctx, request);
-
-
             case RequestCode.VIEW_BROKER_STATS_DATA:
                 return ViewBrokerStatsData(ctx, request);
-
             case RequestCode.GET_BROKER_CONSUME_STATS:
                 return fetchAllConsumeStatsInBroker(ctx, request);
             default:
@@ -529,7 +493,7 @@ public class AdminBrokerProcessor implements NettyRequestProcessor {
 
             long timestamp = 0;
             if (max > 0) {
-                timestamp = this.brokerController.getMessageStore().getMessageStoreTimeStamp(topic, i, (max - 1));
+                timestamp = this.brokerController.getMessageStore().getMessageStoreTimeStamp(topic, i, max - 1);
             }
 
             topicOffset.setMinOffset(min);
@@ -847,11 +811,11 @@ public class AdminBrokerProcessor implements NettyRequestProcessor {
             timeSpan.setMinTimeStamp(minTime);
 
             long max = this.brokerController.getMessageStore().getMaxOffsetInQuque(topic, i);
-            long maxTime = this.brokerController.getMessageStore().getMessageStoreTimeStamp(topic, i, (max - 1));
+            long maxTime = this.brokerController.getMessageStore().getMessageStoreTimeStamp(topic, i, max - 1);
             timeSpan.setMaxTimeStamp(maxTime);
 
             long consumeTime;
-            long consumerOffset = this.brokerController.getConsumerOffsetManager().queryOffset(//
+            long consumerOffset = this.brokerController.getConsumerOffsetManager().queryOffset(
                     requestHeader.getGroup(), topic, i);
             if (consumerOffset > 0) {
                 consumeTime = this.brokerController.getMessageStore().getMessageStoreTimeStamp(topic, i, consumerOffset - 1);
@@ -1156,8 +1120,8 @@ public class AdminBrokerProcessor implements NettyRequestProcessor {
 
     private HashMap<String, String> prepareRuntimeInfo() {
         HashMap<String, String> runtimeInfo = this.brokerController.getMessageStore().getRuntimeInfo();
-        runtimeInfo.put("brokerVersionDesc", MQVersion.getVersionDesc(MQVersion.CurrentVersion));
-        runtimeInfo.put("brokerVersion", String.valueOf(MQVersion.CurrentVersion));
+        runtimeInfo.put("brokerVersionDesc", MQVersion.getVersionDesc(MQVersion.CURRENT_VERSION));
+        runtimeInfo.put("brokerVersion", String.valueOf(MQVersion.CURRENT_VERSION));
 
         runtimeInfo.put("msgPutTotalYesterdayMorning",
                 String.valueOf(this.brokerController.getBrokerStats().getMsgPutTotalYesterdayMorning()));

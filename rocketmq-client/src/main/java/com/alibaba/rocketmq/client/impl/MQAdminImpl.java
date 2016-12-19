@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.alibaba.rocketmq.client.impl;
 
@@ -261,18 +261,17 @@ public class MQAdminImpl {
     }
 
     public QueryResult queryMessage(String topic, String key, int maxNum, long begin, long end) throws MQClientException,
-        InterruptedException {
+            InterruptedException {
         return queryMessage(topic, key, maxNum, begin, end, false);
     }
 
-    public MessageExt queryMessageByUniqKey(String topic, String uniqKey)  throws InterruptedException, MQClientException  {
+    public MessageExt queryMessageByUniqKey(String topic, String uniqKey) throws InterruptedException, MQClientException {
 
         QueryResult qr = this.queryMessage(topic, uniqKey, 32,
                 MessageClientIDSetter.getNearlyTimeFromID(uniqKey).getTime() - 1000, Long.MAX_VALUE, true);
         if (qr != null && qr.getMessageList() != null && qr.getMessageList().size() > 0) {
             return qr.getMessageList().get(0);
-        }
-        else {
+        } else {
             return null;
         }
     }
@@ -347,9 +346,9 @@ public class MQAdminImpl {
                                 }, isUniqKey);
                     } catch (Exception e) {
                         log.warn("queryMessage exception", e);
-                    }// end of try
+                    }
 
-                } // end of for
+                }
 
                 boolean ok = countDownLatch.await(timeoutMillis * 4, TimeUnit.MILLISECONDS);
                 if (!ok) {
@@ -375,17 +374,14 @@ public class MQAdminImpl {
                                         messageList.add(msgExt);
                                     }
 
-                                }
-                                else {
+                                } else {
 
                                     messageList.add(msgExt);
                                 }
-                            }
-                            else {
+                            } else {
                                 log.warn("queryMessage by uniqKey, find message key not matched, maybe hash duplicate {}", msgExt.toString());
                             }
-                        }
-                        else {
+                        } else {
                             String keys = msgExt.getKeys();
                             if (keys != null) {
                                 boolean matched = false;
@@ -401,8 +397,7 @@ public class MQAdminImpl {
 
                                 if (matched) {
                                     messageList.add(msgExt);
-                                }
-                                else {
+                                } else {
                                     log.warn("queryMessage, find message key not matched, maybe hash duplicate {}", msgExt.toString());
                                 }
                             }

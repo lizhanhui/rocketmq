@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.alibaba.rocketmq.filtersrv;
 
@@ -60,29 +60,25 @@ public class FiltersrvStartup {
 
         String tip = "The Filter Server boot success, " + controller.localAddr();
         log.info(tip);
-        System.out.println(tip);
+        System.out.printf("%s%n", tip);
 
         return controller;
     }
 
     public static FiltersrvController createController(String[] args) {
-        System.setProperty(RemotingCommand.RemotingVersionKey, Integer.toString(MQVersion.CurrentVersion));
+        System.setProperty(RemotingCommand.REMOTING_VERSION_KEY, Integer.toString(MQVersion.CURRENT_VERSION));
 
 
-        if (null == System.getProperty(NettySystemConfig.SystemPropertySocketSndbufSize)) {
+        if (null == System.getProperty(NettySystemConfig.COM_ROCKETMQ_REMOTING_SOCKET_SNDBUF_SIZE)) {
             NettySystemConfig.socketSndbufSize = 65535;
         }
 
 
-        if (null == System.getProperty(NettySystemConfig.SystemPropertySocketRcvbufSize)) {
+        if (null == System.getProperty(NettySystemConfig.COM_ROCKETMQ_REMOTING_SOCKET_RCVBUF_SIZE)) {
             NettySystemConfig.socketRcvbufSize = 1024;
         }
 
         try {
-
-            //PackageConflictDetect.detectFastjson();
-
-
             Options options = ServerUtil.buildCommandlineOptions(new Options());
             final CommandLine commandLine =
                     ServerUtil.parseCmdLine("mqfiltersrv", args, buildCommandlineOptions(options),
@@ -91,7 +87,6 @@ public class FiltersrvStartup {
                 System.exit(-1);
                 return null;
             }
-
 
             final FiltersrvConfig filtersrvConfig = new FiltersrvConfig();
             final NettyServerConfig nettyServerConfig = new NettyServerConfig();
@@ -103,7 +98,7 @@ public class FiltersrvStartup {
                     Properties properties = new Properties();
                     properties.load(in);
                     MixAll.properties2Object(properties, filtersrvConfig);
-                    System.out.println("load config properties file OK, " + file);
+                    System.out.printf("load config properties file OK, " + file + "%n");
                     in.close();
 
                     String port = properties.getProperty("listenPort");
@@ -113,14 +108,11 @@ public class FiltersrvStartup {
                 }
             }
 
-
             nettyServerConfig.setListenPort(0);
-
             nettyServerConfig.setServerAsyncSemaphoreValue(filtersrvConfig.getFsServerAsyncSemaphoreValue());
             nettyServerConfig.setServerCallbackExecutorThreads(filtersrvConfig
                     .getFsServerCallbackExecutorThreads());
             nettyServerConfig.setServerWorkerThreads(filtersrvConfig.getFsServerWorkerThreads());
-
 
             if (commandLine.hasOption('p')) {
                 MixAll.printObjectProperties(null, filtersrvConfig);
@@ -129,10 +121,9 @@ public class FiltersrvStartup {
             }
 
             MixAll.properties2Object(ServerUtil.commandLine2Properties(commandLine), filtersrvConfig);
-
             if (null == filtersrvConfig.getRocketmqHome()) {
-                System.out.println("Please set the " + MixAll.ROCKETMQ_HOME_ENV
-                        + " variable in your environment to match the location of the RocketMQ installation");
+                System.out.printf("Please set the " + MixAll.ROCKETMQ_HOME_ENV
+                        + " variable in your environment to match the location of the RocketMQ installation%n");
                 System.exit(-2);
             }
 
@@ -141,8 +132,7 @@ public class FiltersrvStartup {
             configurator.setContext(lc);
             lc.reset();
             configurator.doConfigure(filtersrvConfig.getRocketmqHome() + "/conf/logback_filtersrv.xml");
-            log = LoggerFactory.getLogger(LoggerName.FiltersrvLoggerName);
-
+            log = LoggerFactory.getLogger(LoggerName.FILTERSRV_LOGGER_NAME);
 
             final FiltersrvController controller =
                     new FiltersrvController(filtersrvConfig, nettyServerConfig);
@@ -155,7 +145,6 @@ public class FiltersrvStartup {
             Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
                 private volatile boolean hasShutdown = false;
                 private AtomicInteger shutdownTimes = new AtomicInteger(0);
-
 
                 @Override
                 public void run() {
@@ -177,7 +166,6 @@ public class FiltersrvStartup {
             e.printStackTrace();
             System.exit(-1);
         }
-
         return null;
     }
 

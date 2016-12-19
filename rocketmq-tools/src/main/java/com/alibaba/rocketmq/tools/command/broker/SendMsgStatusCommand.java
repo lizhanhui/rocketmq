@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.alibaba.rocketmq.tools.command.broker;
 
@@ -66,7 +66,7 @@ public class SendMsgStatusCommand implements SubCommand {
 
     @Override
     public void execute(CommandLine commandLine, Options options, RPCHook rpcHook) {
-        final DefaultMQProducer producer = new DefaultMQProducer("PID_SMSC",rpcHook);
+        final DefaultMQProducer producer = new DefaultMQProducer("PID_SMSC", rpcHook);
         producer.setInstanceName("PID_SMSC_" + System.currentTimeMillis());
 
         try {
@@ -80,7 +80,7 @@ public class SendMsgStatusCommand implements SubCommand {
             for (int i = 0; i < count; i++) {
                 long begin = System.currentTimeMillis();
                 SendResult result = producer.send(buildMessage(brokerName, messageSize));
-                System.out.println("rt:" + (System.currentTimeMillis() - begin) + "ms, SendResult=" + result);
+                System.out.printf("rt:" + (System.currentTimeMillis() - begin) + "ms, SendResult=" + result);
             }
         } catch (Exception e) {
             e.printStackTrace();

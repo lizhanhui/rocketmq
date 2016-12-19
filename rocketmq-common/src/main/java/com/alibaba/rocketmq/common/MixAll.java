@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.alibaba.rocketmq.common;
 
@@ -20,20 +20,36 @@ import com.alibaba.rocketmq.common.annotation.ImportantField;
 import com.alibaba.rocketmq.common.help.FAQUrl;
 import org.slf4j.Logger;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.net.*;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.net.URL;
+import java.net.URLConnection;
 import java.nio.ByteBuffer;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
 
 /**
  * @author shijia.wxr
- * @author lansheng.zj
  */
 public class MixAll {
     public static final String ROCKETMQ_HOME_ENV = "ROCKETMQ_HOME";
@@ -63,8 +79,8 @@ public class MixAll {
     public static final String CID_ONSAPI_PULL_GROUP = "CID_ONSAPI_PULL";
     public static final String CID_RMQ_SYS_PREFIX = "CID_RMQ_SYS_";
 
-    public static final List<String> LocalInetAddrs = getLocalInetAddress();
-    public static final String Localhost = localhost();
+    public static final List<String> LOCAL_INET_ADDRESS = getLocalInetAddress();
+    public static final String LOCALHOST = localhost();
     public static final String DEFAULT_CHARSET = "UTF-8";
     public static final long MASTER_ID = 0L;
     public static final long CURRENT_JVM_PID = getPID();
@@ -74,8 +90,8 @@ public class MixAll {
     public static final String DLQ_GROUP_TOPIC_PREFIX = "%DLQ%";
     public static final String SYSTEM_TOPIC_PREFIX = "rmq_sys_";
     public static final String UNIQUE_MSG_QUERY_FLAG = "_UNIQUE_KEY_QUERY";
-    public static final String DEFAULT_TRACE_REGION_ID="DefaultRegion";
-    public static final String CONSUME_CONTEXT_TYPE="ConsumeContextType";
+    public static final String DEFAULT_TRACE_REGION_ID = "DefaultRegion";
+    public static final String CONSUME_CONTEXT_TYPE = "ConsumeContextType";
 
     public static String getRetryTopic(final String consumerGroup) {
         return RETRY_GROUP_TOPIC_PREFIX + consumerGroup;
@@ -130,10 +146,6 @@ public class MixAll {
         return Math.abs(value);
     }
 
-
-    /**
-
-     */
     public static final void string2File(final String str, final String fileName) throws IOException {
 
         String tmpFile = fileName + ".tmp";
@@ -195,7 +207,7 @@ public class MixAll {
             try {
                 fileReader = new FileReader(file);
                 int len = fileReader.read(data);
-                result = (len == data.length);
+                result = len == data.length;
             } catch (IOException e) {
                 // e.printStackTrace();
             } finally {
@@ -209,8 +221,7 @@ public class MixAll {
             }
 
             if (result) {
-                String value = new String(data);
-                return value;
+                return new String(data);
             }
         }
         return null;
@@ -264,9 +275,9 @@ public class MixAll {
                             value = "";
                         }
                     } catch (IllegalArgumentException e) {
-                        System.out.println(e);
+                        e.printStackTrace();
                     } catch (IllegalAccessException e) {
-                        System.out.println(e);
+                        e.printStackTrace();
                     }
 
                     if (onlyImportantField) {
@@ -279,7 +290,6 @@ public class MixAll {
                     if (log != null) {
                         log.info(name + "=" + value);
                     } else {
-                        System.out.println(name + "=" + value);
                     }
                 }
             }
@@ -297,10 +307,6 @@ public class MixAll {
         return sb.toString();
     }
 
-
-    /**
-
-     */
     public static Properties string2Properties(final String str) {
         Properties properties = new Properties();
         try {
@@ -317,10 +323,6 @@ public class MixAll {
         return properties;
     }
 
-
-    /**
-
-     */
     public static Properties object2Properties(final Object object) {
         Properties properties = new Properties();
 
@@ -334,9 +336,9 @@ public class MixAll {
                         field.setAccessible(true);
                         value = field.get(object);
                     } catch (IllegalArgumentException e) {
-                        System.out.println(e);
+                        e.printStackTrace();
                     } catch (IllegalAccessException e) {
-                        System.out.println(e);
+                        e.printStackTrace();
                     }
 
                     if (value != null) {
@@ -349,10 +351,6 @@ public class MixAll {
         return properties;
     }
 
-
-    /**
-
-     */
     public static void properties2Object(final Properties p, final Object object) {
         Method[] methods = object.getClass().getMethods();
         for (Method method : methods) {
@@ -379,7 +377,7 @@ public class MixAll {
                                 arg = Boolean.parseBoolean(property);
                             } else if (cn.equals("float") || cn.equals("Float")) {
                                 arg = Float.parseFloat(property);
-                            }else if (cn.equals("String")) {
+                            } else if (cn.equals("String")) {
                                 arg = property;
                             } else {
                                 continue;
@@ -419,7 +417,7 @@ public class MixAll {
 
 
     public static boolean isLocalAddr(String address) {
-        for (String addr : LocalInetAddrs) {
+        for (String addr : LOCAL_INET_ADDRESS) {
             if (address.contains(addr))
                 return true;
         }
@@ -482,7 +480,7 @@ public class MixAll {
         int unit = si ? 1000 : 1024;
         if (bytes < unit) return bytes + " B";
         int exp = (int) (Math.log(bytes) / Math.log(unit));
-        String pre = (si ? "kMGTPE" : "KMGTPE").charAt(exp-1) + (si ? "" : "i");
+        String pre = (si ? "kMGTPE" : "KMGTPE").charAt(exp - 1) + (si ? "" : "i");
         return String.format("%.1f %sB", bytes / Math.pow(unit, exp), pre);
     }
 }

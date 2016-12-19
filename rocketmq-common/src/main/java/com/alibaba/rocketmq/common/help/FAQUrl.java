@@ -71,21 +71,21 @@ public class FAQUrl {
     public static final String UNKNOWN_HOST_EXCEPTION = //
             "http://docs.aliyun.com/cn#/pub/ons/faq/exceptions&unknown_host";
 
-    private static final String TipStringBegin = "\nSee ";
-    private static final String TipStringEnd = " for further details.";
+    private static final String TIP_STRING_BEGIN = "\nSee ";
+    private static final String TIP_STRING_END = " for further details.";
 
 
     public static String suggestTodo(final String url) {
         StringBuilder sb = new StringBuilder();
-        sb.append(TipStringBegin);
+        sb.append(TIP_STRING_BEGIN);
         sb.append(url);
-        sb.append(TipStringEnd);
+        sb.append(TIP_STRING_END);
         return sb.toString();
     }
 
     public static String attachDefaultURL(final String errorMessage) {
         if (errorMessage != null) {
-            int index = errorMessage.indexOf(TipStringBegin);
+            int index = errorMessage.indexOf(TIP_STRING_BEGIN);
             if (-1 == index) {
                 StringBuilder sb = new StringBuilder();
                 sb.append(errorMessage);

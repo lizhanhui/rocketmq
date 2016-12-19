@@ -27,8 +27,8 @@ import java.util.TreeMap;
 
 
 public class DefaultMonitorListener implements MonitorListener {
-    private final static String LogPrefix = "[MONITOR] ";
-    private final static String LogNotify = LogPrefix + " [NOTIFY] ";
+    private final static String LOG_PREFIX = "[MONITOR] ";
+    private final static String LOG_NOTIFY = LOG_PREFIX + " [NOTIFY] ";
     private final Logger log = ClientLogger.getLog();
 
 
@@ -38,25 +38,25 @@ public class DefaultMonitorListener implements MonitorListener {
 
     @Override
     public void beginRound() {
-        log.info(LogPrefix + "=========================================beginRound");
+        log.info(LOG_PREFIX + "=========================================beginRound");
     }
 
 
     @Override
     public void reportUndoneMsgs(UndoneMsgs undoneMsgs) {
-        log.info(String.format(LogPrefix + "reportUndoneMsgs: %s", undoneMsgs));
+        log.info(String.format(LOG_PREFIX + "reportUndoneMsgs: %s", undoneMsgs));
     }
 
 
     @Override
     public void reportFailedMsgs(FailedMsgs failedMsgs) {
-        log.info(String.format(LogPrefix + "reportFailedMsgs: %s", failedMsgs));
+        log.info(String.format(LOG_PREFIX + "reportFailedMsgs: %s", failedMsgs));
     }
 
 
     @Override
     public void reportDeleteMsgsEvent(DeleteMsgsEvent deleteMsgsEvent) {
-        log.info(String.format(LogPrefix + "reportDeleteMsgsEvent: %s", deleteMsgsEvent));
+        log.info(String.format(LOG_PREFIX + "reportDeleteMsgsEvent: %s", deleteMsgsEvent));
     }
 
 
@@ -66,7 +66,7 @@ public class DefaultMonitorListener implements MonitorListener {
         {
             boolean result = ConsumerRunningInfo.analyzeSubscription(criTable);
             if (!result) {
-                log.info(String.format(LogNotify
+                log.info(String.format(LOG_NOTIFY
                         + "reportConsumerRunningInfo: ConsumerGroup: %s, Subscription different", criTable
                         .firstEntry().getValue().getProperties().getProperty("consumerGroup")));
             }
@@ -78,11 +78,11 @@ public class DefaultMonitorListener implements MonitorListener {
             while (it.hasNext()) {
                 Entry<String, ConsumerRunningInfo> next = it.next();
                 String result = ConsumerRunningInfo.analyzeProcessQueue(next.getKey(), next.getValue());
-                if (result != null && !result.isEmpty()) {
-                    log.info(String.format(LogNotify
-                                    + "reportConsumerRunningInfo: ConsumerGroup: %s, ClientId: %s, %s", //
-                            criTable.firstEntry().getValue().getProperties().getProperty("consumerGroup"),//
-                            next.getKey(),//
+                if (!result.isEmpty()) {
+                    log.info(String.format(LOG_NOTIFY
+                                    + "reportConsumerRunningInfo: ConsumerGroup: %s, ClientId: %s, %s",
+                            criTable.firstEntry().getValue().getProperties().getProperty("consumerGroup"),
+                            next.getKey(),
                             result));
                 }
             }
@@ -92,6 +92,6 @@ public class DefaultMonitorListener implements MonitorListener {
 
     @Override
     public void endRound() {
-        log.info(LogPrefix + "=========================================endRound");
+        log.info(LOG_PREFIX + "=========================================endRound");
     }
 }

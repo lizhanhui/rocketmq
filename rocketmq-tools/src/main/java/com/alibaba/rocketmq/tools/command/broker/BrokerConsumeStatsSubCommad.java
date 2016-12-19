@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.alibaba.rocketmq.tools.command.broker;
 
@@ -41,12 +41,10 @@ public class BrokerConsumeStatsSubCommad implements SubCommand {
         return "brokerConsumeStats";
     }
 
-
     @Override
     public String commandDesc() {
         return "Fetch broker consume stats data";
     }
-
 
     @Override
     public Options buildCommandlineOptions(Options options) {
@@ -90,14 +88,14 @@ public class BrokerConsumeStatsSubCommad implements SubCommand {
             }
 
             ConsumeStatsList consumeStatsList = defaultMQAdminExt.fetchConsumeStatsInBroker(brokerAddr, isOrder, timeoutMillis);
-            System.out.printf("%-32s  %-32s  %-32s  %-4s  %-20s  %-20s  %-20s  %s%n",//
-                    "#Topic",//
-                    "#Group",//
-                    "#Broker Name",//
-                    "#QID",//
-                    "#Broker Offset",//
-                    "#Consumer Offset",//
-                    "#Diff", //
+            System.out.printf("%-32s  %-32s  %-32s  %-4s  %-20s  %-20s  %-20s  %s%n",
+                    "#Topic",
+                    "#Group",
+                    "#Broker Name",
+                    "#QID",
+                    "#Broker Offset",
+                    "#Consumer Offset",
+                    "#Diff",
                     "#LastTime");
             for (Map<String, List<ConsumeStats>> map : consumeStatsList.getConsumeStatsList()) {
                 for (Map.Entry<String, List<ConsumeStats>> entry : map.entrySet()) {
@@ -116,27 +114,26 @@ public class BrokerConsumeStatsSubCommad implements SubCommand {
                             }
                             String lastTime = "-";
                             try {
-                                lastTime = UtilAll.formatDate(new Date(offsetWrapper.getLastTimestamp()), UtilAll.yyyy_MM_dd_HH_mm_ss);
+                                lastTime = UtilAll.formatDate(new Date(offsetWrapper.getLastTimestamp()), UtilAll.YYYY_MM_DD_HH_MM_SS);
                             } catch (Exception e) {
-                                //
+
                             }
                             if (offsetWrapper.getLastTimestamp() > 0)
-                                System.out.printf("%-32s  %-32s  %-32s  %-4d  %-20d  %-20d  %-20d  %s%n",//
-                                        UtilAll.frontStringAtLeast(mq.getTopic(), 32),//
+                                System.out.printf("%-32s  %-32s  %-32s  %-4d  %-20d  %-20d  %-20d  %s%n",
+                                        UtilAll.frontStringAtLeast(mq.getTopic(), 32),
                                         group,
-                                        UtilAll.frontStringAtLeast(mq.getBrokerName(), 32),//
-                                        mq.getQueueId(),//
-                                        offsetWrapper.getBrokerOffset(),//
-                                        offsetWrapper.getConsumerOffset(),//
-                                        diff, //
-                                        lastTime//
+                                        UtilAll.frontStringAtLeast(mq.getBrokerName(), 32),
+                                        mq.getQueueId(),
+                                        offsetWrapper.getBrokerOffset(),
+                                        offsetWrapper.getConsumerOffset(),
+                                        diff,
+                                        lastTime
                                 );
                         }
                     }
                 }
             }
-            System.out.println();
-            System.out.printf("Diff Total: %d%n", consumeStatsList.getTotalDiff());
+            System.out.printf("%nDiff Total: %d%n", consumeStatsList.getTotalDiff());
         } catch (Exception e) {
             e.printStackTrace();
         } finally {

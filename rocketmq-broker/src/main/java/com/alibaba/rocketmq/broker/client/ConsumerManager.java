@@ -38,24 +38,21 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author shijia.wxr
  */
 public class ConsumerManager {
-    private static final Logger log = LoggerFactory.getLogger(LoggerName.BrokerLoggerName);
-    private static final long ChannelExpiredTimeout = 1000 * 120;
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
+    private static final long CHANNEL_EXPIRED_TIMEOUT = 1000 * 120;
     private final ConcurrentHashMap<String/* Group */, ConsumerGroupInfo> consumerTable =
             new ConcurrentHashMap<String, ConsumerGroupInfo>(1024);
     private final ConsumerIdsChangeListener consumerIdsChangeListener;
 
-
     public ConsumerManager(final ConsumerIdsChangeListener consumerIdsChangeListener) {
         this.consumerIdsChangeListener = consumerIdsChangeListener;
     }
-
 
     public ClientChannelInfo findChannel(final String group, final String clientId) {
         ConsumerGroupInfo consumerGroupInfo = this.consumerTable.get(group);
         if (consumerGroupInfo != null) {
             return consumerGroupInfo.findChannel(clientId);
         }
-
         return null;
     }
 
@@ -80,7 +77,6 @@ public class ConsumerManager {
 
         return 0;
     }
-
 
     public void doChannelCloseEvent(final String remoteAddr, final Channel channel) {
         Iterator<Entry<String, ConsumerGroupInfo>> it = this.consumerTable.entrySet().iterator();
@@ -127,7 +123,6 @@ public class ConsumerManager {
         return r1 || r2;
     }
 
-
     public void unregisterConsumer(final String group, final ClientChannelInfo clientChannelInfo, boolean isNotifyConsumerIdsChangedEnable) {
         ConsumerGroupInfo consumerGroupInfo = this.consumerTable.get(group);
         if (null != consumerGroupInfo) {
@@ -158,7 +153,7 @@ public class ConsumerManager {
                 Entry<Channel, ClientChannelInfo> nextChannel = itChannel.next();
                 ClientChannelInfo clientChannelInfo = nextChannel.getValue();
                 long diff = System.currentTimeMillis() - clientChannelInfo.getLastUpdateTimestamp();
-                if (diff > ChannelExpiredTimeout) {
+                if (diff > CHANNEL_EXPIRED_TIMEOUT) {
                     log.warn(
                             "SCAN: remove expired channel from ConsumerManager consumerTable. channel={}, consumerGroup={}",
                             RemotingHelper.parseChannelRemoteAddr(clientChannelInfo.getChannel()), group);
@@ -176,7 +171,6 @@ public class ConsumerManager {
         }
     }
 
-
     public HashSet<String> queryTopicConsumeByWho(final String topic) {
         HashSet<String> groups = new HashSet<String>();
         Iterator<Entry<String, ConsumerGroupInfo>> it = this.consumerTable.entrySet().iterator();
@@ -188,7 +182,6 @@ public class ConsumerManager {
                 groups.add(entry.getKey());
             }
         }
-
         return groups;
     }
 }

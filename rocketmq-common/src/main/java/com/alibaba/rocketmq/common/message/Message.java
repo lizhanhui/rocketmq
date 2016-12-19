@@ -88,7 +88,7 @@ public class Message implements Serializable {
     }
 
     public void putUserProperty(final String name, final String value) {
-        if (MessageConst.systemKeySet.contains(name)) {
+        if (MessageConst.STRING_HASH_SET.contains(name)) {
             throw new RuntimeException(String.format(
                     "The Property<%s> is used by system, input another please", name));
         }

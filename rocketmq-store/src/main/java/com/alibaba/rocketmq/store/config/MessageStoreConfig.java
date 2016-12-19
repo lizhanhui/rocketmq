@@ -38,8 +38,8 @@ public class MessageStoreConfig {
 
     // CommitLog file size,default is 1G
     private int mapedFileSizeCommitLog = 1024 * 1024 * 1024;
-    // ConsumeQueue file size, default is 30W
-    private int mapedFileSizeConsumeQueue = 300000 * ConsumeQueue.CQStoreUnitSize;
+    // ConsumeQueue file size,default is 30W
+    private int mapedFileSizeConsumeQueue = 300000 * ConsumeQueue.CQ_STORE_UNIT_SIZE;
 
     // CommitLog flush interval
     // flush data to disk
@@ -75,11 +75,11 @@ public class MessageStoreConfig {
     private int fileReservedTime = 72;
     // Flow control for ConsumeQueue
     private int putMsgIndexHightWater = 600000;
-    // The maximum size of a single log file，default is 512K
+    // The maximum size of a single log file,default is 512K
     private int maxMessageSize = 1024 * 1024 * 4;
     // Whether check the CRC32 of the records consumed.
     // This ensures no on-the-wire or on-disk corruption to the messages occurred.
-    // This check adds some overhead, so it may be disabled in cases seeking extreme performance.
+    // This check adds some overhead,so it may be disabled in cases seeking extreme performance.
     private boolean checkCRCOnRecover = true;
     // How many pages are to be flushed when flush CommitLog
     private int flushCommitLogLeastPages = 4;
@@ -192,8 +192,8 @@ public class MessageStoreConfig {
 
     public int getMapedFileSizeConsumeQueue() {
 
-        int factor = (int) Math.ceil(this.mapedFileSizeConsumeQueue / (ConsumeQueue.CQStoreUnitSize * 1.0));
-        return (int) (factor * ConsumeQueue.CQStoreUnitSize);
+        int factor = (int) Math.ceil(this.mapedFileSizeConsumeQueue / (ConsumeQueue.CQ_STORE_UNIT_SIZE * 1.0));
+        return (int) (factor * ConsumeQueue.CQ_STORE_UNIT_SIZE);
     }
 
 

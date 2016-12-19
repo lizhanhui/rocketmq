@@ -36,10 +36,6 @@ import java.io.UnsupportedEncodingException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
-
-/**
- * @author jodie<manhong.yqd@alibaba-inc.com>
- */
 public class PrintMessageByQueueCommand implements SubCommand {
 
     @Override
@@ -68,7 +64,7 @@ public class PrintMessageByQueueCommand implements SubCommand {
         opt.setRequired(true);
         options.addOption(opt);
 
-        opt = new Option("c", "charsetName ", true, "CharsetName(eg: UTF-8、GBK)");
+        opt = new Option("c", "charsetName ", true, "CharsetName(eg: UTF-8,GBK)");
         opt.setRequired(false);
         options.addOption(opt);
 
@@ -105,15 +101,15 @@ public class PrintMessageByQueueCommand implements SubCommand {
         DefaultMQPullConsumer consumer = new DefaultMQPullConsumer(MixAll.TOOLS_CONSUMER_GROUP, rpcHook);
 
         try {
-            String charsetName = //
+            String charsetName =
                     !commandLine.hasOption('c') ? "UTF-8" : commandLine.getOptionValue('c').trim();
-            boolean printMsg = //
+            boolean printMsg =
                     !commandLine.hasOption('p') ? false : Boolean.parseBoolean(commandLine.getOptionValue('p').trim());
-            boolean printBody = //
+            boolean printBody =
                     !commandLine.hasOption('d') ? false : Boolean.parseBoolean(commandLine.getOptionValue('d').trim());
-            boolean calByTag = //
+            boolean calByTag =
                     !commandLine.hasOption('f') ? false : Boolean.parseBoolean(commandLine.getOptionValue('f').trim());
-            String subExpression = //
+            String subExpression =
                     !commandLine.hasOption('s') ? "*" : commandLine.getOptionValue('s').trim();
 
             String topic = commandLine.getOptionValue('t').trim();
@@ -173,7 +169,7 @@ public class PrintMessageByQueueCommand implements SubCommand {
             timestamp = Long.parseLong(value);
         } catch (NumberFormatException e) {
 
-            timestamp = UtilAll.parseDate(value, UtilAll.yyyy_MM_dd_HH_mm_ss_SSS).getTime();
+            timestamp = UtilAll.parseDate(value, UtilAll.YYYY_MM_DD_HH_MM_SS_SSS).getTime();
         }
 
         return timestamp;

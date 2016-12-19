@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.alibaba.rocketmq.store.index;
 
@@ -39,7 +39,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * @author shijia.wxr
  */
 public class IndexService {
-    private static final Logger log = LoggerFactory.getLogger(LoggerName.StoreLoggerName);
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
     private final DefaultMessageStore defaultMessageStore;
 
     private final int hashSlotNum;
@@ -172,7 +172,7 @@ public class IndexService {
             if (!this.indexFileList.isEmpty()) {
                 for (int i = this.indexFileList.size(); i > 0; i--) {
                     IndexFile f = this.indexFileList.get(i - 1);
-                    boolean lastFile = (i == this.indexFileList.size());
+                    boolean lastFile = i == this.indexFileList.size();
                     if (lastFile) {
                         indexLastUpdateTimestamp = f.getEndTimestamp();
                         indexLastUpdatePhyoffset = f.getEndPhyOffset();
@@ -221,12 +221,12 @@ public class IndexService {
 
             final int tranType = MessageSysFlag.getTransactionValue(msg.getSysFlag());
             switch (tranType) {
-            case MessageSysFlag.TransactionNotType:
-            case MessageSysFlag.TransactionPreparedType:
-            case MessageSysFlag.TransactionCommitType:
+                case MessageSysFlag.TRANSACTION_NOT_TYPE:
+                case MessageSysFlag.TRANSACTION_PREPARED_TYPE:
+                case MessageSysFlag.TRANSACTION_COMMIT_TYPE:
                     break;
-            case MessageSysFlag.TransactionRollbackType:
-                return;
+                case MessageSysFlag.TRANSACTION_ROLLBACK_TYPE:
+                    return;
             }
 
             if (req.getUniqKey() != null) {
@@ -237,22 +237,20 @@ public class IndexService {
                 }
             }
 
-            if ((keys != null && keys.length() > 0)) {
+            if (keys != null && keys.length() > 0) {
                 String[] keyset = keys.split(MessageConst.KEY_SEPARATOR);
-                for (int i = 0; i <  keyset.length; i++) {
+                for (int i = 0; i < keyset.length; i++) {
                     String key = keyset[i];
                     if (key.length() > 0) {
-                            indexFile = putKey(indexFile, msg, buildKey(topic, key));
-                            if (indexFile == null) {
-                                log.error("putKey error commitlog {} uniqkey {}", req.getCommitLogOffset(), req.getUniqKey());
-                                return;
-                            }
+                        indexFile = putKey(indexFile, msg, buildKey(topic, key));
+                        if (indexFile == null) {
+                            log.error("putKey error commitlog {} uniqkey {}", req.getCommitLogOffset(), req.getUniqKey());
+                            return;
                         }
-                 }
+                    }
+                }
             }
-        }
-
-        else {
+        } else {
             log.error("build index error, stop building index");
         }
     }
@@ -260,8 +258,8 @@ public class IndexService {
 
     private IndexFile putKey(IndexFile indexFile, DispatchRequest msg, String idxKey) {
         for (boolean ok =
-                indexFile.putKey(idxKey, msg.getCommitLogOffset(),
-                    msg.getStoreTimestamp()); !ok;) {
+             indexFile.putKey(idxKey, msg.getCommitLogOffset(),
+                     msg.getStoreTimestamp()); !ok; ) {
             log.warn("index file full, so create another one, " + indexFile.getFileName());
             indexFile = retryGetAndCreateIndexFile();
             if (null == indexFile) {
@@ -270,7 +268,7 @@ public class IndexService {
 
             ok =
                     indexFile.putKey(idxKey, msg.getCommitLogOffset(),
-                        msg.getStoreTimestamp());
+                            msg.getStoreTimestamp());
         }
         return indexFile;
     }

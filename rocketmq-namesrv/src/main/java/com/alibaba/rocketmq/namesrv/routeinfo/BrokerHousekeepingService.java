@@ -28,7 +28,7 @@ import org.slf4j.LoggerFactory;
  * @author shijia.wxr
  */
 public class BrokerHousekeepingService implements ChannelEventListener {
-    private static final Logger log = LoggerFactory.getLogger(LoggerName.NamesrvLoggerName);
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.NAMESRV_LOGGER_NAME);
     private final NamesrvController namesrvController;
 
 

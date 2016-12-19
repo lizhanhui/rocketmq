@@ -35,7 +35,7 @@ import java.util.concurrent.TimeUnit;
 
 
 public class FilterClassManager {
-    private static final Logger log = LoggerFactory.getLogger(LoggerName.FiltersrvLoggerName);
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.FILTERSRV_LOGGER_NAME);
 
     private final Object compileLock = new Object();
     private final FiltersrvController filtersrvController;

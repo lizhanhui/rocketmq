@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.alibaba.rocketmq.store;
 
@@ -35,18 +35,18 @@ public class DispatchRequest {
     private final long preparedTransactionOffset;
 
 
-    public DispatchRequest(//
-            final String topic,// 1
-            final int queueId,// 2
-            final long commitLogOffset,// 3
-            final int msgSize,// 4
-            final long tagsCode,// 5
-            final long storeTimestamp,// 6
-            final long consumeQueueOffset,// 7
-            final String keys,// 8
+    public DispatchRequest(
+            final String topic,
+            final int queueId,
+            final long commitLogOffset,
+            final int msgSize,
+            final long tagsCode,
+            final long storeTimestamp,
+            final long consumeQueueOffset,
+            final String keys,
             final String uniqKey,
-            final int sysFlag,// 9
-            final long preparedTransactionOffset// 10
+            final int sysFlag,
+            final long preparedTransactionOffset
     ) {
         this.topic = topic;
         this.queueId = queueId;

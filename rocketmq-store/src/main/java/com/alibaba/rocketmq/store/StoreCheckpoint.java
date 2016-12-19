@@ -33,7 +33,7 @@ import java.nio.channels.FileChannel.MapMode;
  * @author shijia.wxr
  */
 public class StoreCheckpoint {
-    private static final Logger log = LoggerFactory.getLogger(LoggerName.StoreLoggerName);
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
     private final RandomAccessFile randomAccessFile;
     private final FileChannel fileChannel;
     private final MappedByteBuffer mappedByteBuffer;
