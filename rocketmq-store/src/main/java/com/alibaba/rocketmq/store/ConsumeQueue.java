@@ -129,6 +129,8 @@ public class ConsumeQueue {
             }
 
             processOffset += mapedFileOffset;
+            this.mappedFileQueue.setFlushedWhere(processOffset);
+            this.mappedFileQueue.setCommittedWhere(processOffset);
             this.mappedFileQueue.truncateDirtyFiles(processOffset);
         }
     }
@@ -392,6 +394,8 @@ public class ConsumeQueue {
 
             if (mappedFile.isFirstCreateInQueue() && cqOffset != 0 && mappedFile.getWrotePosition() == 0) {
                 this.minLogicOffset = expectLogicOffset;
+                this.mappedFileQueue.setFlushedWhere(expectLogicOffset);
+                this.mappedFileQueue.setCommittedWhere(expectLogicOffset);
                 this.fillPreBlank(mappedFile, expectLogicOffset);
                 log.info("fill pre blank space " + mappedFile.getFileName() + " " + expectLogicOffset + " "
                         + mappedFile.getWrotePosition());
