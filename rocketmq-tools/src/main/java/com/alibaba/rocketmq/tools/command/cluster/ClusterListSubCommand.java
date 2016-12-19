@@ -85,7 +85,6 @@ public class ClusterListSubCommand implements SubCommand {
 
             do {
                 if (i++ > 0) {
-                    System.out.println("== == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == ==");
                     Thread.sleep(printInterval);
                 }
                 if (commandLine.hasOption('m')) {
@@ -106,13 +105,13 @@ public class ClusterListSubCommand implements SubCommand {
 
         ClusterInfo clusterInfoSerializeWrapper = defaultMQAdminExt.examineBrokerClusterInfo();
 
-        System.out.printf("%-16s  %-32s %14s %14s %14s %14s%n",//
-                "#Cluster Name",//
-                "#Broker Name",//
-                "#InTotalYest",//
-                "#OutTotalYest",//
-                "#InTotalToday",//
-                "#OutTotalToday"//
+        System.out.printf("%-16s  %-32s %14s %14s %14s %14s%n",
+                "#Cluster Name",
+                "#Broker Name",
+                "#InTotalYest",
+                "#OutTotalYest",
+                "#InTotalToday",
+                "#OutTotalToday"
         );
 
         Iterator<Map.Entry<String, Set<String>>> itCluster = clusterInfoSerializeWrapper.getClusterAddrTable().entrySet().iterator();
@@ -129,10 +128,10 @@ public class ClusterListSubCommand implements SubCommand {
                     Iterator<Map.Entry<Long, String>> itAddr = brokerData.getBrokerAddrs().entrySet().iterator();
                     while (itAddr.hasNext()) {
                         Map.Entry<Long, String> next1 = itAddr.next();
-                        long InTotalYest = 0;
-                        long OutTotalYest = 0;
-                        long InTotalToday = 0;
-                        long OutTotalToday = 0;
+                        long inTotalYest = 0;
+                        long outTotalYest = 0;
+                        long inTotalToday = 0;
+                        long outTotalToday = 0;
 
                         try {
                             KVTable kvTable = defaultMQAdminExt.fetchBrokerRuntimeStats(next1.getValue());
@@ -143,29 +142,29 @@ public class ClusterListSubCommand implements SubCommand {
                             String msgGetTotalTodayMorning = kvTable.getTable().get("msgGetTotalTodayMorning");
                             String msgGetTotalTodayNow = kvTable.getTable().get("msgGetTotalTodayNow");
 
-                            InTotalYest = Long.parseLong(msgPutTotalTodayMorning) - Long.parseLong(msgPutTotalYesterdayMorning);
-                            OutTotalYest = Long.parseLong(msgGetTotalTodayMorning) - Long.parseLong(msgGetTotalYesterdayMorning);
+                            inTotalYest = Long.parseLong(msgPutTotalTodayMorning) - Long.parseLong(msgPutTotalYesterdayMorning);
+                            outTotalYest = Long.parseLong(msgGetTotalTodayMorning) - Long.parseLong(msgGetTotalYesterdayMorning);
 
-                            InTotalToday = Long.parseLong(msgPutTotalTodayNow) - Long.parseLong(msgPutTotalTodayMorning);
-                            OutTotalToday = Long.parseLong(msgGetTotalTodayNow) - Long.parseLong(msgGetTotalTodayMorning);
+                            inTotalToday = Long.parseLong(msgPutTotalTodayNow) - Long.parseLong(msgPutTotalTodayMorning);
+                            outTotalToday = Long.parseLong(msgGetTotalTodayNow) - Long.parseLong(msgGetTotalTodayMorning);
 
                         } catch (Exception e) {
                         }
 
-                        System.out.printf("%-16s  %-32s %14d %14d %14d %14d%n",//
-                                clusterName,//
-                                brokerName,//
-                                InTotalYest,//
-                                OutTotalYest,//
-                                InTotalToday,//
-                                OutTotalToday//
+                        System.out.printf("%-16s  %-32s %14d %14d %14d %14d%n",
+                                clusterName,
+                                brokerName,
+                                inTotalYest,
+                                outTotalYest,
+                                inTotalToday,
+                                outTotalToday
                         );
                     }
                 }
             }
 
             if (itCluster.hasNext()) {
-                System.out.println("");
+                System.out.printf("");
             }
         }
     }
@@ -175,17 +174,17 @@ public class ClusterListSubCommand implements SubCommand {
 
         ClusterInfo clusterInfoSerializeWrapper = defaultMQAdminExt.examineBrokerClusterInfo();
 
-        System.out.printf("%-16s  %-22s  %-4s  %-22s %-16s %19s %19s %10s %5s %6s%n",//
-                "#Cluster Name",//
-                "#Broker Name",//
-                "#BID",//
-                "#Addr",//
-                "#Version",//
-                "#InTPS(LOAD)",//
-                "#OutTPS(LOAD)",//
-                "#PCWait(ms)",//
-                "#Hour",//
-                "#SPACE"//
+        System.out.printf("%-16s  %-22s  %-4s  %-22s %-16s %19s %19s %10s %5s %6s%n",
+                "#Cluster Name",
+                "#Broker Name",
+                "#BID",
+                "#Addr",
+                "#Version",
+                "#InTPS(LOAD)",
+                "#OutTPS(LOAD)",
+                "#PCWait(ms)",
+                "#Hour",
+                "#SPACE"
         );
 
         Iterator<Map.Entry<String, Set<String>>> itCluster = clusterInfoSerializeWrapper.getClusterAddrTable().entrySet().iterator();
@@ -257,24 +256,24 @@ public class ClusterListSubCommand implements SubCommand {
                             space = Double.valueOf(commitLogDiskRatio);
                         }
 
-                        System.out.printf("%-16s  %-22s  %-4s  %-22s %-16s %19s %19s %10s %5s %6s%n",//
-                                clusterName,//
-                                brokerName,//
-                                next1.getKey().longValue(),//
-                                next1.getValue(),//
-                                version,//
-                                String.format("%9.2f(%s,%sms)", in, sendThreadPoolQueueSize, sendThreadPoolQueueHeadWaitTimeMills),//
-                                String.format("%9.2f(%s,%sms)", out, pullThreadPoolQueueSize, pullThreadPoolQueueHeadWaitTimeMills),//
-                                pageCacheLockTimeMills,//
-                                String.format("%2.2f", hour),//
-                                String.format("%.4f", space)//
+                        System.out.printf("%-16s  %-22s  %-4s  %-22s %-16s %19s %19s %10s %5s %6s%n",
+                                clusterName,
+                                brokerName,
+                                next1.getKey().longValue(),
+                                next1.getValue(),
+                                version,
+                                String.format("%9.2f(%s,%sms)", in, sendThreadPoolQueueSize, sendThreadPoolQueueHeadWaitTimeMills),
+                                String.format("%9.2f(%s,%sms)", out, pullThreadPoolQueueSize, pullThreadPoolQueueHeadWaitTimeMills),
+                                pageCacheLockTimeMills,
+                                String.format("%2.2f", hour),
+                                String.format("%.4f", space)
                         );
                     }
                 }
             }
 
             if (itCluster.hasNext()) {
-                System.out.println("");
+                System.out.printf("");
             }
         }
     }

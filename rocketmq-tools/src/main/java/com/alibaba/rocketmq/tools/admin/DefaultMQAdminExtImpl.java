@@ -748,16 +748,13 @@ public class DefaultMQAdminExtImpl implements MQAdminExt, MQAdminExtInner {
 
                     if (ifConsumed) {
                         mt.setTrackType(TrackType.CONSUMED);
-
-
                         Iterator<Entry<String, SubscriptionData>> it = cc.getSubscriptionTable().entrySet().iterator();
                         while (it.hasNext()) {
                             Entry<String, SubscriptionData> next = it.next();
                             if (next.getKey().equals(msg.getTopic())) {
-                                if (next.getValue().getTagsSet().contains(msg.getTags()) //
-                                        || next.getValue().getTagsSet().contains("*")//
-                                        || next.getValue().getTagsSet().isEmpty()//
-                                        ) {
+                                if (next.getValue().getTagsSet().contains(msg.getTags())
+                                        || next.getValue().getTagsSet().contains("*")
+                                        || next.getValue().getTagsSet().isEmpty()) {
                                 } else {
                                     mt.setTrackType(TrackType.CONSUMED_BUT_FILTERED);
                                 }

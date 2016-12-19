@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package com.alibaba.rocketmq.common.stats;
@@ -72,7 +72,7 @@ public class StatsItem {
 
                 long timesDiff = last.getTimes() - first.getTimes();
                 if (timesDiff > 0) {
-                    avgpt = (sum * 1.0d) / (timesDiff);
+                    avgpt = (sum * 1.0d) / timesDiff;
                 }
             }
 
@@ -128,39 +128,36 @@ public class StatsItem {
 
 
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
-                                                              @Override
-                                                              public void run() {
-                                                                  try {
-                                                                      printAtMinutes();
-                                                                  } catch (Throwable e) {
-                                                                  }
-                                                              }
-                                                          }, Math.abs(UtilAll.computNextMinutesTimeMillis() - System.currentTimeMillis()), //
-                1000 * 60, TimeUnit.MILLISECONDS);
+            @Override
+            public void run() {
+                try {
+                    printAtMinutes();
+                } catch (Throwable ignored) {
+                }
+            }
+        }, Math.abs(UtilAll.computNextMinutesTimeMillis() - System.currentTimeMillis()), 1000 * 60, TimeUnit.MILLISECONDS);
 
 
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
-                                                              @Override
-                                                              public void run() {
-                                                                  try {
-                                                                      printAtHour();
-                                                                  } catch (Throwable e) {
-                                                                  }
-                                                              }
-                                                          }, Math.abs(UtilAll.computNextHourTimeMillis() - System.currentTimeMillis()), //
-                1000 * 60 * 60, TimeUnit.MILLISECONDS);
+            @Override
+            public void run() {
+                try {
+                    printAtHour();
+                } catch (Throwable ignored) {
+                }
+            }
+        }, Math.abs(UtilAll.computNextHourTimeMillis() - System.currentTimeMillis()), 1000 * 60 * 60, TimeUnit.MILLISECONDS);
 
 
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
-                                                              @Override
-                                                              public void run() {
-                                                                  try {
-                                                                      printAtDay();
-                                                                  } catch (Throwable e) {
-                                                                  }
-                                                              }
-                                                          }, Math.abs(UtilAll.computNextMorningTimeMillis() - System.currentTimeMillis()) - 2000, //
-                1000 * 60 * 60 * 24, TimeUnit.MILLISECONDS);
+            @Override
+            public void run() {
+                try {
+                    printAtDay();
+                } catch (Throwable ignored) {
+                }
+            }
+        }, Math.abs(UtilAll.computNextMorningTimeMillis() - System.currentTimeMillis()) - 2000, 1000 * 60 * 60 * 24, TimeUnit.MILLISECONDS);
     }
 
     public void samplingInSeconds() {
@@ -195,31 +192,31 @@ public class StatsItem {
 
     public void printAtMinutes() {
         StatsSnapshot ss = computeStatsData(this.csListMinute);
-        log.info(String.format("[%s] [%s] Stats In One Minute, SUM: %d TPS: %.2f AVGPT: %.2f", //
-                this.statsName,//
-                this.statsKey,//
-                ss.getSum(),//
-                ss.getTps(),//
+        log.info(String.format("[%s] [%s] Stats In One Minute, SUM: %d TPS: %.2f AVGPT: %.2f",
+                this.statsName,
+                this.statsKey,
+                ss.getSum(),
+                ss.getTps(),
                 ss.getAvgpt()));
     }
 
     public void printAtHour() {
         StatsSnapshot ss = computeStatsData(this.csListHour);
-        log.info(String.format("[%s] [%s] Stats In One Hour, SUM: %d TPS: %.2f AVGPT: %.2f", //
-                this.statsName,//
-                this.statsKey,//
-                ss.getSum(),//
-                ss.getTps(),//
+        log.info(String.format("[%s] [%s] Stats In One Hour, SUM: %d TPS: %.2f AVGPT: %.2f",
+                this.statsName,
+                this.statsKey,
+                ss.getSum(),
+                ss.getTps(),
                 ss.getAvgpt()));
     }
 
     public void printAtDay() {
         StatsSnapshot ss = computeStatsData(this.csListDay);
-        log.info(String.format("[%s] [%s] Stats In One Day, SUM: %d TPS: %.2f AVGPT: %.2f", //
-                this.statsName,//
-                this.statsKey,//
-                ss.getSum(),//
-                ss.getTps(),//
+        log.info(String.format("[%s] [%s] Stats In One Day, SUM: %d TPS: %.2f AVGPT: %.2f",
+                this.statsName,
+                this.statsKey,
+                ss.getSum(),
+                ss.getTps(),
                 ss.getAvgpt()));
     }
 

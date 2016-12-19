@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.alibaba.rocketmq.namesrv;
 
@@ -52,15 +52,15 @@ public class NamesrvStartup {
     }
 
     public static NamesrvController main0(String[] args) {
-        System.setProperty(RemotingCommand.RemotingVersionKey, Integer.toString(MQVersion.CurrentVersion));
+        System.setProperty(RemotingCommand.REMOTING_VERSION_KEY, Integer.toString(MQVersion.CURRENT_VERSION));
 
 
-        if (null == System.getProperty(NettySystemConfig.SystemPropertySocketSndbufSize)) {
+        if (null == System.getProperty(NettySystemConfig.COM_ROCKETMQ_REMOTING_SOCKET_SNDBUF_SIZE)) {
             NettySystemConfig.socketSndbufSize = 4096;
         }
 
 
-        if (null == System.getProperty(NettySystemConfig.SystemPropertySocketRcvbufSize)) {
+        if (null == System.getProperty(NettySystemConfig.COM_ROCKETMQ_REMOTING_SOCKET_RCVBUF_SIZE)) {
             NettySystemConfig.socketRcvbufSize = 4096;
         }
 
@@ -91,7 +91,7 @@ public class NamesrvStartup {
 
                     namesrvConfig.setConfigStorePath(file);
 
-                    System.out.println("load config properties file OK, " + file);
+                    System.out.printf("load config properties file OK, " + file + "%n");
                     in.close();
                 }
             }
@@ -106,8 +106,8 @@ public class NamesrvStartup {
             MixAll.properties2Object(ServerUtil.commandLine2Properties(commandLine), namesrvConfig);
 
             if (null == namesrvConfig.getRocketmqHome()) {
-                System.out.println("Please set the " + MixAll.ROCKETMQ_HOME_ENV
-                        + " variable in your environment to match the location of the RocketMQ installation");
+                System.out.printf("Please set the " + MixAll.ROCKETMQ_HOME_ENV
+                        + " variable in your environment to match the location of the RocketMQ installation%n");
                 System.exit(-2);
             }
 
@@ -116,7 +116,7 @@ public class NamesrvStartup {
             configurator.setContext(lc);
             lc.reset();
             configurator.doConfigure(namesrvConfig.getRocketmqHome() + "/conf/logback_namesrv.xml");
-            final Logger log = LoggerFactory.getLogger(LoggerName.NamesrvLoggerName);
+            final Logger log = LoggerFactory.getLogger(LoggerName.NAMESRV_LOGGER_NAME);
 
 
             MixAll.printObjectProperties(log, namesrvConfig);
@@ -159,7 +159,7 @@ public class NamesrvStartup {
 
             String tip = "The Name Server boot success. serializeType=" + RemotingCommand.getSerializeTypeConfigInThisServer();
             log.info(tip);
-            System.out.println(tip);
+            System.out.printf(tip + "%n");
 
             return controller;
         } catch (Throwable e) {

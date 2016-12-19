@@ -43,7 +43,7 @@ import org.slf4j.LoggerFactory;
  * @author shijia.wxr
  */
 public class QueryMessageProcessor implements NettyRequestProcessor {
-    private static final Logger log = LoggerFactory.getLogger(LoggerName.BrokerLoggerName);
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
 
     private final BrokerController brokerController;
 

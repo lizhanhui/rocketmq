@@ -3,15 +3,15 @@
 [![GitHub release](https://img.shields.io/badge/release-download-orange.svg)](https://github.com/alibaba/RocketMQ/releases)
 [![License](https://img.shields.io/badge/license-Apache%202-4EB1BA.svg)](https://www.apache.org/licenses/LICENSE-2.0.html)
 
-**RocketMQ is a low latency, reliable, scalable, easy to use message oriented middleware born from alibaba massive messaging business.**
+**RocketMQ is producerGroup low latency, reliable, scalable, easy to use message oriented middleware born from alibaba massive messaging business.**
 
-It offers a variety of features as follows:
+It offers producerGroup variety of features as follows:
 
 * Pub/Sub and P2P messaging model
 * Reliable FIFO and strict sequential messaging in the same queue
 * Long pull queue model,also support push consumption style
 * Million message accumulation ability in single queue
-* Over a variety of messaging protocols.such as JMS,MQTT,HTTP etc.
+* Over producerGroup variety of messaging protocols.such as JMS,MQTT,HTTP etc.
 * Distributed high available deploy architecture, meets at least once message delivery semantics
 * Docker images for isolated testing and cloud Isolated clusters
 * Feature-rich administrative dashboard for configuration,metrics and monitoring [![Cloud Charge](https://img.shields.io/badge/cloud-charge-red.svg)](https://www.aliyun.com/product/ons/?spm=5176.7960203.237031.135.67OdNO)
@@ -27,6 +27,7 @@ It offers a variety of features as follows:
 * Documentation: <https://github.com/alibaba/RocketMQ/wiki>
 * Wiki: <https://github.com/alibaba/RocketMQ/wiki>
 * Issues: <https://github.com/alibaba/RocketMQ/issues>
+* Ask: <http://stackoverflow.com/questions/tagged/rocketmq> or <https://www.quora.com/topic/RocketMQ>
 * [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/alibaba/RocketMQ?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
  
 

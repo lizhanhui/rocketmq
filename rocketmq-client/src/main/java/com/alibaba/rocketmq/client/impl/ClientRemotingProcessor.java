@@ -113,8 +113,8 @@ public class ClientRemotingProcessor implements NettyRequestProcessor {
         try {
             final NotifyConsumerIdsChangedRequestHeader requestHeader =
                     (NotifyConsumerIdsChangedRequestHeader) request.decodeCommandCustomHeader(NotifyConsumerIdsChangedRequestHeader.class);
-            log.info("receive broker's notification[{}], the consumer group: {} changed, rebalance immediately",//
-                    RemotingHelper.parseChannelRemoteAddr(ctx.channel()),//
+            log.info("receive broker's notification[{}], the consumer group: {} changed, rebalance immediately",
+                    RemotingHelper.parseChannelRemoteAddr(ctx.channel()),
                     requestHeader.getConsumerGroup());
             this.mqClientFactory.rebalanceImmediately();
         } catch (Exception e) {

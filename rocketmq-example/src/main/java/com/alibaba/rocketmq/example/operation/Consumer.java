@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.alibaba.rocketmq.example.operation;
 
@@ -22,7 +22,12 @@ import com.alibaba.rocketmq.client.consumer.listener.ConsumeConcurrentlyStatus;
 import com.alibaba.rocketmq.client.consumer.listener.MessageListenerConcurrently;
 import com.alibaba.rocketmq.client.exception.MQClientException;
 import com.alibaba.rocketmq.common.message.MessageExt;
-import org.apache.commons.cli.*;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+import org.apache.commons.cli.PosixParser;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
@@ -51,28 +56,24 @@ public class Consumer {
                 public ConsumeConcurrentlyStatus consumeMessage(List<MessageExt> msgs,
                                                                 ConsumeConcurrentlyContext context) {
                     long currentTimes = this.consumeTimes.incrementAndGet();
-
                     System.out.printf("%-8d %s%n", currentTimes, msgs);
-
                     if (Boolean.parseBoolean(returnFailedHalf)) {
                         if ((currentTimes % 2) == 0) {
                             return ConsumeConcurrentlyStatus.RECONSUME_LATER;
                         }
                     }
-
                     return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;
                 }
             });
 
             consumer.start();
 
-            System.out.println("Consumer Started.");
+            System.out.printf("Consumer Started.%n");
         }
     }
 
     public static CommandLine buildCommandline(String[] args) {
         final Options options = new Options();
-        // ////////////////////////////////////////////////////
         Option opt = new Option("h", "help", false, "Print help");
         opt.setRequired(false);
         options.addOption(opt);
@@ -92,8 +93,6 @@ public class Consumer {
         opt = new Option("f", "returnFailedHalf", true, "return failed result, for half message");
         opt.setRequired(true);
         options.addOption(opt);
-
-        // ////////////////////////////////////////////////////
 
         PosixParser parser = new PosixParser();
         HelpFormatter hf = new HelpFormatter();

@@ -21,7 +21,7 @@ import java.io.Serializable;
 
 
 /**
- * @auther lansheng.zj
+ * @author lansheng.zj
  */
 public class MessageQueueForC implements Comparable<MessageQueueForC>, Serializable {
 

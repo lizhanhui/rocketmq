@@ -84,7 +84,7 @@ public class HttpTinyClient {
                 conn.addRequestProperty(iter.next(), iter.next());
             }
         }
-        conn.addRequestProperty("Client-Version", MQVersion.getVersionDesc(MQVersion.CurrentVersion));
+        conn.addRequestProperty("Client-Version", MQVersion.getVersionDesc(MQVersion.CURRENT_VERSION));
         conn.addRequestProperty("Content-Type", "application/x-www-form-urlencoded;charset=" + encoding);
 
 
@@ -105,7 +105,7 @@ public class HttpTinyClient {
      * @param readTimeoutMs
 
      *
-     * @return
+     * @return the http response of given http post request
      *
      * @throws java.io.IOException
      */

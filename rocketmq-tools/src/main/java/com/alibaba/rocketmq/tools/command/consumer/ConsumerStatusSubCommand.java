@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.alibaba.rocketmq.tools.command.consumer;
 
@@ -41,9 +41,7 @@ public class ConsumerStatusSubCommand implements SubCommand {
 
     public static void main(String[] args) {
         System.setProperty(MixAll.NAMESRV_ADDR_PROPERTY, "127.0.0.1:9876");
-        MQAdminStartup.main(new String[]{new ConsumerStatusSubCommand().commandName(), //
-                "-g", "benchmark_consumer" //
-        });
+        MQAdminStartup.main(new String[]{new ConsumerStatusSubCommand().commandName(), "-g", "benchmark_consumer"});
     }
 
     @Override
@@ -81,19 +79,13 @@ public class ConsumerStatusSubCommand implements SubCommand {
 
         try {
             defaultMQAdminExt.start();
-
             String group = commandLine.getOptionValue('g').trim();
-
             ConsumerConnection cc = defaultMQAdminExt.examineConsumerConnectionInfo(group);
-
             boolean jstack = commandLine.hasOption('s');
-
             if (!commandLine.hasOption('i')) {
-
                 int i = 1;
                 long now = System.currentTimeMillis();
-                final TreeMap<String/* clientId */, ConsumerRunningInfo> criTable =
-                        new TreeMap<String, ConsumerRunningInfo>();
+                final TreeMap<String/* clientId */, ConsumerRunningInfo> criTable = new TreeMap<String, ConsumerRunningInfo>();
                 for (Connection conn : cc.getConnectionSet()) {
                     try {
                         ConsumerRunningInfo consumerRunningInfo =
@@ -102,10 +94,10 @@ public class ConsumerStatusSubCommand implements SubCommand {
                             criTable.put(conn.getClientId(), consumerRunningInfo);
                             String filePath = now + "/" + conn.getClientId();
                             MixAll.string2FileNotSafe(consumerRunningInfo.formatString(), filePath);
-                            System.out.printf("%03d  %-40s %-20s %s%n",//
-                                    i++,//
-                                    conn.getClientId(),//
-                                    MQVersion.getVersionDesc(conn.getVersion()),//
+                            System.out.printf("%03d  %-40s %-20s %s%n",
+                                    i++,
+                                    conn.getClientId(),
+                                    MQVersion.getVersionDesc(conn.getVersion()),
                                     filePath);
                         }
                     } catch (Exception e) {
@@ -119,22 +111,19 @@ public class ConsumerStatusSubCommand implements SubCommand {
                     boolean rebalanceOK = subSame && ConsumerRunningInfo.analyzeRebalance(criTable);
 
                     if (subSame) {
-                        System.out.println("%n%nSame subscription in the same group of consumer");
-
+                        System.out.printf("%n%nSame subscription in the same group of consumer");
                         System.out.printf("%n%nRebalance %s%n", rebalanceOK ? "OK" : "Failed");
-
                         Iterator<Entry<String, ConsumerRunningInfo>> it = criTable.entrySet().iterator();
                         while (it.hasNext()) {
                             Entry<String, ConsumerRunningInfo> next = it.next();
                             String result =
                                     ConsumerRunningInfo.analyzeProcessQueue(next.getKey(), next.getValue());
                             if (result.length() > 0) {
-                                System.out.println(result);
+                                System.out.printf(result);
                             }
                         }
                     } else {
-                        System.out
-                                .println("\n\nWARN: Different subscription in the same group of consumer!!!");
+                        System.out.printf("%n%nWARN: Different subscription in the same group of consumer!!!");
                     }
                 }
             } else {
@@ -142,7 +131,7 @@ public class ConsumerStatusSubCommand implements SubCommand {
                 ConsumerRunningInfo consumerRunningInfo =
                         defaultMQAdminExt.getConsumerRunningInfo(group, clientId, jstack);
                 if (consumerRunningInfo != null) {
-                    System.out.println(consumerRunningInfo.formatString());
+                    System.out.printf("%s", consumerRunningInfo.formatString());
                 }
             }
         } catch (Exception e) {

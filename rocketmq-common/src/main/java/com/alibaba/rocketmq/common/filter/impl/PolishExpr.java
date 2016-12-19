@@ -21,7 +21,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
 
-import static com.alibaba.rocketmq.common.filter.impl.Operator.*;
+import static com.alibaba.rocketmq.common.filter.impl.Operator.LEFTPARENTHESIS;
+import static com.alibaba.rocketmq.common.filter.impl.Operator.RIGHTPARENTHESIS;
+import static com.alibaba.rocketmq.common.filter.impl.Operator.createOperator;
 
 public class PolishExpr {
 
@@ -34,8 +36,7 @@ public class PolishExpr {
      * http://en.wikipedia.org/wiki/Shunting_yard_algorithm
      *
      * @param tokens
-     *
-     * @return
+     * @return the compute result of Shunting-yard algorithm
      */
     public static List<Op> reversePolish(List<Op> tokens) {
         List<Op> segments = new ArrayList<Op>();

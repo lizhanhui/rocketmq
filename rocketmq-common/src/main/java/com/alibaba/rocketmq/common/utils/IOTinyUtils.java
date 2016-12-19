@@ -61,7 +61,7 @@ public class IOTinyUtils {
         BufferedReader reader = toBufferedReader(input);
         List<String> list = new ArrayList<String>();
         String line = null;
-        for (; ; ) {
+        for (;;) {
             line = reader.readLine();
             if (null != line) {
                 list.add(line);

@@ -65,9 +65,9 @@ public class DeleteTopicSubCommand implements SubCommand {
     }
 
 
-    public static void deleteTopic(final DefaultMQAdminExt adminExt,//
-                                   final String clusterName,//
-                                   final String topic//
+    public static void deleteTopic(final DefaultMQAdminExt adminExt,
+                                   final String clusterName,
+                                   final String topic
     ) throws InterruptedException, MQBrokerException, RemotingException, MQClientException {
 
         Set<String> masterSet = CommandUtil.fetchMasterAddrByClusterName(adminExt, clusterName);

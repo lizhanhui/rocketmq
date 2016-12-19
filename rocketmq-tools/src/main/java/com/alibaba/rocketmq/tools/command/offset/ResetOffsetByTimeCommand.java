@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package com.alibaba.rocketmq.tools.command.offset;
@@ -97,7 +97,7 @@ public class ResetOffsetByTimeCommand implements SubCommand {
                 }
             } catch (NumberFormatException e) {
 
-                timestamp = UtilAll.parseDate(timeStampStr, UtilAll.yyyy_MM_dd_HH_mm_ss_SSS).getTime();
+                timestamp = UtilAll.parseDate(timeStampStr, UtilAll.YYYY_MM_DD_HH_MM_SS_SSS).getTime();
             }
 
             boolean force = true;
@@ -122,21 +122,20 @@ public class ResetOffsetByTimeCommand implements SubCommand {
                 throw e;
             }
 
-            System.out.printf(
-                    "rollback consumer offset by specified group[%s], topic[%s], force[%s], timestamp(string)[%s], timestamp(long)[%s]%n",
+            System.out.printf("rollback consumer offset by specified group[%s], topic[%s], force[%s], timestamp(string)[%s], timestamp(long)[%s]%n",
                     group, topic, force, timeStampStr, timestamp);
 
-            System.out.printf("%-40s  %-40s  %-40s%n",//
-                    "#brokerName",//
-                    "#queueId",//
+            System.out.printf("%-40s  %-40s  %-40s%n",
+                    "#brokerName",
+                    "#queueId",
                     "#offset");
 
             Iterator<Map.Entry<MessageQueue, Long>> iterator = offsetTable.entrySet().iterator();
             while (iterator.hasNext()) {
                 Map.Entry<MessageQueue, Long> entry = iterator.next();
-                System.out.printf("%-40s  %-40d  %-40d%n",//
-                        UtilAll.frontStringAtLeast(entry.getKey().getBrokerName(), 32),//
-                        entry.getKey().getQueueId(),//
+                System.out.printf("%-40s  %-40d  %-40d%n",
+                        UtilAll.frontStringAtLeast(entry.getKey().getBrokerName(), 32),
+                        entry.getKey().getQueueId(),
                         entry.getValue());
             }
         } catch (Exception e) {

@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package com.alibaba.rocketmq.common.stats;
@@ -79,39 +79,36 @@ public class StatsItemSet {
 
 
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
-                                                              @Override
-                                                              public void run() {
-                                                                  try {
-                                                                      printAtMinutes();
-                                                                  } catch (Throwable e) {
-                                                                  }
-                                                              }
-                                                          }, Math.abs(UtilAll.computNextMinutesTimeMillis() - System.currentTimeMillis()), //
-                1000 * 60, TimeUnit.MILLISECONDS);
+            @Override
+            public void run() {
+                try {
+                    printAtMinutes();
+                } catch (Throwable e) {
+                }
+            }
+        }, Math.abs(UtilAll.computNextMinutesTimeMillis() - System.currentTimeMillis()), 1000 * 60, TimeUnit.MILLISECONDS);
 
 
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
-                                                              @Override
-                                                              public void run() {
-                                                                  try {
-                                                                      printAtHour();
-                                                                  } catch (Throwable e) {
-                                                                  }
-                                                              }
-                                                          }, Math.abs(UtilAll.computNextHourTimeMillis() - System.currentTimeMillis()), //
-                1000 * 60 * 60, TimeUnit.MILLISECONDS);
+            @Override
+            public void run() {
+                try {
+                    printAtHour();
+                } catch (Throwable e) {
+                }
+            }
+        }, Math.abs(UtilAll.computNextHourTimeMillis() - System.currentTimeMillis()), 1000 * 60 * 60, TimeUnit.MILLISECONDS);
 
 
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
-                                                              @Override
-                                                              public void run() {
-                                                                  try {
-                                                                      printAtDay();
-                                                                  } catch (Throwable e) {
-                                                                  }
-                                                              }
-                                                          }, Math.abs(UtilAll.computNextMorningTimeMillis() - System.currentTimeMillis()), //
-                1000 * 60 * 60 * 24, TimeUnit.MILLISECONDS);
+            @Override
+            public void run() {
+                try {
+                    printAtDay();
+                } catch (Throwable e) {
+                }
+            }
+        }, Math.abs(UtilAll.computNextMorningTimeMillis() - System.currentTimeMillis()), 1000 * 60 * 60 * 24, TimeUnit.MILLISECONDS);
     }
 
     private void samplingInSeconds() {

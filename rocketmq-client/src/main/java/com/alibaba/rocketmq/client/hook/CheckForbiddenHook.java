@@ -21,7 +21,7 @@ import com.alibaba.rocketmq.client.exception.MQClientException;
 
 
 /**
- * @author: manhong.yqd
+ * @author manhong.yqd
  */
 public interface CheckForbiddenHook {
     public String hookName();

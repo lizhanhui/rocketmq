@@ -34,7 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author shijia.wxr
  */
 public class PullRequestHoldService extends ServiceThread {
-    private static final Logger log = LoggerFactory.getLogger(LoggerName.BrokerLoggerName);
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
     private static final String TOPIC_QUEUEID_SEPARATOR = "@";
     private final BrokerController brokerController;
     private final SystemClock systemClock = new SystemClock();

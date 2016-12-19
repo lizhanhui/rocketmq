@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.alibaba.rocketmq.tools.command.topic;
 
@@ -93,7 +93,7 @@ public class UpdateTopicPermSubCommand implements SubCommand {
             int perm = Integer.parseInt(commandLine.getOptionValue('p').trim());
             int oldPerm = topicConfig.getPerm();
             if (perm == oldPerm) {
-                System.out.println("new perm equals to the old one!");
+                System.out.printf("new perm equals to the old one!%n");
                 return;
             }
             topicConfig.setPerm(perm);
@@ -101,7 +101,7 @@ public class UpdateTopicPermSubCommand implements SubCommand {
                 String addr = commandLine.getOptionValue('b').trim();
                 defaultMQAdminExt.createAndUpdateTopicConfig(addr, topicConfig);
                 System.out.printf("update topic perm from %s to %s in %s success.%n", oldPerm, perm, addr);
-                System.out.println(topicConfig);
+                System.out.printf("%s%n", topicConfig);
                 return;
             } else if (commandLine.hasOption('c')) {
                 String clusterName = commandLine.getOptionValue('c').trim();

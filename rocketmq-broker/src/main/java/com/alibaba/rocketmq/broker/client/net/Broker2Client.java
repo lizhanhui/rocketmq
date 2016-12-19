@@ -59,20 +59,17 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author shijia.wxr
  */
 public class Broker2Client {
-    private static final Logger log = LoggerFactory.getLogger(LoggerName.BrokerLoggerName);
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
     private final BrokerController brokerController;
-
 
     public Broker2Client(BrokerController brokerController) {
         this.brokerController = brokerController;
     }
 
-
-    public void checkProducerTransactionState(//
-                                              final Channel channel,//
-                                              final CheckTransactionStateRequestHeader requestHeader,//
-                                              final SelectMappedBufferResult selectMappedBufferResult//
-    ) {
+    public void checkProducerTransactionState(
+            final Channel channel,
+            final CheckTransactionStateRequestHeader requestHeader,
+            final SelectMappedBufferResult selectMappedBufferResult) {
         RemotingCommand request =
                 RemotingCommand.createRequestCommand(RequestCode.CHECK_TRANSACTION_STATE, requestHeader);
         request.markOnewayRPC();
@@ -96,18 +93,15 @@ public class Broker2Client {
         }
     }
 
-
-    public RemotingCommand callClient(//
-                                      final Channel channel,//
-                                      final RemotingCommand request//
+    public RemotingCommand callClient(final Channel channel,
+                                      final RemotingCommand request
     ) throws RemotingSendRequestException, RemotingTimeoutException, InterruptedException {
         return this.brokerController.getRemotingServer().invokeSync(channel, request, 10000);
     }
 
-    public void notifyConsumerIdsChanged(//
-                                         final Channel channel,//
-                                         final String consumerGroup//
-    ) {
+    public void notifyConsumerIdsChanged(
+            final Channel channel,
+            final String consumerGroup) {
         if (null == consumerGroup) {
             log.error("notifyConsumerIdsChanged consumerGroup is null");
             return;
@@ -125,11 +119,9 @@ public class Broker2Client {
         }
     }
 
-
     public RemotingCommand resetOffset(String topic, String group, long timeStamp, boolean isForce) {
         return resetOffset(topic, group, timeStamp, isForce, false);
     }
-
 
     public RemotingCommand resetOffset(String topic, String group, long timeStamp, boolean isForce,
                                        boolean isC) {
@@ -201,7 +193,6 @@ public class Broker2Client {
         ConsumerGroupInfo consumerGroupInfo =
                 this.brokerController.getConsumerManager().getConsumerGroupInfo(group);
 
-
         if (consumerGroupInfo != null && !consumerGroupInfo.getAllChannel().isEmpty()) {
             ConcurrentHashMap<Channel, ClientChannelInfo> channelInfoTable =
                     consumerGroupInfo.getChannelInfoTable();
@@ -227,10 +218,9 @@ public class Broker2Client {
             }
         } else {
             String errorInfo =
-                    String.format(
-                            "Consumer not online, so can not reset offset, Group: %s Topic: %s Timestamp: %d",//
-                            requestHeader.getGroup(), //
-                            requestHeader.getTopic(), //
+                    String.format("Consumer not online, so can not reset offset, Group: %s Topic: %s Timestamp: %d",
+                            requestHeader.getGroup(),
+                            requestHeader.getTopic(),
                             requestHeader.getTimestamp());
             log.error(errorInfo);
             response.setCode(ResponseCode.CONSUMER_NOT_ONLINE);
@@ -252,7 +242,6 @@ public class Broker2Client {
                     new MessageQueueForC(mq.getTopic(), mq.getBrokerName(), mq.getQueueId(), entry.getValue());
             list.add(tmp);
         }
-
         return list;
     }
 
@@ -287,8 +276,6 @@ public class Broker2Client {
                         RemotingHelper.parseChannelRemoteAddr(entry.getKey()), MQVersion.getVersionDesc(version));
                 return result;
             } else if (UtilAll.isBlank(originClientId) || originClientId.equals(clientId)) {
-
-
                 try {
                     RemotingCommand response =
                             this.brokerController.getRemotingServer().invokeSync(entry.getKey(), request, 5000);
@@ -315,13 +302,11 @@ public class Broker2Client {
                             new Object[]{topic, group}, e);
                 }
 
-
                 if (!UtilAll.isBlank(originClientId) && originClientId.equals(clientId)) {
                     break;
                 }
             }
         }
-
 
         result.setCode(ResponseCode.SUCCESS);
         GetConsumerStatusBody resBody = new GetConsumerStatusBody();

@@ -39,27 +39,27 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class RemotingCommand {
     public static final String SERIALIZE_TYPE_PROPERTY = "rocketmq.serialize.type";
     public static final String SERIALIZE_TYPE_ENV = "ROCKETMQ_SERIALIZE_TYPE";
-    private static final Logger log = LoggerFactory.getLogger(RemotingHelper.RemotingLogName);
+    private static final Logger log = LoggerFactory.getLogger(RemotingHelper.ROCKETMQ_REMOTING);
     private static final int RPC_TYPE = 0; // 0, REQUEST_COMMAND
     private static final int RPC_ONEWAY = 1; // 0, RPC
 
-    private static final Map<Class<? extends CommandCustomHeader>, Field[]> clazzFieldsCache =
+    private static final Map<Class<? extends CommandCustomHeader>, Field[]> CLASS_HASH_MAP =
             new HashMap<Class<? extends CommandCustomHeader>, Field[]>();
-    private static final Map<Class, String> canonicalNameCache = new HashMap<Class, String>();
+    private static final Map<Class, String> CANONICAL_NAME_CACHE = new HashMap<Class, String>();
     // 1, RESPONSE_COMMAND
-    private static final Map<Field, Annotation> notNullAnnotationCache = new HashMap<Field, Annotation>();
+    private static final Map<Field, Annotation> NOT_NULL_ANNOTATION_CACHE = new HashMap<Field, Annotation>();
     // 1, Oneway
 
-    private static final String StringCanonicalName = String.class.getCanonicalName();
-    private static final String DoubleCanonicalName1 = Double.class.getCanonicalName();
-    private static final String DoubleCanonicalName2 = double.class.getCanonicalName();
-    private static final String IntegerCanonicalName1 = Integer.class.getCanonicalName();
-    private static final String IntegerCanonicalName2 = int.class.getCanonicalName();
-    private static final String LongCanonicalName1 = Long.class.getCanonicalName();
-    private static final String LongCanonicalName2 = long.class.getCanonicalName();
-    private static final String BooleanCanonicalName1 = Boolean.class.getCanonicalName();
-    private static final String BooleanCanonicalName2 = boolean.class.getCanonicalName();
-    public static final String RemotingVersionKey = "rocketmq.remoting.version";
+    private static final String STRING_CANONICAL_NAME = String.class.getCanonicalName();
+    private static final String DOUBLE_CANONICAL_NAME_1 = Double.class.getCanonicalName();
+    private static final String DOUBLE_CANONICAL_NAME_2 = double.class.getCanonicalName();
+    private static final String INTEGER_CANONICAL_NAME_1 = Integer.class.getCanonicalName();
+    private static final String INTEGER_CANONICAL_NAME_2 = int.class.getCanonicalName();
+    private static final String LONG_CANONICAL_NAME_1 = Long.class.getCanonicalName();
+    private static final String LONG_CANONICAL_NAME_2 = long.class.getCanonicalName();
+    private static final String BOOLEAN_CANONICAL_NAME_1 = Boolean.class.getCanonicalName();
+    private static final String BOOLEAN_CANONICAL_NAME_2 = boolean.class.getCanonicalName();
+    public static final String REMOTING_VERSION_KEY = "rocketmq.remoting.version";
     private static volatile int configVersion = -1;
     private static AtomicInteger requestId = new AtomicInteger(0);
 
@@ -112,7 +112,7 @@ public class RemotingCommand {
         if (configVersion >= 0) {
             cmd.setVersion(configVersion);
         } else {
-            String v = System.getProperty(RemotingVersionKey);
+            String v = System.getProperty(REMOTING_VERSION_KEY);
             if (v != null) {
                 int value = Integer.parseInt(v);
                 cmd.setVersion(value);
@@ -272,15 +272,15 @@ public class RemotingCommand {
                             String type = getCanonicalName(field.getType());
                             Object valueParsed;
 
-                            if (type.equals(StringCanonicalName)) {
+                            if (type.equals(STRING_CANONICAL_NAME)) {
                                 valueParsed = value;
-                            } else if (type.equals(IntegerCanonicalName1) || type.equals(IntegerCanonicalName2)) {
+                            } else if (type.equals(INTEGER_CANONICAL_NAME_1) || type.equals(INTEGER_CANONICAL_NAME_2)) {
                                 valueParsed = Integer.parseInt(value);
-                            } else if (type.equals(LongCanonicalName1) || type.equals(LongCanonicalName2)) {
+                            } else if (type.equals(LONG_CANONICAL_NAME_1) || type.equals(LONG_CANONICAL_NAME_2)) {
                                 valueParsed = Long.parseLong(value);
-                            } else if (type.equals(BooleanCanonicalName1) || type.equals(BooleanCanonicalName2)) {
+                            } else if (type.equals(BOOLEAN_CANONICAL_NAME_1) || type.equals(BOOLEAN_CANONICAL_NAME_2)) {
                                 valueParsed = Boolean.parseBoolean(value);
-                            } else if (type.equals(DoubleCanonicalName1) || type.equals(DoubleCanonicalName2)) {
+                            } else if (type.equals(DOUBLE_CANONICAL_NAME_1) || type.equals(DOUBLE_CANONICAL_NAME_2)) {
                                 valueParsed = Double.parseDouble(value);
                             } else {
                                 throw new RemotingCommandException("the custom field <" + fieldName + "> type is not supported");
@@ -301,36 +301,36 @@ public class RemotingCommand {
     }
 
     private Field[] getClazzFields(Class<? extends CommandCustomHeader> classHeader) {
-        Field[] field = clazzFieldsCache.get(classHeader);
+        Field[] field = CLASS_HASH_MAP.get(classHeader);
 
         if (field == null) {
             field = classHeader.getDeclaredFields();
-            synchronized (clazzFieldsCache) {
-                clazzFieldsCache.put(classHeader, field);
+            synchronized (CLASS_HASH_MAP) {
+                CLASS_HASH_MAP.put(classHeader, field);
             }
         }
         return field;
     }
 
     private Annotation getNotNullAnnotation(Field field) {
-        Annotation annotation = notNullAnnotationCache.get(field);
+        Annotation annotation = NOT_NULL_ANNOTATION_CACHE.get(field);
 
         if (annotation == null) {
             annotation = field.getAnnotation(CFNotNull.class);
-            synchronized (notNullAnnotationCache) {
-                notNullAnnotationCache.put(field, annotation);
+            synchronized (NOT_NULL_ANNOTATION_CACHE) {
+                NOT_NULL_ANNOTATION_CACHE.put(field, annotation);
             }
         }
         return annotation;
     }
 
     private String getCanonicalName(Class clazz) {
-        String name = canonicalNameCache.get(clazz);
+        String name = CANONICAL_NAME_CACHE.get(clazz);
 
         if (name == null) {
             name = clazz.getCanonicalName();
-            synchronized (canonicalNameCache) {
-                canonicalNameCache.put(clazz, name);
+            synchronized (CANONICAL_NAME_CACHE) {
+                CANONICAL_NAME_CACHE.put(clazz, name);
             }
         }
         return name;

@@ -43,10 +43,8 @@ import org.slf4j.LoggerFactory;
  * @author shijia.wxr
  */
 public class ClientManageProcessor implements NettyRequestProcessor {
-    private static final Logger log = LoggerFactory.getLogger(LoggerName.BrokerLoggerName);
-
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
     private final BrokerController brokerController;
-
 
     public ClientManageProcessor(final BrokerController brokerController) {
         this.brokerController = brokerController;
@@ -73,14 +71,12 @@ public class ClientManageProcessor implements NettyRequestProcessor {
 
     public RemotingCommand heartBeat(ChannelHandlerContext ctx, RemotingCommand request) {
         RemotingCommand response = RemotingCommand.createResponseCommand(null);
-
         HeartbeatData heartbeatData = HeartbeatData.decode(request.getBody(), HeartbeatData.class);
-
-        ClientChannelInfo clientChannelInfo = new ClientChannelInfo(//
-                ctx.channel(),//
-                heartbeatData.getClientID(),//
-                request.getLanguage(),//
-                request.getVersion()//
+        ClientChannelInfo clientChannelInfo = new ClientChannelInfo(
+                ctx.channel(),
+                heartbeatData.getClientID(),
+                request.getLanguage(),
+                request.getVersion()
         );
 
         for (ConsumerData data : heartbeatData.getConsumerDataSet()) {
@@ -95,34 +91,27 @@ public class ClientManageProcessor implements NettyRequestProcessor {
                     topicSysFlag = TopicSysFlag.buildSysFlag(false, true);
                 }
                 String newTopic = MixAll.getRetryTopic(data.getGroupName());
-                this.brokerController.getTopicConfigManager().createTopicInSendMessageBackMethod(//
-                        newTopic,//
-                        subscriptionGroupConfig.getRetryQueueNums(), //
+                this.brokerController.getTopicConfigManager().createTopicInSendMessageBackMethod(
+                        newTopic,
+                        subscriptionGroupConfig.getRetryQueueNums(),
                         PermName.PERM_WRITE | PermName.PERM_READ, topicSysFlag);
             }
 
-            boolean changed = this.brokerController.getConsumerManager().registerConsumer(//
-                    data.getGroupName(),//
-                    clientChannelInfo,//
-                    data.getConsumeType(),//
-                    data.getMessageModel(),//
-                    data.getConsumeFromWhere(),//
-                    data.getSubscriptionDataSet(),//
+            boolean changed = this.brokerController.getConsumerManager().registerConsumer(
+                    data.getGroupName(),
+                    clientChannelInfo,
+                    data.getConsumeType(),
+                    data.getMessageModel(),
+                    data.getConsumeFromWhere(),
+                    data.getSubscriptionDataSet(),
                     isNotifyConsumerIdsChangedEnable
             );
 
             if (changed) {
-                log.info("registerConsumer info changed {} {}",//
-                        data.toString(),//
-                        RemotingHelper.parseChannelRemoteAddr(ctx.channel())//
+                log.info("registerConsumer info changed {} {}",
+                        data.toString(),
+                        RemotingHelper.parseChannelRemoteAddr(ctx.channel())
                 );
-
-
-                // for (SubscriptionData subscriptionData :
-                // data.getSubscriptionDataSet()) {
-                // this.brokerController.getTopicConfigManager().updateTopicUnitSubFlag(
-                // subscriptionData.getTopic(), data.isUnitMode());
-                // }
             }
         }
 
@@ -130,7 +119,6 @@ public class ClientManageProcessor implements NettyRequestProcessor {
             this.brokerController.getProducerManager().registerProducer(data.getGroupName(),
                     clientChannelInfo);
         }
-
         response.setCode(ResponseCode.SUCCESS);
         response.setRemark(null);
         return response;
@@ -144,13 +132,11 @@ public class ClientManageProcessor implements NettyRequestProcessor {
                 (UnregisterClientRequestHeader) request
                         .decodeCommandCustomHeader(UnregisterClientRequestHeader.class);
 
-        ClientChannelInfo clientChannelInfo = new ClientChannelInfo(//
-                ctx.channel(),//
-                requestHeader.getClientID(),//
-                request.getLanguage(),//
-                request.getVersion()//
-        );
-
+        ClientChannelInfo clientChannelInfo = new ClientChannelInfo(
+                ctx.channel(),
+                requestHeader.getClientID(),
+                request.getLanguage(),
+                request.getVersion());
         {
             final String group = requestHeader.getProducerGroup();
             if (group != null) {

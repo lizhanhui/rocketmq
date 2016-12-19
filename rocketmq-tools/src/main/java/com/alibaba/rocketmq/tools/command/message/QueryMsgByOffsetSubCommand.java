@@ -19,8 +19,6 @@ package com.alibaba.rocketmq.tools.command.message;
 import com.alibaba.rocketmq.client.consumer.DefaultMQPullConsumer;
 import com.alibaba.rocketmq.client.consumer.PullResult;
 import com.alibaba.rocketmq.common.MixAll;
-import com.alibaba.rocketmq.common.message.MessageClientExt;
-import com.alibaba.rocketmq.common.message.MessageExt;
 import com.alibaba.rocketmq.common.message.MessageQueue;
 import com.alibaba.rocketmq.remoting.RPCHook;
 import com.alibaba.rocketmq.tools.admin.DefaultMQAdminExt;
@@ -40,12 +38,10 @@ public class QueryMsgByOffsetSubCommand implements SubCommand {
         return "queryMsgByOffset";
     }
 
-
     @Override
     public String commandDesc() {
         return "Query Message by offset";
     }
-
 
     @Override
     public Options buildCommandlineOptions(Options options) {
@@ -67,7 +63,6 @@ public class QueryMsgByOffsetSubCommand implements SubCommand {
 
         return options;
     }
-
 
     @Override
     public void execute(CommandLine commandLine, Options options, RPCHook rpcHook) {

@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.alibaba.rocketmq.tools.command.topic;
 
@@ -49,38 +49,33 @@ public class TopicListSubCommand implements SubCommand {
         return "topicList";
     }
 
-
     @Override
     public String commandDesc() {
         return "Fetch all topic list from name server";
     }
-
 
     @Override
     public Options buildCommandlineOptions(Options options) {
         Option opt = new Option("c", "clusterModel", false, "clusterModel");
         opt.setRequired(false);
         options.addOption(opt);
-
         return options;
     }
 
     @Override
     public void execute(final CommandLine commandLine, final Options options, RPCHook rpcHook) {
         DefaultMQAdminExt defaultMQAdminExt = new DefaultMQAdminExt(rpcHook);
-
         defaultMQAdminExt.setInstanceName(Long.toString(System.currentTimeMillis()));
 
         try {
             defaultMQAdminExt.start();
-
             if (commandLine.hasOption('c')) {
                 ClusterInfo clusterInfo = defaultMQAdminExt.examineBrokerClusterInfo();
 
-                System.out.printf("%-20s  %-48s  %-48s%n",//
-                        "#Cluster Name",//
-                        "#Topic",//
-                        "#Consumer Group"//
+                System.out.printf("%-20s  %-48s  %-48s%n",
+                        "#Cluster Name",
+                        "#Topic",
+                        "#Consumer Group"
                 );
 
                 TopicList topicList = defaultMQAdminExt.fetchAllTopicList();
@@ -106,17 +101,17 @@ public class TopicListSubCommand implements SubCommand {
                     }
 
                     for (String group : groupList.getGroupList()) {
-                        System.out.printf("%-20s  %-48s  %-48s%n",//
-                                UtilAll.frontStringAtLeast(clusterName, 20),//
-                                UtilAll.frontStringAtLeast(topic, 48),//
-                                UtilAll.frontStringAtLeast(group, 48)//
+                        System.out.printf("%-20s  %-48s  %-48s%n",
+                                UtilAll.frontStringAtLeast(clusterName, 20),
+                                UtilAll.frontStringAtLeast(topic, 48),
+                                UtilAll.frontStringAtLeast(group, 48)
                         );
                     }
                 }
             } else {
                 TopicList topicList = defaultMQAdminExt.fetchAllTopicList();
                 for (String topic : topicList.getTopicList()) {
-                    System.out.println(topic);
+                    System.out.printf("%s%n", topic);
                 }
             }
         } catch (Exception e) {
@@ -142,7 +137,6 @@ public class TopicListSubCommand implements SubCommand {
                 return next.getKey();
             }
         }
-
         return null;
     }
 }

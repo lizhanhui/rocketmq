@@ -25,11 +25,6 @@ import org.apache.commons.cli.Options;
 
 import java.util.List;
 
-
-/**
- * @author shijia.wxr
- *
- */
 public class WipeWritePermSubCommand implements SubCommand {
 
     @Override
@@ -67,15 +62,15 @@ public class WipeWritePermSubCommand implements SubCommand {
                 for (String namesrvAddr : namesrvList) {
                     try {
                         int wipeTopicCount = defaultMQAdminExt.wipeWritePermOfBroker(namesrvAddr, brokerName);
-                        System.out.printf("wipe write perm of broker[%s] in name server[%s] OK, %d%n",//
-                                brokerName,//
-                                namesrvAddr,//
-                                wipeTopicCount//
+                        System.out.printf("wipe write perm of broker[%s] in name server[%s] OK, %d%n",
+                                brokerName,
+                                namesrvAddr,
+                                wipeTopicCount
                         );
                     } catch (Exception e) {
-                        System.out.printf("wipe write perm of broker[%s] in name server[%s] Failed%n",//
-                                brokerName,//
-                                namesrvAddr//
+                        System.out.printf("wipe write perm of broker[%s] in name server[%s] Failed%n",
+                                brokerName,
+                                namesrvAddr
                         );
 
                         e.printStackTrace();

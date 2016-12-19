@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.alibaba.rocketmq.store;
 
@@ -46,11 +46,11 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class MappedFile extends ReferenceResource {
     public static final int OS_PAGE_SIZE = 1024 * 4;
-    protected static final Logger log = LoggerFactory.getLogger(LoggerName.StoreLoggerName);
+    protected static final Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
 
-    private static final AtomicLong TotalMapedVitualMemory = new AtomicLong(0);
+    private static final AtomicLong TOTAL_MAPED_VITUAL_MEMORY = new AtomicLong(0);
 
-    private static final AtomicInteger TotalMapedFiles = new AtomicInteger(0);
+    private static final AtomicInteger TOTAL_MAPED_FILES = new AtomicInteger(0);
 
     private String fileName;
 
@@ -97,7 +97,7 @@ public class MappedFile extends ReferenceResource {
         this.transientStorePool = transientStorePool;
     }
 
-    private void init(final String fileName, final int fileSize) throws IOException{
+    private void init(final String fileName, final int fileSize) throws IOException {
         this.fileName = fileName;
         this.fileSize = fileSize;
         this.file = new File(fileName);
@@ -109,8 +109,8 @@ public class MappedFile extends ReferenceResource {
         try {
             this.fileChannel = new RandomAccessFile(this.file, "rw").getChannel();
             this.mappedByteBuffer = this.fileChannel.map(MapMode.READ_WRITE, 0, fileSize);
-            TotalMapedVitualMemory.addAndGet(fileSize);
-            TotalMapedFiles.incrementAndGet();
+            TOTAL_MAPED_VITUAL_MEMORY.addAndGet(fileSize);
+            TOTAL_MAPED_FILES.incrementAndGet();
             ok = true;
         } catch (FileNotFoundException e) {
             log.error("create file channel " + this.fileName + " Failed. ", e);
@@ -190,12 +190,12 @@ public class MappedFile extends ReferenceResource {
 
 
     public static int getTotalmapedfiles() {
-        return TotalMapedFiles.get();
+        return TOTAL_MAPED_FILES.get();
     }
 
 
     public static long getTotalMapedVitualMemory() {
-        return TotalMapedVitualMemory.get();
+        return TOTAL_MAPED_VITUAL_MEMORY.get();
     }
 
 
@@ -270,7 +270,7 @@ public class MappedFile extends ReferenceResource {
      * @param flushLeastPages
 
      *
-     * @return
+     * @return The current flushed position
      */
     public int flush(final int flushLeastPages) {
         if (this.isAbleToFlush(flushLeastPages)) {
@@ -325,7 +325,7 @@ public class MappedFile extends ReferenceResource {
         int writePos = this.wrotePosition.get();
         int lastCommittedPosition = this.committedPosition.get();
 
-        if ((writePos - this.committedPosition.get() > 0)) {
+        if (writePos - this.committedPosition.get() > 0) {
             try {
                 ByteBuffer byteBuffer = writeBuffer.slice();
                 byteBuffer.position(lastCommittedPosition);
@@ -397,9 +397,7 @@ public class MappedFile extends ReferenceResource {
                 log.warn("matched, but hold failed, request pos: " + pos + ", fileFromOffset: "
                         + this.fileFromOffset);
             }
-        }
-
-        else {
+        } else {
             log.warn("selectMappedBuffer request pos invalid, request pos: " + pos + ", size: " + size
                     + ", fileFromOffset: " + this.fileFromOffset);
         }
@@ -443,8 +441,8 @@ public class MappedFile extends ReferenceResource {
         }
 
         clean(this.mappedByteBuffer);
-        TotalMapedVitualMemory.addAndGet(this.fileSize * (-1));
-        TotalMapedFiles.decrementAndGet();
+        TOTAL_MAPED_VITUAL_MEMORY.addAndGet(this.fileSize * (-1));
+        TOTAL_MAPED_FILES.decrementAndGet();
         log.info("unmap file[REF:" + currentRef + "] " + this.fileName + " OK");
         return true;
     }

@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.alibaba.rocketmq.tools.admin;
 
@@ -50,56 +50,46 @@ public class DefaultMQAdminExt extends ClientConfig implements MQAdminExt {
     private String createTopicKey = MixAll.DEFAULT_TOPIC;
     private long timeoutMillis = 5000;
 
-
     public DefaultMQAdminExt() {
         this.defaultMQAdminExtImpl = new DefaultMQAdminExtImpl(this, null, timeoutMillis);
     }
-
 
     public DefaultMQAdminExt(long timeoutMillis) {
         this.defaultMQAdminExtImpl = new DefaultMQAdminExtImpl(this, null, timeoutMillis);
     }
 
-
     public DefaultMQAdminExt(RPCHook rpcHook) {
         this.defaultMQAdminExtImpl = new DefaultMQAdminExtImpl(this, rpcHook, timeoutMillis);
     }
 
-
     public DefaultMQAdminExt(RPCHook rpcHook, long timeoutMillis) {
         this.defaultMQAdminExtImpl = new DefaultMQAdminExtImpl(this, rpcHook, timeoutMillis);
     }
-
 
     public DefaultMQAdminExt(final String adminExtGroup) {
         this.adminExtGroup = adminExtGroup;
         this.defaultMQAdminExtImpl = new DefaultMQAdminExtImpl(this, timeoutMillis);
     }
 
-
     public DefaultMQAdminExt(final String adminExtGroup, long timeoutMillis) {
         this.adminExtGroup = adminExtGroup;
         this.defaultMQAdminExtImpl = new DefaultMQAdminExtImpl(this, timeoutMillis);
     }
-
 
     @Override
     public void createTopic(String key, String newTopic, int queueNum) throws MQClientException {
         createTopic(key, newTopic, queueNum, 0);
     }
 
-
     @Override
     public void createTopic(String key, String newTopic, int queueNum, int topicSysFlag) throws MQClientException {
         defaultMQAdminExtImpl.createTopic(key, newTopic, queueNum, topicSysFlag);
     }
 
-
     @Override
     public long searchOffset(MessageQueue mq, long timestamp) throws MQClientException {
         return defaultMQAdminExtImpl.searchOffset(mq, timestamp);
     }
-
 
     @Override
     public long maxOffset(MessageQueue mq) throws MQClientException {
@@ -112,18 +102,15 @@ public class DefaultMQAdminExt extends ClientConfig implements MQAdminExt {
         return defaultMQAdminExtImpl.minOffset(mq);
     }
 
-
     @Override
     public long earliestMsgStoreTime(MessageQueue mq) throws MQClientException {
         return defaultMQAdminExtImpl.earliestMsgStoreTime(mq);
     }
 
-
     @Override
     public MessageExt viewMessage(String offsetMsgId) throws RemotingException, MQBrokerException, InterruptedException, MQClientException {
         return defaultMQAdminExtImpl.viewMessage(offsetMsgId);
     }
-
 
     @Override
     public QueryResult queryMessage(String topic, String key, int maxNum, long begin, long end) throws MQClientException,
@@ -131,12 +118,10 @@ public class DefaultMQAdminExt extends ClientConfig implements MQAdminExt {
         return defaultMQAdminExtImpl.queryMessage(topic, key, maxNum, begin, end);
     }
 
-
     @Override
     public void start() throws MQClientException {
         defaultMQAdminExtImpl.start();
     }
-
 
     @Override
     public void shutdown() {
@@ -151,7 +136,7 @@ public class DefaultMQAdminExt extends ClientConfig implements MQAdminExt {
 
     @Override
     public Properties getBrokerConfig(final String brokerAddr) throws RemotingConnectException,
-            RemotingSendRequestException, RemotingTimeoutException, UnsupportedEncodingException, InterruptedException, MQBrokerException{
+            RemotingSendRequestException, RemotingTimeoutException, UnsupportedEncodingException, InterruptedException, MQBrokerException {
         return defaultMQAdminExtImpl.getBrokerConfig(brokerAddr);
     }
 
@@ -189,7 +174,7 @@ public class DefaultMQAdminExt extends ClientConfig implements MQAdminExt {
     }
 
     @Override
-    public TopicList fetchTopicsByCLuster(String clusterName) throws RemotingException, MQClientException, InterruptedException{
+    public TopicList fetchTopicsByCLuster(String clusterName) throws RemotingException, MQClientException, InterruptedException {
         return this.defaultMQAdminExtImpl.fetchTopicsByCLuster(clusterName);
     }
 

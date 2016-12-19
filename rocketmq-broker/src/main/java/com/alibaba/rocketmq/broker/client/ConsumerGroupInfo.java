@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.alibaba.rocketmq.broker.client;
 
@@ -37,7 +37,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author shijia.wxr
  */
 public class ConsumerGroupInfo {
-    private static final Logger log = LoggerFactory.getLogger(LoggerName.BrokerLoggerName);
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
     private final String groupName;
     private final ConcurrentHashMap<String/* Topic */, SubscriptionData> subscriptionTable =
             new ConcurrentHashMap<String, SubscriptionData>();
@@ -144,10 +144,9 @@ public class ConsumerGroupInfo {
             infoOld = infoNew;
         } else {
             if (!infoOld.getClientId().equals(infoNew.getClientId())) {
-                log.error(
-                        "[BUG] consumer channel exist in broker, but clientId not equal. GROUP: {} OLD: {} NEW: {} ",
-                        this.groupName,//
-                        infoOld.toString(),//
+                log.error("[BUG] consumer channel exist in broker, but clientId not equal. GROUP: {} OLD: {} NEW: {} ",
+                        this.groupName,
+                        infoOld.toString(),
                         infoNew.toString());
                 this.channelInfoTable.put(infoNew.getChannel(), infoNew);
             }
@@ -169,15 +168,16 @@ public class ConsumerGroupInfo {
                 SubscriptionData prev = this.subscriptionTable.putIfAbsent(sub.getTopic(), sub);
                 if (null == prev) {
                     updated = true;
-                    log.info("subscription changed, add new topic, group: {} {}", this.groupName,
+                    log.info("subscription changed, add new topic, group: {} {}",
+                            this.groupName,
                             sub.toString());
                 }
             } else if (sub.getSubVersion() > old.getSubVersion()) {
                 if (this.consumeType == ConsumeType.CONSUME_PASSIVELY) {
-                    log.info("subscription changed, group: {} OLD: {} NEW: {}", //
-                            this.groupName,//
-                            old.toString(),//
-                            sub.toString()//
+                    log.info("subscription changed, group: {} OLD: {} NEW: {}",
+                            this.groupName,
+                            old.toString(),
+                            sub.toString()
                     );
                 }
 
@@ -200,10 +200,10 @@ public class ConsumerGroupInfo {
             }
 
             if (!exist) {
-                log.warn("subscription changed, group: {} remove topic {} {}", //
-                        this.groupName,//
-                        oldTopic,//
-                        next.getValue().toString()//
+                log.warn("subscription changed, group: {} remove topic {} {}",
+                        this.groupName,
+                        oldTopic,
+                        next.getValue().toString()
                 );
 
                 it.remove();

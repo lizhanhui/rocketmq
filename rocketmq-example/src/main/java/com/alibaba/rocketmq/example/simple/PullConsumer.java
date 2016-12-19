@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.alibaba.rocketmq.example.simple;
 
@@ -26,7 +26,7 @@ import java.util.Map;
 import java.util.Set;
 
 public class PullConsumer {
-    private static final Map<MessageQueue, Long> offseTable = new HashMap<MessageQueue, Long>();
+    private static final Map<MessageQueue, Long> OFFSE_TABLE = new HashMap<MessageQueue, Long>();
 
 
     public static void main(String[] args) throws MQClientException {
@@ -36,13 +36,13 @@ public class PullConsumer {
 
         Set<MessageQueue> mqs = consumer.fetchSubscribeMessageQueues("TopicTest1");
         for (MessageQueue mq : mqs) {
-            System.out.println("Consume from the queue: " + mq);
+            System.out.printf("Consume from the queue: " + mq + "%n");
             SINGLE_MQ:
             while (true) {
                 try {
                     PullResult pullResult =
                             consumer.pullBlockIfNotFound(mq, null, getMessageQueueOffset(mq), 32);
-                    System.out.println(pullResult);
+                    System.out.printf("%s%n", pullResult);
                     putMessageQueueOffset(mq, pullResult.getNextBeginOffset());
                     switch (pullResult.getPullStatus()) {
                         case FOUND:
@@ -66,7 +66,7 @@ public class PullConsumer {
     }
 
     private static long getMessageQueueOffset(MessageQueue mq) {
-        Long offset = offseTable.get(mq);
+        Long offset = OFFSE_TABLE.get(mq);
         if (offset != null)
             return offset;
 
@@ -74,7 +74,7 @@ public class PullConsumer {
     }
 
     private static void putMessageQueueOffset(MessageQueue mq, long offset) {
-        offseTable.put(mq, offset);
+        OFFSE_TABLE.put(mq, offset);
     }
 
 }

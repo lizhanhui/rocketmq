@@ -74,7 +74,7 @@ public class CleanUnusedTopicCommand implements SubCommand {
                     cluster = cluster.trim();
                 result = defaultMQAdminExt.cleanUnusedTopicByAddr(cluster);
             }
-            System.out.println(result ? "success" : "false");
+            System.out.printf(result ? "success" : "false");
         } catch (Exception e) {
             e.printStackTrace();
         } finally {

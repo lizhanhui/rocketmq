@@ -36,9 +36,9 @@ import java.util.concurrent.locks.ReentrantLock;
  * @author shijia.wxr
  */
 public class ProducerManager {
-    private static final Logger log = LoggerFactory.getLogger(LoggerName.BrokerLoggerName);
-    private static final long LockTimeoutMillis = 3000;
-    private static final long ChannelExpiredTimeout = 1000 * 120;
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
+    private static final long LOCK_TIMEOUT_MILLIS = 3000;
+    private static final long CHANNEL_EXPIRED_TIMEOUT = 1000 * 120;
     private final Lock groupChannelLock = new ReentrantLock();
     private final HashMap<String /* group name */, HashMap<Channel, ClientChannelInfo>> groupChannelTable =
             new HashMap<String, HashMap<Channel, ClientChannelInfo>>();
@@ -52,7 +52,7 @@ public class ProducerManager {
         HashMap<String /* group name */, HashMap<Channel, ClientChannelInfo>> newGroupChannelTable =
                 new HashMap<String, HashMap<Channel, ClientChannelInfo>>();
         try {
-            if (this.groupChannelLock.tryLock(LockTimeoutMillis, TimeUnit.MILLISECONDS)) {
+            if (this.groupChannelLock.tryLock(LOCK_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)) {
                 try {
                     newGroupChannelTable.putAll(groupChannelTable);
                 } finally {
@@ -68,7 +68,7 @@ public class ProducerManager {
 
     public void scanNotActiveChannel() {
         try {
-            if (this.groupChannelLock.tryLock(LockTimeoutMillis, TimeUnit.MILLISECONDS)) {
+            if (this.groupChannelLock.tryLock(LOCK_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)) {
                 try {
                     for (final Map.Entry<String, HashMap<Channel, ClientChannelInfo>> entry : this.groupChannelTable
                             .entrySet()) {
@@ -82,7 +82,7 @@ public class ProducerManager {
                             final ClientChannelInfo info = item.getValue();
 
                             long diff = System.currentTimeMillis() - info.getLastUpdateTimestamp();
-                            if (diff > ChannelExpiredTimeout) {
+                            if (diff > CHANNEL_EXPIRED_TIMEOUT) {
                                 it.remove();
                                 log.warn(
                                         "SCAN: remove expired channel[{}] from ProducerManager groupChannelTable, producer group name: {}",
@@ -106,7 +106,7 @@ public class ProducerManager {
     public void doChannelCloseEvent(final String remoteAddr, final Channel channel) {
         if (channel != null) {
             try {
-                if (this.groupChannelLock.tryLock(LockTimeoutMillis, TimeUnit.MILLISECONDS)) {
+                if (this.groupChannelLock.tryLock(LOCK_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)) {
                     try {
                         for (final Map.Entry<String, HashMap<Channel, ClientChannelInfo>> entry : this.groupChannelTable
                                 .entrySet()) {
@@ -139,7 +139,7 @@ public class ProducerManager {
         try {
             ClientChannelInfo clientChannelInfoFound = null;
 
-            if (this.groupChannelLock.tryLock(LockTimeoutMillis, TimeUnit.MILLISECONDS)) {
+            if (this.groupChannelLock.tryLock(LOCK_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)) {
                 try {
                     HashMap<Channel, ClientChannelInfo> channelTable = this.groupChannelTable.get(group);
                     if (null == channelTable) {
@@ -171,7 +171,7 @@ public class ProducerManager {
 
     public void unregisterProducer(final String group, final ClientChannelInfo clientChannelInfo) {
         try {
-            if (this.groupChannelLock.tryLock(LockTimeoutMillis, TimeUnit.MILLISECONDS)) {
+            if (this.groupChannelLock.tryLock(LOCK_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)) {
                 try {
                     HashMap<Channel, ClientChannelInfo> channelTable = this.groupChannelTable.get(group);
                     if (null != channelTable && !channelTable.isEmpty()) {

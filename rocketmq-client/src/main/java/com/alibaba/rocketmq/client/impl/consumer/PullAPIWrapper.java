@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.alibaba.rocketmq.client.impl.consumer;
 
@@ -133,18 +133,18 @@ public class PullAPIWrapper {
         }
     }
 
-    public PullResult pullKernelImpl(//
-                                     final MessageQueue mq,// 1
-                                     final String subExpression,// 2
-                                     final long subVersion,// 3
-                                     final long offset,// 4
-                                     final int maxNums,// 5
-                                     final int sysFlag,// 6
-                                     final long commitOffset,// 7
-                                     final long brokerSuspendMaxTimeMillis,// 8
-                                     final long timeoutMillis,// 9
-                                     final CommunicationMode communicationMode,// 10
-                                     final PullCallback pullCallback// 11
+    public PullResult pullKernelImpl(
+            final MessageQueue mq,
+            final String subExpression,
+            final long subVersion,
+            final long offset,
+            final int maxNums,
+            final int sysFlag,
+            final long commitOffset,
+            final long brokerSuspendMaxTimeMillis,
+            final long timeoutMillis,
+            final CommunicationMode communicationMode,
+            final PullCallback pullCallback
     ) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
         FindBrokerResult findBrokerResult =
                 this.mQClientFactory.findBrokerAddressInSubscribe(mq.getBrokerName(),
@@ -180,11 +180,11 @@ public class PullAPIWrapper {
                 brokerAddr = computPullFromWhichFilterServer(mq.getTopic(), brokerAddr);
             }
 
-            PullResult pullResult = this.mQClientFactory.getMQClientAPIImpl().pullMessage(//
-                    brokerAddr,//
-                    requestHeader,//
-                    timeoutMillis,//
-                    communicationMode,//
+            PullResult pullResult = this.mQClientFactory.getMQClientAPIImpl().pullMessage(
+                    brokerAddr,
+                    requestHeader,
+                    timeoutMillis,
+                    communicationMode,
                     pullCallback);
 
             return pullResult;

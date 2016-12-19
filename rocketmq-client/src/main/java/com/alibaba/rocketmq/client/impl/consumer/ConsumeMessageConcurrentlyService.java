@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.alibaba.rocketmq.client.impl.consumer;
 
@@ -52,7 +52,7 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
     private final String consumerGroup;
 
     private final ScheduledExecutorService scheduledExecutorService;
-    private final ScheduledExecutorService CleanExpireMsgExecutors;
+    private final ScheduledExecutorService cleanExpireMsgExecutors;
 
 
     public ConsumeMessageConcurrentlyService(DefaultMQPushConsumerImpl defaultMQPushConsumerImpl,
@@ -73,12 +73,12 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
                 new ThreadFactoryImpl("ConsumeMessageThread_"));
 
         this.scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryImpl("ConsumeMessageScheduledThread_"));
-        this.CleanExpireMsgExecutors = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryImpl("CleanExpireMsgScheduledThread_"));
+        this.cleanExpireMsgExecutors = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryImpl("CleanExpireMsgScheduledThread_"));
     }
 
 
     public void start() {
-        this.CleanExpireMsgExecutors.scheduleAtFixedRate(new Runnable() {
+        this.cleanExpireMsgExecutors.scheduleAtFixedRate(new Runnable() {
 
             @Override
             public void run() {
@@ -92,7 +92,7 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
     public void shutdown() {
         this.scheduledExecutorService.shutdown();
         this.consumeExecutor.shutdown();
-        this.CleanExpireMsgExecutors.shutdown();
+        this.cleanExpireMsgExecutors.shutdown();
     }
 
     @Override
@@ -405,8 +405,8 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
             }
 
             long beginTimestamp = System.currentTimeMillis();
-            boolean hasException =false;
-            ConsumeReturnType returnType =ConsumeReturnType.SUCCESS;
+            boolean hasException = false;
+            ConsumeReturnType returnType = ConsumeReturnType.SUCCESS;
             try {
                 ConsumeMessageConcurrentlyService.this.resetRetryTopic(msgs);
                 if (msgs != null && !msgs.isEmpty()) {
@@ -416,32 +416,32 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
                 }
                 status = listener.consumeMessage(Collections.unmodifiableList(msgs), context);
             } catch (Throwable e) {
-                log.warn("consumeMessage exception: {} Group: {} Msgs: {} MQ: {}", //
+                log.warn("consumeMessage exception: {} Group: {} Msgs: {} MQ: {}",
                         RemotingHelper.exceptionSimpleDesc(e), //
-                        ConsumeMessageConcurrentlyService.this.consumerGroup, //
-                        msgs, //
+                        ConsumeMessageConcurrentlyService.this.consumerGroup,
+                        msgs,
                         messageQueue);
-                hasException=true;
+                hasException = true;
             }
             long consumeRT = System.currentTimeMillis() - beginTimestamp;
-            if(null ==status){
-                if(hasException){
-                    returnType=ConsumeReturnType.EXCEPTION;
-                }else {
-                    returnType=ConsumeReturnType.RETURNNULL;
-                }
-            } else if(consumeRT>=defaultMQPushConsumer.getConsumeTimeout()*60*1000){
-                returnType =ConsumeReturnType.TIME_OUT;
-            }else if(ConsumeConcurrentlyStatus.RECONSUME_LATER==status){
-                returnType=ConsumeReturnType.FAILED;
-            }else if(ConsumeConcurrentlyStatus.CONSUME_SUCCESS==status){
-                returnType=ConsumeReturnType.SUCCESS;
-            }
-            consumeMessageContext.getProps().put(MixAll.CONSUME_CONTEXT_TYPE,returnType.name());
             if (null == status) {
-                log.warn("consumeMessage return null, Group: {} Msgs: {} MQ: {}", //
-                        ConsumeMessageConcurrentlyService.this.consumerGroup, //
-                        msgs, //
+                if (hasException) {
+                    returnType = ConsumeReturnType.EXCEPTION;
+                } else {
+                    returnType = ConsumeReturnType.RETURNNULL;
+                }
+            } else if (consumeRT >= defaultMQPushConsumer.getConsumeTimeout() * 60 * 1000) {
+                returnType = ConsumeReturnType.TIME_OUT;
+            } else if (ConsumeConcurrentlyStatus.RECONSUME_LATER == status) {
+                returnType = ConsumeReturnType.FAILED;
+            } else if (ConsumeConcurrentlyStatus.CONSUME_SUCCESS == status) {
+                returnType = ConsumeReturnType.SUCCESS;
+            }
+            consumeMessageContext.getProps().put(MixAll.CONSUME_CONTEXT_TYPE, returnType.name());
+            if (null == status) {
+                log.warn("consumeMessage return null, Group: {} Msgs: {} MQ: {}",
+                        ConsumeMessageConcurrentlyService.this.consumerGroup,
+                        msgs,
                         messageQueue);
                 status = ConsumeConcurrentlyStatus.RECONSUME_LATER;
             }

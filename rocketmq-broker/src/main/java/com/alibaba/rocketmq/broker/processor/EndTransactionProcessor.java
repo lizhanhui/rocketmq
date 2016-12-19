@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.alibaba.rocketmq.broker.processor;
 
@@ -42,10 +42,8 @@ import org.slf4j.LoggerFactory;
  * @author shijia.wxr
  */
 public class EndTransactionProcessor implements NettyRequestProcessor {
-    private static final Logger log = LoggerFactory.getLogger(LoggerName.BrokerLoggerName);
-    private static final Logger logTransaction = LoggerFactory.getLogger(LoggerName.TransactionLoggerName);
+    private static final Logger LOGGER = LoggerFactory.getLogger(LoggerName.TRANSACTION_LOGGER_NAME);
     private final BrokerController brokerController;
-
 
     public EndTransactionProcessor(final BrokerController brokerController) {
         this.brokerController = brokerController;
@@ -60,60 +58,56 @@ public class EndTransactionProcessor implements NettyRequestProcessor {
 
         if (requestHeader.getFromTransactionCheck()) {
             switch (requestHeader.getCommitOrRollback()) {
-
-                case MessageSysFlag.TransactionNotType: {
-                    logTransaction.warn("check producer[{}] transaction state, but it's pending status.\n"//
-                                    + "RequestHeader: {} Remark: {}",//
-                            RemotingHelper.parseChannelRemoteAddr(ctx.channel()), //
-                            requestHeader.toString(),//
+                case MessageSysFlag.TRANSACTION_NOT_TYPE: {
+                    LOGGER.warn("check producer[{}] transaction state, but it's pending status."
+                                    + "RequestHeader: {} Remark: {}",
+                            RemotingHelper.parseChannelRemoteAddr(ctx.channel()),
+                            requestHeader.toString(),
                             request.getRemark());
                     return null;
                 }
 
-                case MessageSysFlag.TransactionCommitType: {
-                    logTransaction.warn("check producer[{}] transaction state, the producer commit the message.\n"//
-                                    + "RequestHeader: {} Remark: {}",//
-                            RemotingHelper.parseChannelRemoteAddr(ctx.channel()), //
-                            requestHeader.toString(),//
+                case MessageSysFlag.TRANSACTION_COMMIT_TYPE: {
+                    LOGGER.warn("check producer[{}] transaction state, the producer commit the message."
+                                    + "RequestHeader: {} Remark: {}",
+                            RemotingHelper.parseChannelRemoteAddr(ctx.channel()),
+                            requestHeader.toString(),
                             request.getRemark());
 
                     break;
                 }
 
-                case MessageSysFlag.TransactionRollbackType: {
-                    logTransaction.warn("check producer[{}] transaction state, the producer rollback the message.\n"//
-                                    + "RequestHeader: {} Remark: {}",//
-                            RemotingHelper.parseChannelRemoteAddr(ctx.channel()), //
-                            requestHeader.toString(),//
+                case MessageSysFlag.TRANSACTION_ROLLBACK_TYPE: {
+                    LOGGER.warn("check producer[{}] transaction state, the producer rollback the message."
+                                    + "RequestHeader: {} Remark: {}",
+                            RemotingHelper.parseChannelRemoteAddr(ctx.channel()),
+                            requestHeader.toString(),
                             request.getRemark());
                     break;
                 }
                 default:
                     return null;
             }
-        }
-
-        else {
+        } else {
             switch (requestHeader.getCommitOrRollback()) {
-
-                case MessageSysFlag.TransactionNotType: {
-                    logTransaction.warn("the producer[{}] end transaction in sending message,  and it's pending status.\n"//
-                                    + "RequestHeader: {} Remark: {}",//
-                            RemotingHelper.parseChannelRemoteAddr(ctx.channel()), //
-                            requestHeader.toString(),//
+                case MessageSysFlag.TRANSACTION_NOT_TYPE: {
+                    LOGGER.warn("the producer[{}] end transaction in sending message,  and it's pending status."
+                                    + "RequestHeader: {} Remark: {}",
+                            RemotingHelper.parseChannelRemoteAddr(ctx.channel()),
+                            requestHeader.toString(),
                             request.getRemark());
                     return null;
                 }
 
-                case MessageSysFlag.TransactionCommitType: {
+                case MessageSysFlag.TRANSACTION_COMMIT_TYPE: {
                     break;
                 }
 
-                case MessageSysFlag.TransactionRollbackType: {
-                    logTransaction.warn("the producer[{}] end transaction in sending message, rollback the message.\n"//
-                                    + "RequestHeader: {} Remark: {}",//
-                            RemotingHelper.parseChannelRemoteAddr(ctx.channel()), //
-                            requestHeader.toString(),//
+                case MessageSysFlag.TRANSACTION_ROLLBACK_TYPE: {
+                    LOGGER.warn("the producer[{}] end transaction in sending message, rollback the message."
+                                    + "RequestHeader: {} Remark: {}",
+                            RemotingHelper.parseChannelRemoteAddr(ctx.channel()),
+                            requestHeader.toString(),
                             request.getRemark());
                     break;
                 }
@@ -149,7 +143,7 @@ public class EndTransactionProcessor implements NettyRequestProcessor {
             msgInner.setQueueOffset(requestHeader.getTranStateTableOffset());
             msgInner.setPreparedTransactionOffset(requestHeader.getCommitLogOffset());
             msgInner.setStoreTimestamp(msgExt.getStoreTimestamp());
-            if (MessageSysFlag.TransactionRollbackType == requestHeader.getCommitOrRollback()) {
+            if (MessageSysFlag.TRANSACTION_ROLLBACK_TYPE == requestHeader.getCommitOrRollback()) {
                 msgInner.setBody(null);
             }
 
@@ -165,7 +159,6 @@ public class EndTransactionProcessor implements NettyRequestProcessor {
                         response.setCode(ResponseCode.SUCCESS);
                         response.setRemark(null);
                         break;
-
                     // Failed
                     case CREATE_MAPEDFILE_FAILED:
                         response.setCode(ResponseCode.SYSTEM_ERROR);
@@ -174,8 +167,7 @@ public class EndTransactionProcessor implements NettyRequestProcessor {
                     case MESSAGE_ILLEGAL:
                     case PROPERTIES_SIZE_EXCEEDED:
                         response.setCode(ResponseCode.MESSAGE_ILLEGAL);
-                        response
-                                .setRemark("the message is illegal, maybe msg body or properties length not matched. msg body length limit 128k, msg properties length limit 32k.");
+                        response.setRemark("the message is illegal, maybe msg body or properties length not matched. msg body length limit 128k, msg properties length limit 32k.");
                         break;
                     case SERVICE_NOT_AVAILABLE:
                         response.setCode(ResponseCode.SERVICE_NOT_AVAILABLE);
@@ -221,7 +213,7 @@ public class EndTransactionProcessor implements NettyRequestProcessor {
         MessageAccessor.setProperties(msgInner, msgExt.getProperties());
 
         TopicFilterType topicFilterType =
-                (msgInner.getSysFlag() & MessageSysFlag.MultiTagsFlag) == MessageSysFlag.MultiTagsFlag ? TopicFilterType.MULTI_TAG
+                (msgInner.getSysFlag() & MessageSysFlag.MULTI_TAGS_FLAG) == MessageSysFlag.MULTI_TAGS_FLAG ? TopicFilterType.MULTI_TAG
                         : TopicFilterType.SINGLE_TAG;
         long tagsCodeValue = MessageExtBrokerInner.tagsString2tagsCode(topicFilterType, msgInner.getTags());
         msgInner.setTagsCode(tagsCodeValue);

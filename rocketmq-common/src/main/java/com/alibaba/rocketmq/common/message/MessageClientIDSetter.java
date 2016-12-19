@@ -26,27 +26,28 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class MessageClientIDSetter {
     private static final String TOPIC_KEY_SPLITTER = "#";
-    private static final int len;
-    private static final String fixString;
-    private static final AtomicInteger counter;
+    private static final int LEN;
+    private static final String FIX_STRING;
+    private static final AtomicInteger COUNTER;
     private static long startTime;
     private static long nextStartTime;
+
     static {
-        len = 4 + 2 + 4 + 4 + 2;
+        LEN = 4 + 2 + 4 + 4 + 2;
         ByteBuffer tempBuffer = ByteBuffer.allocate(10);
         tempBuffer.position(2);
-        tempBuffer.putInt(UtilAll.getPid());//2
+        tempBuffer.putInt(UtilAll.getPid());
         tempBuffer.position(0);
         try {
-            tempBuffer.put(UtilAll.getIP());    //4
+            tempBuffer.put(UtilAll.getIP());
         } catch (Exception e) {
-            tempBuffer.put(createFakeIP()); //4
+            tempBuffer.put(createFakeIP());
         }
         tempBuffer.position(6);
         tempBuffer.putInt(MessageClientIDSetter.class.getClassLoader().hashCode()); //4
-        fixString = UtilAll.bytes2string(tempBuffer.array());
+        FIX_STRING = UtilAll.bytes2string(tempBuffer.array());
         setStartTime(System.currentTimeMillis());
-        counter = new AtomicInteger(0);
+        COUNTER = new AtomicInteger(0);
     }
 
     private synchronized static void setStartTime(long millis) {
@@ -101,8 +102,8 @@ public class MessageClientIDSetter {
     }
 
     public static String createUniqID() {
-        StringBuilder sb = new StringBuilder(len * 2);
-        sb.append(fixString);
+        StringBuilder sb = new StringBuilder(LEN * 2);
+        sb.append(FIX_STRING);
         sb.append(UtilAll.bytes2string(createUniqIDBuffer()));
         return sb.toString();
     }
@@ -116,7 +117,7 @@ public class MessageClientIDSetter {
         }
         buffer.position(0);
         buffer.putInt((int) (System.currentTimeMillis() - startTime));
-        buffer.putShort((short) counter.getAndIncrement());
+        buffer.putShort((short) COUNTER.getAndIncrement());
         return buffer.array();
     }
 
@@ -141,10 +142,14 @@ public class MessageClientIDSetter {
 
     private static void printIP(byte[] ip) {
         String str = UtilAll.ipToIPv4Str(ip);
-        System.out.println(str);
     }
 
     public static void main(String[] args) throws Exception {
+        for (int i = 0; i< Short.MAX_VALUE * 2; i++) {
+            short b = (short) i;
+            System.out.println(b);
+        }
+        System.exit(-1);
         final CountDownLatch latch = new CountDownLatch(20);
         Runnable runnable = new Runnable() {
             public void run() {
@@ -161,7 +166,6 @@ public class MessageClientIDSetter {
         }
         latch.await();
         long end = System.currentTimeMillis();
-        System.out.println(end - begin);
     }
 }
     
