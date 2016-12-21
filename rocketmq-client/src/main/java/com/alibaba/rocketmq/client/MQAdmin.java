@@ -161,7 +161,7 @@ public interface MQAdmin {
 
      * @param topic
      * @param msgId
-     * @return
+     * @return The {@code MessageExt} of given msgId
      * @throws RemotingException
      * @throws MQBrokerException
      * @throws InterruptedException

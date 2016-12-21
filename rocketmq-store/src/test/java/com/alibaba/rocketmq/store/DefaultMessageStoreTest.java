@@ -51,7 +51,6 @@ public class DefaultMessageStoreTest {
     public static void setUpBeforeClass() throws Exception {
         StoreHost = new InetSocketAddress(InetAddress.getLocalHost(), 8123);
         BornHost = new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0);
-
     }
 
     @AfterClass
@@ -61,10 +60,8 @@ public class DefaultMessageStoreTest {
     @Test
     public void test_write_read() throws Exception {
         System.out.println("================================================================");
-        long totalMsgs = 10000;
+        long totalMsgs = 100;
         QUEUE_TOTAL = 1;
-
-
         MessageBody = StoreMessage.getBytes();
 
         MessageStoreConfig messageStoreConfig = new MessageStoreConfig();
@@ -72,20 +69,16 @@ public class DefaultMessageStoreTest {
         messageStoreConfig.setMapedFileSizeConsumeQueue(1024 * 4);
         messageStoreConfig.setMaxHashSlotNum(100);
         messageStoreConfig.setMaxIndexNum(100 * 10);
-
         MessageStore master = new DefaultMessageStore(messageStoreConfig, null, null, null);
 
         boolean load = master.load();
         assertTrue(load);
 
-
         master.start();
         for (long i = 0; i < totalMsgs; i++) {
             PutMessageResult result = master.putMessage(buildMessage());
-
             System.out.println(i + "\t" + result.getAppendMessageResult().getMsgId());
         }
-
 
         for (long i = 0; i < totalMsgs; i++) {
             try {
@@ -101,11 +94,7 @@ public class DefaultMessageStoreTest {
             }
 
         }
-
-
         master.shutdown();
-
-
         master.destroy();
         System.out.println("================================================================");
     }
@@ -122,38 +111,27 @@ public class DefaultMessageStoreTest {
         msg.setBornTimestamp(System.currentTimeMillis());
         msg.setStoreHost(StoreHost);
         msg.setBornHost(BornHost);
-
         return msg;
     }
 
     @Test
     public void test_group_commit() throws Exception {
         System.out.println("================================================================");
-        long totalMsgs = 10000;
+        long totalMsgs = 100;
         QUEUE_TOTAL = 1;
-
-
         MessageBody = StoreMessage.getBytes();
-
         MessageStoreConfig messageStoreConfig = new MessageStoreConfig();
         messageStoreConfig.setMapedFileSizeCommitLog(1024 * 8);
-
-
         messageStoreConfig.setFlushDiskType(FlushDiskType.SYNC_FLUSH);
-
         MessageStore master = new DefaultMessageStore(messageStoreConfig, null, null, null);
-
         boolean load = master.load();
         assertTrue(load);
-
 
         master.start();
         for (long i = 0; i < totalMsgs; i++) {
             PutMessageResult result = master.putMessage(buildMessage());
-
             System.out.println(i + "\t" + result.getAppendMessageResult().getMsgId());
         }
-
 
         for (long i = 0; i < totalMsgs; i++) {
             try {
@@ -169,11 +147,7 @@ public class DefaultMessageStoreTest {
             }
 
         }
-
-
         master.shutdown();
-
-
         master.destroy();
         System.out.println("================================================================");
     }

@@ -78,16 +78,11 @@ public class Consumer {
 
                     final long consumeTps =
                             (long) (((end[1] - begin[1]) / (double) (end[0] - begin[0])) * 1000L);
-                    final double averageB2CRT = ((end[2] - begin[2]) / (double) (end[1] - begin[1]));
-                    final double averageS2CRT = ((end[3] - begin[3]) / (double) (end[1] - begin[1]));
+                    final double averageB2CRT = (end[2] - begin[2]) / (double) (end[1] - begin[1]);
+                    final double averageS2CRT = (end[3] - begin[3]) / (double) (end[1] - begin[1]);
 
-                    System.out.printf(
-                            "Consume TPS: %d Average(B2C) RT: %7.3f Average(S2C) RT: %7.3f MAX(B2C) RT: %d MAX(S2C) RT: %d%n"//
-                            , consumeTps//
-                            , averageB2CRT//
-                            , averageS2CRT//
-                            , end[4]//
-                            , end[5]//
+                    System.out.printf("Consume TPS: %d Average(B2C) RT: %7.3f Average(S2C) RT: %7.3f MAX(B2C) RT: %d MAX(S2C) RT: %d%n",
+                            consumeTps, averageB2CRT, averageS2CRT, end[4], end[5]
                     );
                 }
             }
@@ -115,21 +110,16 @@ public class Consumer {
                 MessageExt msg = msgs.get(0);
                 long now = System.currentTimeMillis();
 
-                // 1
                 statsBenchmarkConsumer.getReceiveMessageTotalCount().incrementAndGet();
 
-                // 2
                 long born2ConsumerRT = now - msg.getBornTimestamp();
                 statsBenchmarkConsumer.getBorn2ConsumerTotalRT().addAndGet(born2ConsumerRT);
 
-                // 3
                 long store2ConsumerRT = now - msg.getStoreTimestamp();
                 statsBenchmarkConsumer.getStore2ConsumerTotalRT().addAndGet(store2ConsumerRT);
 
-                // 4
                 compareAndSetMax(statsBenchmarkConsumer.getBorn2ConsumerMaxRT(), born2ConsumerRT);
 
-                // 5
                 compareAndSetMax(statsBenchmarkConsumer.getStore2ConsumerMaxRT(), store2ConsumerRT);
 
                 return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;
@@ -138,7 +128,7 @@ public class Consumer {
 
         consumer.start();
 
-        System.out.println("Consumer Started.");
+        System.out.printf("Consumer Started.%n");
     }
 
     public static Options buildCommandlineOptions(final Options options) {
@@ -173,26 +163,25 @@ public class Consumer {
 
 
 class StatsBenchmarkConsumer {
-    // 1
     private final AtomicLong receiveMessageTotalCount = new AtomicLong(0L);
-    // 2
+
     private final AtomicLong born2ConsumerTotalRT = new AtomicLong(0L);
-    // 3
+
     private final AtomicLong store2ConsumerTotalRT = new AtomicLong(0L);
-    // 4
+
     private final AtomicLong born2ConsumerMaxRT = new AtomicLong(0L);
-    // 5
+
     private final AtomicLong store2ConsumerMaxRT = new AtomicLong(0L);
 
 
     public Long[] createSnapshot() {
-        Long[] snap = new Long[]{//
-                System.currentTimeMillis(),//
-                this.receiveMessageTotalCount.get(),//
-                this.born2ConsumerTotalRT.get(),//
-                this.store2ConsumerTotalRT.get(),//
-                this.born2ConsumerMaxRT.get(),//
-                this.store2ConsumerMaxRT.get(), //
+        Long[] snap = new Long[]{
+                System.currentTimeMillis(),
+                this.receiveMessageTotalCount.get(),
+                this.born2ConsumerTotalRT.get(),
+                this.store2ConsumerTotalRT.get(),
+                this.born2ConsumerMaxRT.get(),
+                this.store2ConsumerMaxRT.get(),
         };
 
         return snap;

@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.alibaba.rocketmq.store.ha;
 
@@ -40,10 +40,9 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author shijia.wxr
- *
  */
 public class HAService {
-    private static final Logger log = LoggerFactory.getLogger(LoggerName.StoreLoggerName);
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
 
     private final AtomicInteger connectionCount = new AtomicInteger(0);
 
@@ -82,11 +81,6 @@ public class HAService {
     }
 
 
-    /**
-
-     *
-     * @return
-     */
     public boolean isSlaveOK(final long masterPutWhere) {
         boolean result = this.connectionCount.get() > 0;
         result =
@@ -331,7 +325,7 @@ public class HAService {
     }
 
     class HAClient extends ServiceThread {
-        private static final int ReadMaxBufferSize = 1024 * 1024 * 4;
+        private static final int READ_MAX_BUFFER_SIZE = 1024 * 1024 * 4;
         private final AtomicReference<String> masterAddress = new AtomicReference<String>();
         private final ByteBuffer reportOffset = ByteBuffer.allocate(8);
         private SocketChannel socketChannel;
@@ -340,8 +334,8 @@ public class HAService {
 
         private long currentReportedOffset = 0;
         private int dispatchPostion = 0;
-        private ByteBuffer byteBufferRead = ByteBuffer.allocate(ReadMaxBufferSize);
-        private ByteBuffer byteBufferBackup = ByteBuffer.allocate(ReadMaxBufferSize);
+        private ByteBuffer byteBufferRead = ByteBuffer.allocate(READ_MAX_BUFFER_SIZE);
+        private ByteBuffer byteBufferBackup = ByteBuffer.allocate(READ_MAX_BUFFER_SIZE);
 
 
         public HAClient() throws IOException {
@@ -361,9 +355,8 @@ public class HAService {
         private boolean isTimeToReportOffset() {
             long interval =
                     HAService.this.defaultMessageStore.getSystemClock().now() - this.lastWriteTimestamp;
-            boolean needHeart =
-                    (interval > HAService.this.defaultMessageStore.getMessageStoreConfig()
-                            .getHaSendHeartbeatInterval());
+            boolean needHeart = interval > HAService.this.defaultMessageStore.getMessageStoreConfig()
+                    .getHaSendHeartbeatInterval();
 
             return needHeart;
         }
@@ -391,7 +384,7 @@ public class HAService {
 
 
         // private void reallocateByteBuffer() {
-        // ByteBuffer bb = ByteBuffer.allocate(ReadMaxBufferSize);
+        // ByteBuffer bb = ByteBuffer.allocate(READ_MAX_BUFFER_SIZE);
         // int remain = this.byteBufferRead.limit() - this.dispatchPostion;
         // bb.put(this.byteBufferRead.array(), this.dispatchPostion, remain);
         // this.dispatchPostion = 0;
@@ -402,19 +395,19 @@ public class HAService {
 
          */
         private void reallocateByteBuffer() {
-            int remain = ReadMaxBufferSize - this.dispatchPostion;
+            int remain = READ_MAX_BUFFER_SIZE - this.dispatchPostion;
             if (remain > 0) {
                 this.byteBufferRead.position(this.dispatchPostion);
 
                 this.byteBufferBackup.position(0);
-                this.byteBufferBackup.limit(ReadMaxBufferSize);
+                this.byteBufferBackup.limit(READ_MAX_BUFFER_SIZE);
                 this.byteBufferBackup.put(this.byteBufferRead);
             }
 
             this.swapByteBuffer();
 
             this.byteBufferRead.position(remain);
-            this.byteBufferRead.limit(ReadMaxBufferSize);
+            this.byteBufferRead.limit(READ_MAX_BUFFER_SIZE);
             this.dispatchPostion = 0;
         }
 
@@ -459,12 +452,12 @@ public class HAService {
 
 
         private boolean dispatchReadRequest() {
-            final int MSG_HEADER_SIZE = 8 + 4; // phyoffset + size
+            final int msgHeaderSize = 8 + 4; // phyoffset + size
             int readSocketPos = this.byteBufferRead.position();
 
             while (true) {
                 int diff = this.byteBufferRead.position() - this.dispatchPostion;
-                if (diff >= MSG_HEADER_SIZE) {
+                if (diff >= msgHeaderSize) {
                     long masterPhyOffset = this.byteBufferRead.getLong(this.dispatchPostion);
                     int bodySize = this.byteBufferRead.getInt(this.dispatchPostion + 8);
 
@@ -480,16 +473,16 @@ public class HAService {
                     }
 
 
-                    if (diff >= (MSG_HEADER_SIZE + bodySize)) {
+                    if (diff >= (msgHeaderSize + bodySize)) {
                         byte[] bodyData = new byte[bodySize];
-                        this.byteBufferRead.position(this.dispatchPostion + MSG_HEADER_SIZE);
+                        this.byteBufferRead.position(this.dispatchPostion + msgHeaderSize);
                         this.byteBufferRead.get(bodyData);
 
 
                         HAService.this.defaultMessageStore.appendToCommitLog(masterPhyOffset, bodyData);
 
                         this.byteBufferRead.position(readSocketPos);
-                        this.dispatchPostion += MSG_HEADER_SIZE + bodySize;
+                        this.dispatchPostion += msgHeaderSize + bodySize;
 
                         if (!reportSlaveMaxOffsetPlus()) {
                             return false;
@@ -569,10 +562,10 @@ public class HAService {
                 this.dispatchPostion = 0;
 
                 this.byteBufferBackup.position(0);
-                this.byteBufferBackup.limit(ReadMaxBufferSize);
+                this.byteBufferBackup.limit(READ_MAX_BUFFER_SIZE);
 
                 this.byteBufferRead.position(0);
-                this.byteBufferRead.limit(ReadMaxBufferSize);
+                this.byteBufferRead.limit(READ_MAX_BUFFER_SIZE);
             }
         }
 

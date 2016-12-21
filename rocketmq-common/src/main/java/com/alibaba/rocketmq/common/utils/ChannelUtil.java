@@ -29,7 +29,7 @@ public class ChannelUtil {
             return "";
         }
         final InetAddress inetAddr = inetSocketAddress.getAddress();
-        return (inetAddr != null ? inetAddr.getHostAddress() : inetSocketAddress.getHostName());
+        return inetAddr != null ? inetAddr.getHostAddress() : inetSocketAddress.getHostName();
     }
 
 }

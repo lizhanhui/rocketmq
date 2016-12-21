@@ -44,12 +44,10 @@ public class ResetOffsetByTimeOldCommand implements SubCommand {
         return "resetOffsetByTimeOld";
     }
 
-
     @Override
     public String commandDesc() {
         return "Reset consumer offset by timestamp(execute this command required client restart).";
     }
-
 
     @Override
     public Options buildCommandlineOptions(Options options) {
@@ -84,11 +82,11 @@ public class ResetOffsetByTimeOldCommand implements SubCommand {
                 timestamp = Long.parseLong(timeStampStr);
             } catch (NumberFormatException e) {
 
-                Date date = UtilAll.parseDate(timeStampStr, UtilAll.yyyy_MM_dd_HH_mm_ss_SSS);
+                Date date = UtilAll.parseDate(timeStampStr, UtilAll.YYYY_MM_DD_HH_MM_SS_SSS);
                 if (date != null) {
-                    timestamp = UtilAll.parseDate(timeStampStr, UtilAll.yyyy_MM_dd_HH_mm_ss_SSS).getTime();
+                    timestamp = UtilAll.parseDate(timeStampStr, UtilAll.YYYY_MM_DD_HH_MM_SS_SSS).getTime();
                 } else {
-                    System.out.println("specified timestamp invalid.");
+                    System.out.printf("specified timestamp invalid.%n");
                     return;
                 }
 
@@ -115,23 +113,23 @@ public class ResetOffsetByTimeOldCommand implements SubCommand {
                 "rollback consumer offset by specified consumerGroup[%s], topic[%s], force[%s], timestamp(string)[%s], timestamp(long)[%s]%n",
                 consumerGroup, topic, force, timeStampStr, timestamp);
 
-        System.out.printf("%-20s  %-20s  %-20s  %-20s  %-20s  %-20s%n",//
-                "#brokerName",//
-                "#queueId",//
-                "#brokerOffset",//
-                "#consumerOffset",//
-                "#timestampOffset",//
-                "#rollbackOffset" //
+        System.out.printf("%-20s  %-20s  %-20s  %-20s  %-20s  %-20s%n",
+                "#brokerName",
+                "#queueId",
+                "#brokerOffset",
+                "#consumerOffset",
+                "#timestampOffset",
+                "#rollbackOffset"
         );
 
         for (RollbackStats rollbackStats : rollbackStatsList) {
-            System.out.printf("%-20s  %-20d  %-20d  %-20d  %-20d  %-20d%n",//
-                    UtilAll.frontStringAtLeast(rollbackStats.getBrokerName(), 32),//
-                    rollbackStats.getQueueId(),//
-                    rollbackStats.getBrokerOffset(),//
-                    rollbackStats.getConsumerOffset(),//
-                    rollbackStats.getTimestampOffset(),//
-                    rollbackStats.getRollbackOffset() //
+            System.out.printf("%-20s  %-20d  %-20d  %-20d  %-20d  %-20d%n",
+                    UtilAll.frontStringAtLeast(rollbackStats.getBrokerName(), 32),
+                    rollbackStats.getQueueId(),
+                    rollbackStats.getBrokerOffset(),
+                    rollbackStats.getConsumerOffset(),
+                    rollbackStats.getTimestampOffset(),
+                    rollbackStats.getRollbackOffset()
             );
         }
     }

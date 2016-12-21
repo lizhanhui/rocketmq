@@ -29,12 +29,11 @@ import com.alibaba.rocketmq.remoting.common.RemotingHelper;
 import com.alibaba.rocketmq.remoting.exception.RemotingException;
 import com.alibaba.rocketmq.tools.admin.DefaultMQAdminExt;
 import com.alibaba.rocketmq.tools.admin.api.MessageTrack;
-import com.alibaba.rocketmq.tools.command.MQAdminStartup;
 import com.alibaba.rocketmq.tools.command.SubCommand;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.DataOutputStream;
 import java.io.File;
@@ -45,18 +44,8 @@ import java.util.List;
 
 /**
  * @author shijia.wxr
- * @author jodie.yqd@gmail.com
  */
 public class QueryMsgByIdSubCommand implements SubCommand {
-
-    public static void main(String[] args) {
-        System.setProperty("rocketmq.home.dir", "/Users/jodie/workspace/rmq.msgid");
-        MQAdminStartup.main(new String[]{new QueryMsgByIdSubCommand().commandName(), //
-                "-s", "true", //
-                "-i", "0ADA91A600002A9F00000128AB94ED96,6451A57700002A9F000001AFA9622F4B" //
-        });
-    }
-
     @Override
     public String commandName() {
         return "queryMsgById";
@@ -149,7 +138,7 @@ public class QueryMsgByIdSubCommand implements SubCommand {
         try {
             ConsumeMessageDirectlyResult result =
                     defaultMQAdminExt.consumeMessageDirectly(consumerGroup, clientId, msgId);
-            System.out.println(result);
+            System.out.printf("%s", result);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -160,11 +149,11 @@ public class QueryMsgByIdSubCommand implements SubCommand {
             MessageExt msg = defaultMQAdminExt.viewMessage(msgId);
             if (msg != null) {
                 // resend msg by id
-                System.out.println("prepare resend msg. originalMsgId=" + msgId);
+                System.out.printf("prepare resend msg. originalMsgId=" + msgId);
                 SendResult result = defaultMQProducer.send(msg);
-                System.out.println(result);
+                System.out.printf("%s", result);
             } else {
-                System.out.println("no message. msgId=" + msgId);
+                System.out.printf("no message. msgId=" + msgId);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -180,104 +169,104 @@ public class QueryMsgByIdSubCommand implements SubCommand {
 
     public static void printMsg(final DefaultMQAdminExt admin, final MessageExt msg) throws IOException {
         if (msg == null) {
-            System.out.println("\nMessage not found!");
+            System.out.printf("%nMessage not found!");
             return;
         }
 
         String bodyTmpFilePath = createBodyFile(msg);
         String msgId = msg.getMsgId();
         if (msg instanceof MessageClientExt) {
-            msgId = ((MessageClientExt)msg).getOffsetMsgId();
+            msgId = ((MessageClientExt) msg).getOffsetMsgId();
         }
 
-        System.out.printf("%-20s %s%n",//
-                "OffsetID:",//
-                msgId//
+        System.out.printf("%-20s %s%n",
+                "OffsetID:",
+                msgId
         );
 
-        System.out.printf("%-20s %s%n",//
-                "OffsetID:",//
-                msgId//
+        System.out.printf("%-20s %s%n",
+                "OffsetID:",
+                msgId
         );
 
-        System.out.printf("%-20s %s%n",//
-                "Topic:",//
-                msg.getTopic()//
+        System.out.printf("%-20s %s%n",
+                "Topic:",
+                msg.getTopic()
         );
 
-        System.out.printf("%-20s %s%n",//
-                "Tags:",//
-                "[" + msg.getTags() + "]"//
+        System.out.printf("%-20s %s%n",
+                "Tags:",
+                "[" + msg.getTags() + "]"
         );
 
-        System.out.printf("%-20s %s%n",//
-                "Keys:",//
-                "[" + msg.getKeys() + "]"//
+        System.out.printf("%-20s %s%n",
+                "Keys:",
+                "[" + msg.getKeys() + "]"
         );
 
-        System.out.printf("%-20s %d%n",//
-                "Queue ID:",//
-                msg.getQueueId()//
+        System.out.printf("%-20s %d%n",
+                "Queue ID:",
+                msg.getQueueId()
         );
 
-        System.out.printf("%-20s %d%n",//
-                "Queue Offset:",//
-                msg.getQueueOffset()//
+        System.out.printf("%-20s %d%n",
+                "Queue Offset:",
+                msg.getQueueOffset()
         );
 
-        System.out.printf("%-20s %d%n",//
-                "CommitLog Offset:",//
-                msg.getCommitLogOffset()//
+        System.out.printf("%-20s %d%n",
+                "CommitLog Offset:",
+                msg.getCommitLogOffset()
         );
 
-        System.out.printf("%-20s %d%n",//
-                "Reconsume Times:",//
-                msg.getReconsumeTimes()//
+        System.out.printf("%-20s %d%n",
+                "Reconsume Times:",
+                msg.getReconsumeTimes()
         );
 
-        System.out.printf("%-20s %s%n",//
-                "Born Timestamp:",//
-                UtilAll.timeMillisToHumanString2(msg.getBornTimestamp())//
+        System.out.printf("%-20s %s%n",
+                "Born Timestamp:",
+                UtilAll.timeMillisToHumanString2(msg.getBornTimestamp())
         );
 
-        System.out.printf("%-20s %s%n",//
-                "Store Timestamp:",//
-                UtilAll.timeMillisToHumanString2(msg.getStoreTimestamp())//
+        System.out.printf("%-20s %s%n",
+                "Store Timestamp:",
+                UtilAll.timeMillisToHumanString2(msg.getStoreTimestamp())
         );
 
-        System.out.printf("%-20s %s%n",//
-                "Born Host:",//
-                RemotingHelper.parseSocketAddressAddr(msg.getBornHost())//
+        System.out.printf("%-20s %s%n",
+                "Born Host:",
+                RemotingHelper.parseSocketAddressAddr(msg.getBornHost())
         );
 
-        System.out.printf("%-20s %s%n",//
-                "Store Host:",//
-                RemotingHelper.parseSocketAddressAddr(msg.getStoreHost())//
+        System.out.printf("%-20s %s%n",
+                "Store Host:",
+                RemotingHelper.parseSocketAddressAddr(msg.getStoreHost())
         );
 
-        System.out.printf("%-20s %d%n",//
-                "System Flag:",//
-                msg.getSysFlag()//
+        System.out.printf("%-20s %d%n",
+                "System Flag:",
+                msg.getSysFlag()
         );
 
-        System.out.printf("%-20s %s%n",//
-                "Properties:",//
-                msg.getProperties() != null ? msg.getProperties().toString() : ""//
+        System.out.printf("%-20s %s%n",
+                "Properties:",
+                msg.getProperties() != null ? msg.getProperties().toString() : ""
         );
 
-        System.out.printf("%-20s %s%n",//
-                "Message Body Path:",//
-                bodyTmpFilePath//
+        System.out.printf("%-20s %s%n",
+                "Message Body Path:",
+                bodyTmpFilePath
         );
 
         try {
             List<MessageTrack> mtdList = admin.messageTrackDetail(msg);
             if (mtdList.isEmpty()) {
-                System.out.println("\n\nWARN: No Consumer");
+                System.out.printf("%n%nWARN: No Consumer");
             } else {
-                System.out.println("\n\n");
+                System.out.printf("%n%n");
                 for (MessageTrack mt : mtdList) {
-                    System.out.println(mt);
+                    System.out.printf("%s", mt);
                 }
             }
         } catch (Exception e) {
@@ -287,7 +276,6 @@ public class QueryMsgByIdSubCommand implements SubCommand {
 
     private static String createBodyFile(MessageExt msg) throws IOException {
         DataOutputStream dos = null;
-
         try {
             String bodyTmpFilePath = "/tmp/rocketmq/msgbodys";
             File file = new File(bodyTmpFilePath);

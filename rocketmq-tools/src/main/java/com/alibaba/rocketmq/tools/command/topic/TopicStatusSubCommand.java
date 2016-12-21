@@ -56,7 +56,6 @@ public class TopicStatusSubCommand implements SubCommand {
         Option opt = new Option("t", "topic", true, "topic name");
         opt.setRequired(true);
         options.addOption(opt);
-
         return options;
     }
 
@@ -69,7 +68,6 @@ public class TopicStatusSubCommand implements SubCommand {
 
         try {
             defaultMQAdminExt.start();
-
             String topic = commandLine.getOptionValue('t').trim();
             TopicStatsTable topicStatsTable = defaultMQAdminExt.examineTopicStats(topic);
 
@@ -77,12 +75,12 @@ public class TopicStatusSubCommand implements SubCommand {
             mqList.addAll(topicStatsTable.getOffsetTable().keySet());
             Collections.sort(mqList);
 
-            System.out.printf("%-32s  %-4s  %-20s  %-20s    %s%n",//
-                    "#Broker Name",//
-                    "#QID",//
-                    "#Min Offset",//
-                    "#Max Offset",//
-                    "#Last Updated" //
+            System.out.printf("%-32s  %-4s  %-20s  %-20s    %s%n",
+                    "#Broker Name",
+                    "#QID",
+                    "#Min Offset",
+                    "#Max Offset",
+                    "#Last Updated"
             );
 
             for (MessageQueue mq : mqList) {
@@ -93,12 +91,12 @@ public class TopicStatusSubCommand implements SubCommand {
                     humanTimestamp = UtilAll.timeMillisToHumanString2(topicOffset.getLastUpdateTimestamp());
                 }
 
-                System.out.printf("%-32s  %-4d  %-20d  %-20d    %s%n",//
-                        UtilAll.frontStringAtLeast(mq.getBrokerName(), 32),//
-                        mq.getQueueId(),//
-                        topicOffset.getMinOffset(),//
-                        topicOffset.getMaxOffset(),//
-                        humanTimestamp //
+                System.out.printf("%-32s  %-4d  %-20d  %-20d    %s%n",
+                        UtilAll.frontStringAtLeast(mq.getBrokerName(), 32),
+                        mq.getQueueId(),
+                        topicOffset.getMinOffset(),
+                        topicOffset.getMaxOffset(),
+                        humanTimestamp
                 );
             }
         } catch (Exception e) {

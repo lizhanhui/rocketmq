@@ -29,7 +29,14 @@ import com.alibaba.rocketmq.remoting.exception.RemotingTooMuchRequestException;
 import com.alibaba.rocketmq.remoting.protocol.RemotingCommand;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.channel.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
@@ -50,14 +57,8 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
-/**
-
- *
- * @author shijia.wxr
- *
- */
 public class NettyRemotingServer extends NettyRemotingAbstract implements RemotingServer {
-    private static final Logger log = LoggerFactory.getLogger(RemotingHelper.RemotingLogName);
+    private static final Logger log = LoggerFactory.getLogger(RemotingHelper.ROCKETMQ_REMOTING);
     private final ServerBootstrap serverBootstrap;
     private final EventLoopGroup eventLoopGroupSelector;
     private final EventLoopGroup eventLoopGroupBoss;
@@ -153,32 +154,24 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
                     }
                 });
 
-        ServerBootstrap childHandler = //
+        ServerBootstrap childHandler =
                 this.serverBootstrap.group(this.eventLoopGroupBoss, this.eventLoopGroupSelector).channel(NioServerSocketChannel.class)
-                        //
                         .option(ChannelOption.SO_BACKLOG, 1024)
-                        //
                         .option(ChannelOption.SO_REUSEADDR, true)
-                        //
                         .option(ChannelOption.SO_KEEPALIVE, false)
-                        //
                         .childOption(ChannelOption.TCP_NODELAY, true)
-                        //
                         .option(ChannelOption.SO_SNDBUF, nettyServerConfig.getServerSocketSndBufSize())
-                        //
                         .option(ChannelOption.SO_RCVBUF, nettyServerConfig.getServerSocketRcvBufSize())
-                        //
                         .localAddress(new InetSocketAddress(this.nettyServerConfig.getListenPort()))
                         .childHandler(new ChannelInitializer<SocketChannel>() {
                             @Override
                             public void initChannel(SocketChannel ch) throws Exception {
                                 ch.pipeline().addLast(
-                                        //
-                                        defaultEventExecutorGroup, //
-                                        new NettyEncoder(), //
-                                        new NettyDecoder(), //
-                                        new IdleStateHandler(0, 0, nettyServerConfig.getServerChannelMaxIdleTimeSeconds()), //
-                                        new NettyConnetManageHandler(), //
+                                        defaultEventExecutorGroup,
+                                        new NettyEncoder(),
+                                        new NettyDecoder(),
+                                        new IdleStateHandler(0, 0, nettyServerConfig.getServerChannelMaxIdleTimeSeconds()),
+                                        new NettyConnetManageHandler(),
                                         new NettyServerHandler());
                             }
                         });

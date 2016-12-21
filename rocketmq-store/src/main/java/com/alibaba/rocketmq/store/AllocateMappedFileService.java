@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.alibaba.rocketmq.store;
 
@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ServiceLoader;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.PriorityBlockingQueue;
@@ -37,8 +38,8 @@ import java.util.concurrent.TimeUnit;
  * @author shijia.wxr
  */
 public class AllocateMappedFileService extends ServiceThread {
-    private static final Logger log = LoggerFactory.getLogger(LoggerName.StoreLoggerName);
-    private static int WaitTimeOut = 1000 * 5;
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
+    private static int waitTimeOut = 1000 * 5;
     private ConcurrentHashMap<String, AllocateRequest> requestTable =
             new ConcurrentHashMap<String, AllocateRequest>();
     private PriorityBlockingQueue<AllocateRequest> requestQueue =
@@ -62,7 +63,7 @@ public class AllocateMappedFileService extends ServiceThread {
         }
 
         AllocateRequest nextReq = new AllocateRequest(nextFilePath, fileSize);
-        boolean nextPutOK = (this.requestTable.putIfAbsent(nextFilePath, nextReq) == null);
+        boolean nextPutOK = this.requestTable.putIfAbsent(nextFilePath, nextReq) == null;
 
         if (nextPutOK) {
             if (canSubmitRequests <= 0) {
@@ -79,7 +80,7 @@ public class AllocateMappedFileService extends ServiceThread {
         }
 
         AllocateRequest nextNextReq = new AllocateRequest(nextNextFilePath, fileSize);
-        boolean nextNextPutOK = (this.requestTable.putIfAbsent(nextNextFilePath, nextNextReq) == null);
+        boolean nextNextPutOK = this.requestTable.putIfAbsent(nextNextFilePath, nextNextReq) == null;
         if (nextNextPutOK) {
             if (canSubmitRequests <= 0) {
                 log.warn("[NOTIFYME]TransientStorePool is not enough, so skip preallocate mapped file, " +
@@ -101,7 +102,7 @@ public class AllocateMappedFileService extends ServiceThread {
         AllocateRequest result = this.requestTable.get(nextFilePath);
         try {
             if (result != null) {
-                boolean waitOK = result.getCountDownLatch().await(WaitTimeOut, TimeUnit.MILLISECONDS);
+                boolean waitOK = result.getCountDownLatch().await(waitTimeOut, TimeUnit.MILLISECONDS);
                 if (!waitOK) {
                     log.warn("create mmap timeout " + result.getFilePath() + " " + result.getFileSize());
                     return null;
@@ -148,9 +149,9 @@ public class AllocateMappedFileService extends ServiceThread {
     public void run() {
         log.info(this.getServiceName() + " service started");
 
-        while (!this.isStopped() && this.mmapOperation())
-            ;
+        while (!this.isStopped() && this.mmapOperation()) {
 
+        }
         log.info(this.getServiceName() + " service end");
     }
 
@@ -180,7 +181,13 @@ public class AllocateMappedFileService extends ServiceThread {
 
                 MappedFile mappedFile;
                 if (messageStore.getMessageStoreConfig().isTransientStorePoolEnable()) {
-                    mappedFile = new MappedFile(req.getFilePath(), req.getFileSize(), messageStore.getTransientStorePool());
+                    try {
+                        mappedFile = ServiceLoader.load(MappedFile.class).iterator().next();
+                        mappedFile.init(req.getFilePath(), req.getFileSize(), messageStore.getTransientStorePool());
+                    } catch (RuntimeException e) {
+                        log.warn("Use default implementation.");
+                        mappedFile = new MappedFile(req.getFilePath(), req.getFileSize(), messageStore.getTransientStorePool());
+                    }
                 } else {
                     mappedFile = new MappedFile(req.getFilePath(), req.getFileSize());
                 }
@@ -194,8 +201,8 @@ public class AllocateMappedFileService extends ServiceThread {
 
                 // pre write mappedFile
                 if (mappedFile.getFileSize() >= this.messageStore.getMessageStoreConfig()
-                        .getMapedFileSizeCommitLog() //
-                        && //
+                        .getMapedFileSizeCommitLog()
+                        &&
                         this.messageStore.getMessageStoreConfig().isWarmMapedFileEnable()) {
                     mappedFile.warmMappedFile(this.messageStore.getMessageStoreConfig().getFlushDiskType(),
                             this.messageStore.getMessageStoreConfig().getFlushLeastPagesWhenWarmMapedFile());

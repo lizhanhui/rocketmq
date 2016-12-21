@@ -33,7 +33,7 @@ public enum PullStatus {
      */
     NO_MATCHED_MSG,
     /**
-     * Illegal offset，may be too big or too small
+     * Illegal offset,may be too big or too small
      */
     OFFSET_ILLEGAL
 }

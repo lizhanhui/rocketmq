@@ -34,22 +34,19 @@ public class MappedFileTest {
 
     private static final String StoreMessage = "Once, there was a chance for me!";
 
-
     @BeforeClass
     public static void setUpBeforeClass() throws Exception {
 
     }
 
-
     @AfterClass
     public static void tearDownAfterClass() throws Exception {
     }
 
-
     @Test
     public void test_write_read() {
         try {
-            MappedFile mappedFile = new MappedFile("./unit_test_store/MappedFileTest/000", 1024 * 64);
+            MappedFile mappedFile = new MappedFile("target/unit_test_store/MappedFileTest/000", 1024 * 64);
             boolean result = mappedFile.appendMessage(StoreMessage.getBytes());
             assertTrue(result);
             System.out.println("write OK");
@@ -62,18 +59,10 @@ public class MappedFileTest {
             System.out.println("Read: " + readString);
             assertTrue(readString.equals(StoreMessage));
 
-
             mappedFile.shutdown(1000);
-
-
             assertTrue(!mappedFile.isAvailable());
-
             selectMappedBufferResult.release();
-
-
             assertTrue(mappedFile.isCleanupOver());
-
-
             assertTrue(mappedFile.destroy(1000));
         } catch (IOException e) {
             e.printStackTrace();
@@ -83,7 +72,7 @@ public class MappedFileTest {
     @Ignore
     public void test_jvm_crashed() {
         try {
-            MappedFile mappedFile = new MappedFile("./unit_test_store/MappedFileTest/10086", 1024 * 64);
+            MappedFile mappedFile = new MappedFile("target/unit_test_store/MappedFileTest/10086", 1024 * 64);
             boolean result = mappedFile.appendMessage(StoreMessage.getBytes());
             assertTrue(result);
             System.out.println("write OK");

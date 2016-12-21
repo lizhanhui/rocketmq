@@ -67,7 +67,7 @@ public interface MQPullConsumer extends MQConsumer {
      * @param maxNums
      *         max pulling numbers
      *
-     * @return
+     * @return The resulting {@code PullRequest}
      *
      * @throws MQClientException
      * @throws InterruptedException
@@ -88,7 +88,7 @@ public interface MQPullConsumer extends MQConsumer {
      * @param maxNums
      * @param timeout
      *
-     * @return
+     * @return The resulting {@code PullRequest}
      *
      * @throws MQClientException
      * @throws RemotingException
@@ -144,7 +144,7 @@ public interface MQPullConsumer extends MQConsumer {
      * @param offset
      * @param maxNums
      *
-     * @return
+     * @return The resulting {@code PullRequest}
      *
      * @throws MQClientException
      * @throws RemotingException
@@ -191,7 +191,7 @@ public interface MQPullConsumer extends MQConsumer {
      * @param mq
      * @param fromStore
      *
-     * @return
+     * @return The fetched offset of given queue
      *
      * @throws MQClientException
      */

@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package com.alibaba.rocketmq.tools.command.cluster;
@@ -120,12 +120,12 @@ public class CLusterSendMsgRTCommand implements SubCommand {
             }
 
             if (!printAsTlog) {
-                System.out.printf("%-24s  %-24s  %-4s  %-8s  %-8s%n",//
-                        "#Cluster Name",//
-                        "#Broker Name",//
-                        "#RT",//
-                        "#successCount",//
-                        "#failCount"//
+                System.out.printf("%-24s  %-24s  %-4s  %-8s  %-8s%n",
+                        "#Cluster Name",
+                        "#Broker Name",
+                        "#RT",
+                        "#successCount",
+                        "#failCount"
                 );
             }
 
@@ -163,15 +163,15 @@ public class CLusterSendMsgRTCommand implements SubCommand {
 
                         double rt = (double) elapsed / (amount - 1);
                         if (!printAsTlog) {
-                            System.out.printf("%-24s  %-24s  %-8s  %-16s  %-16s%n",//
-                                    clusterName,//
-                                    brokerName, //
-                                    String.format("%.2f", rt),//
-                                    successCount,//
-                                    failCount//
+                            System.out.printf("%-24s  %-24s  %-8s  %-16s  %-16s%n",
+                                    clusterName,
+                                    brokerName,
+                                    String.format("%.2f", rt),
+                                    successCount,
+                                    failCount
                             );
                         } else {
-                            System.out.println(String.format("%s|%s|%s|%s|%s", getCurTime(),
+                            System.out.printf(String.format("%s|%s|%s|%s|%s%n", getCurTime(),
                                     machineRoom, clusterName, brokerName,
                                     new BigDecimal(rt).setScale(0, BigDecimal.ROUND_HALF_UP)));
                         }
@@ -201,8 +201,6 @@ public class CLusterSendMsgRTCommand implements SubCommand {
 
     public String getCurTime() {
         String fromTimeZone = "GMT+8";
-
-
         SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         Date date = new Date();
         format.setTimeZone(TimeZone.getTimeZone(fromTimeZone));

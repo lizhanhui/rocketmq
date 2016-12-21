@@ -34,30 +34,24 @@ public class MappedFileQueueTest {
     public static void setUpBeforeClass() throws Exception {
     }
 
-
     @AfterClass
     public static void tearDownAfterClass() throws Exception {
     }
-
 
     @Before
     public void setUp() throws Exception {
     }
 
-
     @After
     public void tearDown() throws Exception {
     }
-
 
     @Test
     public void test_getLastMapedFile() {
         final String fixedMsg = "0123456789abcdef";
         System.out.println("================================================================");
-        AllocateMappedFileService allocateMappedFileService = new AllocateMappedFileService(null);
-        allocateMappedFileService.start();
         MappedFileQueue mappedFileQueue =
-                new MappedFileQueue("./unit_test_store/a/", 1024, allocateMappedFileService);
+                new MappedFileQueue("target/unit_test_store/a/", 1024, null);
 
         for (int i = 0; i < 1024; i++) {
             MappedFile mappedFile = mappedFileQueue.getLastMappedFile(0);
@@ -71,7 +65,6 @@ public class MappedFileQueueTest {
 
         mappedFileQueue.shutdown(1000);
         mappedFileQueue.destroy();
-        allocateMappedFileService.shutdown();
         System.out.println("MappedFileQueue.getLastMappedFile() OK");
     }
 
@@ -80,10 +73,8 @@ public class MappedFileQueueTest {
     public void test_findMapedFileByOffset() {
         final String fixedMsg = "abcd";
         System.out.println("================================================================");
-        AllocateMappedFileService allocateMappedFileService = new AllocateMappedFileService(null);
-        allocateMappedFileService.start();
         MappedFileQueue mappedFileQueue =
-                new MappedFileQueue("./unit_test_store/b/", 1024, allocateMappedFileService);
+                new MappedFileQueue("target/unit_test_store/b/", 1024, null);
 
         for (int i = 0; i < 1024; i++) {
             MappedFile mappedFile = mappedFileQueue.getLastMappedFile(0);
@@ -131,19 +122,15 @@ public class MappedFileQueueTest {
 
         mappedFileQueue.shutdown(1000);
         mappedFileQueue.destroy();
-        allocateMappedFileService.shutdown();
         System.out.println("MappedFileQueue.findMappedFileByOffset() OK");
     }
-
 
     @Test
     public void test_commit() {
         final String fixedMsg = "0123456789abcdef";
         System.out.println("================================================================");
-        AllocateMappedFileService allocateMappedFileService = new AllocateMappedFileService(null);
-        allocateMappedFileService.start();
         MappedFileQueue mappedFileQueue =
-                new MappedFileQueue("./unit_test_store/c/", 1024, allocateMappedFileService);
+                new MappedFileQueue("target/unit_test_store/c/", 1024, null);
 
         for (int i = 0; i < 1024; i++) {
             MappedFile mappedFile = mappedFileQueue.getLastMappedFile(0);
@@ -151,7 +138,6 @@ public class MappedFileQueueTest {
             boolean result = mappedFile.appendMessage(fixedMsg.getBytes());
             assertTrue(result);
         }
-
 
         boolean result = mappedFileQueue.flush(0);
         assertFalse(result);
@@ -185,19 +171,15 @@ public class MappedFileQueueTest {
 
         mappedFileQueue.shutdown(1000);
         mappedFileQueue.destroy();
-        allocateMappedFileService.shutdown();
         System.out.println("MappedFileQueue.flush() OK");
     }
-
 
     @Test
     public void test_getMapedMemorySize() {
         final String fixedMsg = "abcd";
         System.out.println("================================================================");
-        AllocateMappedFileService allocateMappedFileService = new AllocateMappedFileService(null);
-        allocateMappedFileService.start();
         MappedFileQueue mappedFileQueue =
-                new MappedFileQueue("./unit_test_store/d/", 1024, allocateMappedFileService);
+                new MappedFileQueue("target/unit_test_store/d/", 1024, null);
 
         for (int i = 0; i < 1024; i++) {
             MappedFile mappedFile = mappedFileQueue.getLastMappedFile(0);
@@ -207,10 +189,8 @@ public class MappedFileQueueTest {
         }
 
         assertEquals(fixedMsg.length() * 1024, mappedFileQueue.getMappedMemorySize());
-
         mappedFileQueue.shutdown(1000);
         mappedFileQueue.destroy();
-        allocateMappedFileService.shutdown();
         System.out.println("MappedFileQueue.getMappedMemorySize() OK");
     }
 

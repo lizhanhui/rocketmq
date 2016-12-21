@@ -24,7 +24,7 @@ JAVA_OPT="${JAVA_OPT}  -XX:+PerfDisableSharedMem"
 JAVA_OPT="${JAVA_OPT} -cp ${CLASSPATH}"
 
 if [ -z "$JAVA_HOME" ]; then
-  JAVA_HOME=/opt/taobao/java
+  JAVA_HOME=/usr/java
 fi
 
 JAVA="$JAVA_HOME/bin/java"

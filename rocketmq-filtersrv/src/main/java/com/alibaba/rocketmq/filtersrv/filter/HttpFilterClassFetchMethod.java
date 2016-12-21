@@ -25,7 +25,7 @@ import org.slf4j.LoggerFactory;
 
 
 public class HttpFilterClassFetchMethod implements FilterClassFetchMethod {
-    private static final Logger log = LoggerFactory.getLogger(LoggerName.FiltersrvLoggerName);
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.FILTERSRV_LOGGER_NAME);
     private final String url;
 
 

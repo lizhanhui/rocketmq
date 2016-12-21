@@ -40,7 +40,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class ScheduleMessageService extends ConfigManager {
     public static final String SCHEDULE_TOPIC = "SCHEDULE_TOPIC_XXXX";
-    private static final Logger log = LoggerFactory.getLogger(LoggerName.StoreLoggerName);
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
     private static final long FIRST_DELAY_TIME = 1000L;
     private static final long DELAY_FOR_A_WHILE = 100L;
     private static final long DELAY_FOR_A_PERIOD = 10000L;
@@ -258,7 +258,7 @@ public class ScheduleMessageService extends ConfigManager {
                     try {
                         long nextOffset = offset;
                         int i = 0;
-                        for (; i < bufferCQ.getSize(); i += ConsumeQueue.CQStoreUnitSize) {
+                        for (; i < bufferCQ.getSize(); i += ConsumeQueue.CQ_STORE_UNIT_SIZE) {
                             long offsetPy = bufferCQ.getByteBuffer().getLong();
                             int sizePy = bufferCQ.getByteBuffer().getInt();
                             long tagsCode = bufferCQ.getByteBuffer().getLong();
@@ -267,7 +267,7 @@ public class ScheduleMessageService extends ConfigManager {
                             long now = System.currentTimeMillis();
                             long deliverTimestamp = this.correctDeliverTimestamp(now, tagsCode);
 
-                            nextOffset = offset + (i / ConsumeQueue.CQStoreUnitSize);
+                            nextOffset = offset + (i / ConsumeQueue.CQ_STORE_UNIT_SIZE);
 
                             long countdown = deliverTimestamp - now;
 
@@ -324,7 +324,7 @@ public class ScheduleMessageService extends ConfigManager {
                             }
                         } // end of for
 
-                        nextOffset = offset + (i / ConsumeQueue.CQStoreUnitSize);
+                        nextOffset = offset + (i / ConsumeQueue.CQ_STORE_UNIT_SIZE);
                         ScheduleMessageService.this.timer.schedule(new DeliverDelayedMessageTimerTask(
                                 this.delayLevel, nextOffset), DELAY_FOR_A_WHILE);
                         ScheduleMessageService.this.updateOffset(this.delayLevel, nextOffset);

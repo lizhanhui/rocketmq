@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.alibaba.rocketmq.store;
 
@@ -31,10 +31,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * @author shijia.wxr
  */
 public class MappedFileQueue {
-    private static final Logger log = LoggerFactory.getLogger(LoggerName.StoreLoggerName);
-    private static final Logger logError = LoggerFactory.getLogger(LoggerName.StoreErrorLoggerName);
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
+    private static final Logger LOG_ERROR = LoggerFactory.getLogger(LoggerName.STORE_ERROR_LOGGER_NAME);
 
-    private static final int DeleteFilesBatchMax = 10;
+    private static final int DELETE_FILES_BATCH_MAX = 10;
 
     private final String storePath;
 
@@ -68,7 +68,7 @@ public class MappedFileQueue {
 
                 if (pre != null) {
                     if (cur.getFileFromOffset() - pre.getFileFromOffset() != this.mappedFileSize) {
-                        logError.error("[BUG]The mappedFile queue's data is damaged, the adjacent mappedFile's offset don't match. pre file {}, cur file {}",
+                        LOG_ERROR.error("[BUG]The mappedFile queue's data is damaged, the adjacent mappedFile's offset don't match. pre file {}, cur file {}",
                                 pre.getFileName(), cur.getFileName());
                     }
                 }
@@ -326,7 +326,7 @@ public class MappedFileQueue {
         return 0;
     }
 
-    public long remainHowManyDataToCommit(){
+    public long remainHowManyDataToCommit() {
         return getMaxWrotePosition() - committedWhere;
     }
 
@@ -365,7 +365,7 @@ public class MappedFileQueue {
                         files.add(mappedFile);
                         deleteCount++;
 
-                        if (files.size() >= DeleteFilesBatchMax) {
+                        if (files.size() >= DELETE_FILES_BATCH_MAX) {
                             break;
                         }
 
@@ -404,8 +404,7 @@ public class MappedFileQueue {
                 if (result != null) {
                     long maxOffsetInLogicQueue = result.getByteBuffer().getLong();
                     result.release();
-
-                    destroy = (maxOffsetInLogicQueue < offset);
+                    destroy = maxOffsetInLogicQueue < offset;
                     if (destroy) {
                         log.info("physic min offset " + offset + ", logics in current mappedFile max offset "
                                 + maxOffsetInLogicQueue + ", delete it");
@@ -437,7 +436,7 @@ public class MappedFileQueue {
             long tmpTimeStamp = mappedFile.getStoreTimestamp();
             int offset = mappedFile.flush(flushLeastPages);
             long where = mappedFile.getFileFromOffset() + offset;
-            result = (where == this.flushedWhere);
+            result = where == this.flushedWhere;
             this.flushedWhere = where;
             if (0 == flushLeastPages) {
                 this.storeTimestamp = tmpTimeStamp;
@@ -453,7 +452,7 @@ public class MappedFileQueue {
         if (mappedFile != null) {
             int offset = mappedFile.commit(commitLeastPages);
             long where = mappedFile.getFileFromOffset() + offset;
-            result = (where == this.committedWhere);
+            result = where == this.committedWhere;
             this.committedWhere = where;
         }
 
@@ -467,7 +466,7 @@ public class MappedFileQueue {
             if (mappedFile != null) {
                 int index = (int) ((offset / this.mappedFileSize) - (mappedFile.getFileFromOffset() / this.mappedFileSize));
                 if (index < 0 || index >= this.mappedFiles.size()) {
-                    logError.warn("findMappedFileByOffset offset not matched, request Offset: {}, index: {}, mappedFileSize: {}, mappedFiles count: {}, StackTrace: {}",//
+                    LOG_ERROR.warn("findMappedFileByOffset offset not matched, request Offset: {}, index: {}, mappedFileSize: {}, mappedFiles count: {}, StackTrace: {}",
                             offset,
                             index,
                             this.mappedFileSize,

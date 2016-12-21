@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.alibaba.rocketmq.filtersrv.processor;
 
@@ -55,7 +55,7 @@ import java.util.List;
  * @author shijia.wxr
  */
 public class DefaultRequestProcessor implements NettyRequestProcessor {
-    private static final Logger log = LoggerFactory.getLogger(LoggerName.FiltersrvLoggerName);
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.FILTERSRV_LOGGER_NAME);
 
     private final FiltersrvController filtersrvController;
 
@@ -68,9 +68,9 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
     @Override
     public RemotingCommand processRequest(ChannelHandlerContext ctx, RemotingCommand request) throws Exception {
         if (log.isDebugEnabled()) {
-            log.debug("receive request, {} {} {}",//
-                    request.getCode(), //
-                    RemotingHelper.parseChannelRemoteAddr(ctx.channel()), //
+            log.debug("receive request, {} {} {}",
+                    request.getCode(),
+                    RemotingHelper.parseChannelRemoteAddr(ctx.channel()),
                     request);
         }
 
@@ -95,10 +95,10 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
                 (RegisterMessageFilterClassRequestHeader) request.decodeCommandCustomHeader(RegisterMessageFilterClassRequestHeader.class);
 
         try {
-            boolean ok = this.filtersrvController.getFilterClassManager().registerFilterClass(requestHeader.getConsumerGroup(),//
-                    requestHeader.getTopic(),//
-                    requestHeader.getClassName(),//
-                    requestHeader.getClassCRC(), //
+            boolean ok = this.filtersrvController.getFilterClassManager().registerFilterClass(requestHeader.getConsumerGroup(),
+                    requestHeader.getTopic(),
+                    requestHeader.getClassName(),
+                    requestHeader.getClassCRC(),
                     request.getBody());
             if (!ok) {
                 throw new Exception("registerFilterClass error");
@@ -178,14 +178,10 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
                             if (!msgListOK.isEmpty()) {
                                 returnResponse(requestHeader.getConsumerGroup(), requestHeader.getTopic(), ctx, response, msgListOK);
                                 return;
-                            }
-
-                            else {
+                            } else {
                                 response.setCode(ResponseCode.PULL_RETRY_IMMEDIATELY);
                             }
-                        }
-
-                        catch (Throwable e) {
+                        } catch (Throwable e) {
                             final String error =
                                     String.format("do Message Filter Exception, ConsumerGroup: %s Topic: %s ",
                                             requestHeader.getConsumerGroup(), requestHeader.getTopic());
@@ -280,7 +276,7 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
                 byte[] data = UtilAll.compress(msg.getBody(), this.filtersrvController.getFiltersrvConfig().getZipCompressLevel());
                 if (data != null) {
                     msg.setBody(data);
-                    sysFlag |= MessageSysFlag.CompressedFlag;
+                    sysFlag |= MessageSysFlag.COMPRESSED_FLAG;
                 }
             }
         }
@@ -317,7 +313,7 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         // 1 TOTALSIZE
         msgStoreItemMemory.putInt(msgLen);
         // 2 MAGICCODE
-        msgStoreItemMemory.putInt(CommitLog.MessageMagicCode);
+        msgStoreItemMemory.putInt(CommitLog.MESSAGE_MAGIC_CODE);
         // 3 BODYCRC
         msgStoreItemMemory.putInt(UtilAll.crc32(msgInner.getBody()));
         // 4 QUEUEID

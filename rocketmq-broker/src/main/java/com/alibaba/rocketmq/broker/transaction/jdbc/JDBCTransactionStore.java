@@ -26,18 +26,16 @@ import org.slf4j.LoggerFactory;
 
 import java.net.URL;
 import java.sql.*;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicLong;
 
 
 public class JDBCTransactionStore implements TransactionStore {
-    private static final Logger log = LoggerFactory.getLogger(LoggerName.TransactionLoggerName);
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.TRANSACTION_LOGGER_NAME);
     private final JDBCTransactionStoreConfig jdbcTransactionStoreConfig;
     private Connection connection;
     private AtomicLong totalRecordsValue = new AtomicLong(0);
-
 
     public JDBCTransactionStore(JDBCTransactionStoreConfig jdbcTransactionStoreConfig) {
         this.jdbcTransactionStoreConfig = jdbcTransactionStoreConfig;
@@ -207,7 +205,6 @@ public class JDBCTransactionStore implements TransactionStore {
                 statement.addBatch();
             }
             int[] executeBatch = statement.executeBatch();
-            System.out.println(Arrays.toString(executeBatch));
             this.connection.commit();
         } catch (Exception e) {
             log.warn("createDB Exception", e);

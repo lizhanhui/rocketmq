@@ -37,18 +37,18 @@ public class CheckTransactionStateResponseHeader implements CommandCustomHeader 
     @CFNotNull
     private Long commitLogOffset;
     @CFNotNull
-    private Integer commitOrRollback; // TransactionCommitType
+    private Integer commitOrRollback; // TRANSACTION_COMMIT_TYPE
 
 
-    // TransactionRollbackType
+    // TRANSACTION_ROLLBACK_TYPE
 
     @Override
     public void checkFields() throws RemotingCommandException {
-        if (MessageSysFlag.TransactionCommitType == this.commitOrRollback) {
+        if (MessageSysFlag.TRANSACTION_COMMIT_TYPE == this.commitOrRollback) {
             return;
         }
 
-        if (MessageSysFlag.TransactionRollbackType == this.commitOrRollback) {
+        if (MessageSysFlag.TRANSACTION_ROLLBACK_TYPE == this.commitOrRollback) {
             return;
         }
 

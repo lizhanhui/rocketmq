@@ -18,7 +18,6 @@ package com.alibaba.rocketmq.client.impl.factory;
 
 import com.alibaba.rocketmq.client.ClientConfig;
 import com.alibaba.rocketmq.client.admin.MQAdminExtInner;
-import com.alibaba.rocketmq.client.common.ThreadLocalIndex;
 import com.alibaba.rocketmq.client.exception.MQBrokerException;
 import com.alibaba.rocketmq.client.exception.MQClientException;
 import com.alibaba.rocketmq.client.impl.*;
@@ -63,7 +62,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * @author shijia.wxr
  */
 public class MQClientInstance {
-    private final static long LockTimeoutMillis = 3000;
+    private final static long LOCK_TIMEOUT_MILLIS = 3000;
     private final Logger log = ClientLogger.getLog();
     private final ClientConfig clientConfig;
     private final int instanceIndex;
@@ -132,7 +131,7 @@ public class MQClientInstance {
                 this.instanceIndex, //
                 this.clientId, //
                 this.clientConfig, //
-                MQVersion.getVersionDesc(MQVersion.CurrentVersion), RemotingCommand.getSerializeTypeConfigInThisServer());
+                MQVersion.getVersionDesc(MQVersion.CURRENT_VERSION), RemotingCommand.getSerializeTypeConfigInThisServer());
     }
 
     public void start() throws MQClientException {
@@ -283,7 +282,7 @@ public class MQClientInstance {
      */
     private void cleanOfflineBroker() {
         try {
-            if (this.lockNamesrv.tryLock(LockTimeoutMillis, TimeUnit.MILLISECONDS))
+            if (this.lockNamesrv.tryLock(LOCK_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS))
                 try {
                     ConcurrentHashMap<String, HashMap<Long, String>> updatedTable = new ConcurrentHashMap<String, HashMap<Long, String>>();
 
@@ -459,7 +458,7 @@ public class MQClientInstance {
 
     public boolean updateTopicRouteInfoFromNameServer(final String topic, boolean isDefault, DefaultMQProducer defaultMQProducer) {
         try {
-            if (this.lockNamesrv.tryLock(LockTimeoutMillis, TimeUnit.MILLISECONDS)) {
+            if (this.lockNamesrv.tryLock(LOCK_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)) {
                 try {
                     TopicRouteData topicRouteData;
                     if (isDefault && defaultMQProducer != null) {
@@ -532,7 +531,7 @@ public class MQClientInstance {
                     this.lockNamesrv.unlock();
                 }
             } else {
-                log.warn("updateTopicRouteInfoFromNameServer tryLock timeout {}ms", LockTimeoutMillis);
+                log.warn("updateTopicRouteInfoFromNameServer tryLock timeout {}ms", LOCK_TIMEOUT_MILLIS);
             }
         } catch (InterruptedException e) {
             log.warn("updateTopicRouteInfoFromNameServer Exception", e);
@@ -798,7 +797,7 @@ public class MQClientInstance {
 
     private void unregisterClientWithLock(final String producerGroup, final String consumerGroup) {
         try {
-            if (this.lockHeartbeat.tryLock(LockTimeoutMillis, TimeUnit.MILLISECONDS)) {
+            if (this.lockHeartbeat.tryLock(LOCK_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)) {
                 try {
                     this.unregisterClient(producerGroup, consumerGroup);
                 } catch (Exception e) {
@@ -957,13 +956,13 @@ public class MQClientInstance {
         HashMap<Long/* brokerId */, String/* address */> map = this.brokerAddrTable.get(brokerName);
         if (map != null && !map.isEmpty()) {
             brokerAddr = map.get(brokerId);
-            slave = (brokerId != MixAll.MASTER_ID);
-            found = (brokerAddr != null);
+            slave = brokerId != MixAll.MASTER_ID;
+            found = brokerAddr != null;
 
             if (!found && !onlyThisBroker) {
                 Entry<Long, String> entry = map.entrySet().iterator().next();
                 brokerAddr = entry.getValue();
-                slave = (entry.getKey() != MixAll.MASTER_ID);
+                slave = entry.getKey() != MixAll.MASTER_ID;
                 found = true;
             }
         }
@@ -1132,7 +1131,7 @@ public class MQClientInstance {
         consumerRunningInfo.getProperties().put(ConsumerRunningInfo.PROP_NAMESERVER_ADDR, nsAddr);
         consumerRunningInfo.getProperties().put(ConsumerRunningInfo.PROP_CONSUME_TYPE, mqConsumerInner.consumeType().name());
         consumerRunningInfo.getProperties().put(ConsumerRunningInfo.PROP_CLIENT_VERSION,
-                MQVersion.getVersionDesc(MQVersion.CurrentVersion));
+                MQVersion.getVersionDesc(MQVersion.CURRENT_VERSION));
 
         return consumerRunningInfo;
     }

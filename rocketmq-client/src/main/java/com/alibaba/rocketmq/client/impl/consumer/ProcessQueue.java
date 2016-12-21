@@ -41,10 +41,10 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * @author shijia.wxr
  */
 public class ProcessQueue {
-    public final static long RebalanceLockMaxLiveTime =
+    public final static long REBALANCE_LOCK_MAX_LIVE_TIME =
             Long.parseLong(System.getProperty("rocketmq.client.rebalance.lockMaxLiveTime", "30000"));
-    public final static long RebalanceLockInterval = Long.parseLong(System.getProperty("rocketmq.client.rebalance.lockInterval", "20000"));
-    private final static long PullMaxIdleTime = Long.parseLong(System.getProperty("rocketmq.client.pull.pullMaxIdleTime", "120000"));
+    public final static long REBALANCE_LOCK_INTERVAL = Long.parseLong(System.getProperty("rocketmq.client.rebalance.lockInterval", "20000"));
+    private final static long PULL_MAX_IDLE_TIME = Long.parseLong(System.getProperty("rocketmq.client.pull.pullMaxIdleTime", "120000"));
     private final Logger log = ClientLogger.getLog();
     private final ReadWriteLock lockTreeMap = new ReentrantReadWriteLock();
     private final TreeMap<Long, MessageExt> msgTreeMap = new TreeMap<Long, MessageExt>();
@@ -62,13 +62,13 @@ public class ProcessQueue {
     private volatile long msgAccCnt = 0;
 
     public boolean isLockExpired() {
-        boolean result = (System.currentTimeMillis() - this.lastLockTimestamp) > RebalanceLockMaxLiveTime;
+        boolean result = (System.currentTimeMillis() - this.lastLockTimestamp) > REBALANCE_LOCK_MAX_LIVE_TIME;
         return result;
     }
 
 
     public boolean isPullExpired() {
-        boolean result = (System.currentTimeMillis() - this.lastPullTimestamp) > PullMaxIdleTime;
+        boolean result = (System.currentTimeMillis() - this.lastPullTimestamp) > PULL_MAX_IDLE_TIME;
         return result;
     }
 

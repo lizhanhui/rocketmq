@@ -36,7 +36,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.*;
-import java.util.zip.Inflater;
 
 
 /**
@@ -44,7 +43,7 @@ import java.util.zip.Inflater;
  */
 public class ConsumeMessageOrderlyService implements ConsumeMessageService {
     private static final Logger log = ClientLogger.getLog();
-    private final static long MaxTimeConsumeContinuously =
+    private final static long MAX_TIME_CONSUME_CONTINUOUSLY =
             Long.parseLong(System.getProperty("rocketmq.client.maxTimeConsumeContinuously", "60000"));
     private final DefaultMQPushConsumerImpl defaultMQPushConsumerImpl;
     private final DefaultMQPushConsumer defaultMQPushConsumer;
@@ -84,7 +83,7 @@ public class ConsumeMessageOrderlyService implements ConsumeMessageService {
                 public void run() {
                     ConsumeMessageOrderlyService.this.lockMQPeriodically();
                 }
-            }, 1000 * 1, ProcessQueue.RebalanceLockInterval, TimeUnit.MILLISECONDS);
+            }, 1000 * 1, ProcessQueue.REBALANCE_LOCK_INTERVAL, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -427,7 +426,7 @@ public class ConsumeMessageOrderlyService implements ConsumeMessageService {
                         }
 
                         long interval = System.currentTimeMillis() - beginTime;
-                        if (interval > MaxTimeConsumeContinuously) {
+                        if (interval > MAX_TIME_CONSUME_CONTINUOUSLY) {
                             ConsumeMessageOrderlyService.this.submitConsumeRequestLater(processQueue, messageQueue, 10);
                             break;
                         }

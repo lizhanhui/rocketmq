@@ -55,7 +55,7 @@ public class SendMessageTest {
         MQClientAPIImpl client = new MQClientAPIImpl(new NettyClientConfig(), null, null, null);
         client.start();
 
-        for (int i = 0; i < 100000; i++) {
+        for (int i = 0; i < 100; i++) {
             String topic = "UnitTestTopic_" + i % 3;
             Message msg = new Message(topic, "TAG1 TAG2", "100200300", ("Hello, Nice world\t" + i).getBytes());
             msg.setDelayTimeLevel(i % 3 + 1);

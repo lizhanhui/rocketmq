@@ -57,7 +57,7 @@ import java.util.Random;
  * @author shijia.wxr
  */
 public abstract class AbstractSendMessageProcessor implements NettyRequestProcessor {
-    protected static final Logger log = LoggerFactory.getLogger(LoggerName.BrokerLoggerName);
+    protected static final Logger log = LoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
 
     protected final static int DLQ_NUMS_PER_GROUP = 1;
     protected final BrokerController brokerController;
@@ -115,7 +115,7 @@ public abstract class AbstractSendMessageProcessor implements NettyRequestProces
         int sysFlag = requestHeader.getSysFlag();
 
         if (TopicFilterType.MULTI_TAG == topicConfig.getTopicFilterType()) {
-            sysFlag |= MessageSysFlag.MultiTagsFlag;
+            sysFlag |= MessageSysFlag.MULTI_TAGS_FLAG;
         }
 
         MessageExtBrokerInner msgInner = new MessageExtBrokerInner();
@@ -156,7 +156,7 @@ public abstract class AbstractSendMessageProcessor implements NettyRequestProces
             response.setCode(ResponseCode.MESSAGE_ILLEGAL);
             return response;
         }
-        if (request.getBody().length > DBMsgConstants.maxBodySize) {
+        if (request.getBody().length > DBMsgConstants.MAX_BODY_SIZE) {
             log.warn(" topic {}  msg body size {}  from {}", requestHeader.getTopic(),
                     request.getBody().length, ChannelUtil.getRemoteIp(ctx.channel()));
             response.setRemark("msg body must be less 64KB");
@@ -224,9 +224,9 @@ public abstract class AbstractSendMessageProcessor implements NettyRequestProces
         int queueIdInt = requestHeader.getQueueId();
         int idValid = Math.max(topicConfig.getWriteQueueNums(), topicConfig.getReadQueueNums());
         if (queueIdInt >= idValid) {
-            String errorInfo = String.format("request queueId[%d] is illagal, %s Producer: %s",//
-                    queueIdInt,//
-                    topicConfig.toString(),//
+            String errorInfo = String.format("request queueId[%d] is illagal, %s Producer: %s",
+                    queueIdInt,
+                    topicConfig.toString(),
                     RemotingHelper.parseChannelRemoteAddr(ctx.channel()));
 
             log.warn(errorInfo);

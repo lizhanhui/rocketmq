@@ -45,7 +45,7 @@ import com.alibaba.rocketmq.remoting.common.RemotingUtil;
 import com.alibaba.rocketmq.remoting.exception.*;
 import com.alibaba.rocketmq.tools.admin.api.MessageTrack;
 import com.alibaba.rocketmq.tools.admin.api.TrackType;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 
 import java.io.UnsupportedEncodingException;
@@ -748,16 +748,13 @@ public class DefaultMQAdminExtImpl implements MQAdminExt, MQAdminExtInner {
 
                     if (ifConsumed) {
                         mt.setTrackType(TrackType.CONSUMED);
-
-
                         Iterator<Entry<String, SubscriptionData>> it = cc.getSubscriptionTable().entrySet().iterator();
                         while (it.hasNext()) {
                             Entry<String, SubscriptionData> next = it.next();
                             if (next.getKey().equals(msg.getTopic())) {
-                                if (next.getValue().getTagsSet().contains(msg.getTags()) //
-                                        || next.getValue().getTagsSet().contains("*")//
-                                        || next.getValue().getTagsSet().isEmpty()//
-                                        ) {
+                                if (next.getValue().getTagsSet().contains(msg.getTags())
+                                        || next.getValue().getTagsSet().contains("*")
+                                        || next.getValue().getTagsSet().isEmpty()) {
                                 } else {
                                     mt.setTrackType(TrackType.CONSUMED_BUT_FILTERED);
                                 }

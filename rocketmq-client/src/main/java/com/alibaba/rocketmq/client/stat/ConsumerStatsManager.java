@@ -28,7 +28,7 @@ import java.util.concurrent.ScheduledExecutorService;
 
 
 public class ConsumerStatsManager {
-    private static final Logger log = LoggerFactory.getLogger(LoggerName.ClientLoggerName);
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.CLIENT_LOGGER_NAME);
 
     private static final String TOPIC_AND_GROUP_CONSUME_OK_TPS = "CONSUME_OK_TPS";
     private static final String TOPIC_AND_GROUP_CONSUME_FAILED_TPS = "CONSUME_FAILED_TPS";

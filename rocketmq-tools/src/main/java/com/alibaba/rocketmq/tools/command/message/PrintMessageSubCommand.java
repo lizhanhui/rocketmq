@@ -56,7 +56,7 @@ public class PrintMessageSubCommand implements SubCommand {
         opt.setRequired(true);
         options.addOption(opt);
 
-        opt = new Option("c", "charsetName ", true, "CharsetName(eg: UTF-8、GBK)");
+        opt = new Option("c", "charsetName ", true, "CharsetName(eg: UTF-8,GBK)");
         opt.setRequired(false);
         options.addOption(opt);
 
@@ -120,7 +120,7 @@ public class PrintMessageSubCommand implements SubCommand {
                     maxOffset = consumer.searchOffset(mq, timeValue);
                 }
 
-                System.out.println("minOffset=" + minOffset + ", maxOffset=" + maxOffset + ", " + mq);
+                System.out.printf("minOffset=" + minOffset + ", maxOffset=" + maxOffset + ", " + mq);
 
                 READQ:
                 for (long offset = minOffset; offset < maxOffset; ) {
@@ -132,11 +132,11 @@ public class PrintMessageSubCommand implements SubCommand {
                                 printMessage(pullResult.getMsgFoundList(), charsetName, printBody);
                                 break;
                             case NO_MATCHED_MSG:
-                                System.out.println(mq + " no matched msg. status=" + pullResult.getPullStatus() + ", offset=" + offset);
+                                System.out.printf(mq + " no matched msg. status=" + pullResult.getPullStatus() + ", offset=" + offset);
                                 break;
                             case NO_NEW_MSG:
                             case OFFSET_ILLEGAL:
-                                System.out.println(mq + " print msg finished. status=" + pullResult.getPullStatus() + ", offset=" + offset);
+                                System.out.printf(mq + " print msg finished. status=" + pullResult.getPullStatus() + ", offset=" + offset);
                                 break READQ;
                         }
                     } catch (Exception e) {
@@ -158,7 +158,7 @@ public class PrintMessageSubCommand implements SubCommand {
         try {
             timestamp = Long.parseLong(value);
         } catch (NumberFormatException e) {
-            timestamp = UtilAll.parseDate(value, UtilAll.yyyy_MM_dd_HH_mm_ss_SSS).getTime();
+            timestamp = UtilAll.parseDate(value, UtilAll.YYYY_MM_DD_HH_MM_SS_SSS).getTime();
         }
 
         return timestamp;

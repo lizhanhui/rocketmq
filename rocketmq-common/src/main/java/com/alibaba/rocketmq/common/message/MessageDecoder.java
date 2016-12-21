@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.alibaba.rocketmq.common.message;
 
@@ -39,11 +39,11 @@ public class MessageDecoder {
     public final static int MSG_ID_LENGTH = 8 + 8;
 
     public final static Charset CHARSET_UTF8 = Charset.forName("UTF-8");
-    public final static int MessageMagicCodePostion = 4;
-    public final static int MessageFlagPostion = 16;
-    public final static int MessagePhysicOffsetPostion = 28;
-    public final static int MessageStoreTimestampPostion = 56;
-    public final static int MessageMagicCode = 0xAABBCCDD ^ 1880681586 + 8;
+    public final static int MESSAGE_MAGIC_CODE_POSTION = 4;
+    public final static int MESSAGE_FLAG_POSTION = 16;
+    public final static int MESSAGE_PHYSIC_OFFSET_POSTION = 28;
+    public final static int MESSAGE_STORE_TIMESTAMP_POSTION = 56;
+    public final static int MESSAGE_MAGIC_CODE = 0xAABBCCDD ^ 1880681586 + 8;
 
 
     public static String createMessageId(final ByteBuffer input, final ByteBuffer addr, final long offset) {
@@ -95,10 +95,10 @@ public class MessageDecoder {
     public static MessageExt clientDecode(java.nio.ByteBuffer byteBuffer, final boolean readBody) {
         return decode(byteBuffer, readBody, true, true);
     }
+
     public static MessageExt decode(java.nio.ByteBuffer byteBuffer, final boolean readBody) {
         return decode(byteBuffer, readBody, true, false);
     }
-
 
 
     public static byte[] encode(MessageExt messageExt, boolean needCompress) throws Exception {
@@ -110,7 +110,7 @@ public class MessageDecoder {
         short propertiesLength = (short) propertiesBytes.length;
         int sysFlag = messageExt.getSysFlag();
         byte[] newBody = messageExt.getBody();
-        if (needCompress && (sysFlag & MessageSysFlag.CompressedFlag) == MessageSysFlag.CompressedFlag) {
+        if (needCompress && (sysFlag & MessageSysFlag.COMPRESSED_FLAG) == MessageSysFlag.COMPRESSED_FLAG) {
             newBody = UtilAll.compress(body, 5);
         }
         int bodyLength = newBody.length;
@@ -143,7 +143,7 @@ public class MessageDecoder {
         byteBuffer.putInt(storeSize);
 
         // 2 MAGICCODE
-        byteBuffer.putInt(MessageMagicCode);
+        byteBuffer.putInt(MESSAGE_MAGIC_CODE);
 
         // 3 BODYCRC
         int bodyCRC = messageExt.getBodyCRC();
@@ -210,19 +210,18 @@ public class MessageDecoder {
     }
 
     public static MessageExt decode(
-                                    java.nio.ByteBuffer byteBuffer, final boolean readBody, final boolean deCompressBody) {
+            java.nio.ByteBuffer byteBuffer, final boolean readBody, final boolean deCompressBody) {
         return decode(byteBuffer, readBody, deCompressBody, false);
     }
 
     public static MessageExt decode(
-                                    java.nio.ByteBuffer byteBuffer, final boolean readBody, final boolean deCompressBody, final boolean isClient) {
+            java.nio.ByteBuffer byteBuffer, final boolean readBody, final boolean deCompressBody, final boolean isClient) {
         try {
 
             MessageExt msgExt;
             if (isClient) {
-                msgExt = new MessageClientExt();                
-            }
-            else {
+                msgExt = new MessageClientExt();
+            } else {
                 msgExt = new MessageExt();
             }
 
@@ -293,13 +292,12 @@ public class MessageDecoder {
                     byteBuffer.get(body);
 
                     // uncompress body
-                    if (deCompressBody && (sysFlag & MessageSysFlag.CompressedFlag) == MessageSysFlag.CompressedFlag) {
+                    if (deCompressBody && (sysFlag & MessageSysFlag.COMPRESSED_FLAG) == MessageSysFlag.COMPRESSED_FLAG) {
                         body = UtilAll.uncompress(body);
                     }
 
                     msgExt.setBody(body);
-                }
-                else {
+                } else {
                     byteBuffer.position(byteBuffer.position() + bodyLen);
                 }
             }
@@ -325,18 +323,15 @@ public class MessageDecoder {
             msgExt.setMsgId(msgId);
 
             if (isClient) {
-                ((MessageClientExt)msgExt).setOffsetMsgId(msgId);
+                ((MessageClientExt) msgExt).setOffsetMsgId(msgId);
             }
-            
+
             return msgExt;
-        }
-        catch (UnknownHostException e) {
+        } catch (UnknownHostException e) {
             byteBuffer.position(byteBuffer.limit());
-        }
-        catch (BufferUnderflowException e) {
+        } catch (BufferUnderflowException e) {
             byteBuffer.position(byteBuffer.limit());
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             byteBuffer.position(byteBuffer.limit());
         }
 
@@ -354,13 +349,13 @@ public class MessageDecoder {
             MessageExt msgExt = clientDecode(byteBuffer, readBody);
             if (null != msgExt) {
                 msgExts.add(msgExt);
-            }
-            else {
+            } else {
                 break;
             }
         }
         return msgExts;
     }
+
     public static final char NAME_VALUE_SEPARATOR = 1;
     public static final char PROPERTY_SEPARATOR = 2;
 

@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package com.alibaba.rocketmq.example.benchmark;
@@ -72,16 +72,11 @@ public class TransactionProducer {
 
                     final long sendTps =
                             (long) (((end[3] - begin[3]) / (double) (end[0] - begin[0])) * 1000L);
-                    final double averageRT = ((end[5] - begin[5]) / (double) (end[3] - begin[3]));
+                    final double averageRT = (end[5] - begin[5]) / (double) (end[3] - begin[3]);
 
                     System.out.printf(
-                            "Send TPS: %d Max RT: %d Average RT: %7.3f Send Failed: %d Response Failed: %d transaction checkCount: %d %n"//
-                            , sendTps//
-                            , statsBenchmark.getSendMessageMaxRT().get()//
-                            , averageRT//
-                            , end[2]//
-                            , end[4]//
-                            , end[6]);
+                            "Send TPS: %d Max RT: %d Average RT: %7.3f Send Failed: %d Response Failed: %d transaction checkCount: %d %n",
+                            sendTps, statsBenchmark.getSendMessageMaxRT().get(), averageRT, end[2], end[4], end[6]);
                 }
             }
 
@@ -193,7 +188,6 @@ class TransactionCheckListenerBImpl implements TransactionCheckListener {
 
     @Override
     public LocalTransactionState checkLocalTransactionState(MessageExt msg) {
-        // System.out.println("server checking TrMsg " + msg.toString());
         statsBenchmarkTProducer.getCheckRequestSuccessCount().incrementAndGet();
         if (ischeckffalse) {
 
@@ -206,31 +200,30 @@ class TransactionCheckListenerBImpl implements TransactionCheckListener {
 
 
 class StatsBenchmarkTProducer {
-    // 1
     private final AtomicLong sendRequestSuccessCount = new AtomicLong(0L);
-    // 2
+
     private final AtomicLong sendRequestFailedCount = new AtomicLong(0L);
-    // 3
+
     private final AtomicLong receiveResponseSuccessCount = new AtomicLong(0L);
-    // 4
+
     private final AtomicLong receiveResponseFailedCount = new AtomicLong(0L);
-    // 5
+
     private final AtomicLong sendMessageSuccessTimeTotal = new AtomicLong(0L);
-    // 6
+
     private final AtomicLong sendMessageMaxRT = new AtomicLong(0L);
-    // 7
+
     private final AtomicLong checkRequestSuccessCount = new AtomicLong(0L);
 
 
     public Long[] createSnapshot() {
-        Long[] snap = new Long[]{//
-                System.currentTimeMillis(),//
-                this.sendRequestSuccessCount.get(),//
-                this.sendRequestFailedCount.get(),//
-                this.receiveResponseSuccessCount.get(),//
-                this.receiveResponseFailedCount.get(),//
-                this.sendMessageSuccessTimeTotal.get(), //
-                this.checkRequestSuccessCount.get(),};
+        Long[] snap = new Long[]{
+                System.currentTimeMillis(),
+                this.sendRequestSuccessCount.get(),
+                this.sendRequestFailedCount.get(),
+                this.receiveResponseSuccessCount.get(),
+                this.receiveResponseFailedCount.get(),
+                this.sendMessageSuccessTimeTotal.get(),
+                this.checkRequestSuccessCount.get()};
 
         return snap;
     }

@@ -26,7 +26,7 @@ import org.apache.commons.cli.Options;
 
 
 /**
- * @auther lansheng.zj
+ * @author lansheng.zj
  */
 public class CleanExpiredCQSubCommand implements SubCommand {
 
@@ -74,7 +74,7 @@ public class CleanExpiredCQSubCommand implements SubCommand {
                     cluster = cluster.trim();
                 result = defaultMQAdminExt.cleanExpiredConsumerQueue(cluster);
             }
-            System.out.println(result ? "success" : "false");
+            System.out.printf(result ? "success" : "false");
         } catch (Exception e) {
             e.printStackTrace();
         } finally {

@@ -75,17 +75,17 @@ public class QueueTimeSpan {
 
 
     public String getMinTimeStampStr() {
-        return UtilAll.formatDate(new Date(minTimeStamp), UtilAll.yyyy_MM_dd_HH_mm_ss_SSS);
+        return UtilAll.formatDate(new Date(minTimeStamp), UtilAll.YYYY_MM_DD_HH_MM_SS_SSS);
     }
 
 
     public String getMaxTimeStampStr() {
-        return UtilAll.formatDate(new Date(maxTimeStamp), UtilAll.yyyy_MM_dd_HH_mm_ss_SSS);
+        return UtilAll.formatDate(new Date(maxTimeStamp), UtilAll.YYYY_MM_DD_HH_MM_SS_SSS);
     }
 
 
     public String getConsumeTimeStampStr() {
-        return UtilAll.formatDate(new Date(consumeTimeStamp), UtilAll.yyyy_MM_dd_HH_mm_ss_SSS);
+        return UtilAll.formatDate(new Date(consumeTimeStamp), UtilAll.YYYY_MM_DD_HH_MM_SS_SSS);
     }
 
 

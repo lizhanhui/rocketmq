@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.alibaba.rocketmq.store;
 
@@ -46,30 +46,30 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class MappedFile extends ReferenceResource {
     public static final int OS_PAGE_SIZE = 1024 * 4;
-    private static final Logger log = LoggerFactory.getLogger(LoggerName.StoreLoggerName);
+    protected static final Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
 
-    private static final AtomicLong TotalMapedVitualMemory = new AtomicLong(0);
+    private static final AtomicLong TOTAL_MAPED_VITUAL_MEMORY = new AtomicLong(0);
 
-    private static final AtomicInteger TotalMapedFiles = new AtomicInteger(0);
+    private static final AtomicInteger TOTAL_MAPED_FILES = new AtomicInteger(0);
 
-    private final String fileName;
+    private String fileName;
 
-    private final long fileFromOffset;
+    private long fileFromOffset;
 
-    private final int fileSize;
+    protected int fileSize;
 
-    private final File file;
+    private File file;
 
-    private final MappedByteBuffer mappedByteBuffer;
+    private MappedByteBuffer mappedByteBuffer;
 
-    private final AtomicInteger wrotePosition = new AtomicInteger(0);
+    protected final AtomicInteger wrotePosition = new AtomicInteger(0);
 
     private final AtomicInteger flushedPosition = new AtomicInteger(0);
     //ADD BY ChenYang
-    private final AtomicInteger committedPosition = new AtomicInteger(0);
+    protected final AtomicInteger committedPosition = new AtomicInteger(0);
 
 
-    private FileChannel fileChannel;
+    protected FileChannel fileChannel;
 
     private volatile long storeTimestamp = 0;
     private boolean firstCreateInQueue = false;
@@ -77,16 +77,27 @@ public class MappedFile extends ReferenceResource {
     /**
      * Message will put to here first, and then reput to FileChannel if writeBuffer is not null.
      */
-    private ByteBuffer writeBuffer = null;
-    private TransientStorePool transientStorePool = null;
+    protected ByteBuffer writeBuffer = null;
+    protected TransientStorePool transientStorePool = null;
+
+    public MappedFile() {
+    }
+
+    public MappedFile(final String fileName, final int fileSize) throws IOException {
+        init(fileName, fileSize);
+    }
 
     public MappedFile(final String fileName, final int fileSize, final TransientStorePool transientStorePool) throws IOException {
-        this(fileName, fileSize);
+        init(fileName, fileSize, transientStorePool);
+    }
+
+    public void init(final String fileName, final int fileSize, final TransientStorePool transientStorePool) throws IOException {
+        init(fileName, fileSize);
         this.writeBuffer = transientStorePool.borrowBuffer();
         this.transientStorePool = transientStorePool;
     }
 
-    public MappedFile(final String fileName, final int fileSize) throws IOException {
+    private void init(final String fileName, final int fileSize) throws IOException {
         this.fileName = fileName;
         this.fileSize = fileSize;
         this.file = new File(fileName);
@@ -98,8 +109,8 @@ public class MappedFile extends ReferenceResource {
         try {
             this.fileChannel = new RandomAccessFile(this.file, "rw").getChannel();
             this.mappedByteBuffer = this.fileChannel.map(MapMode.READ_WRITE, 0, fileSize);
-            TotalMapedVitualMemory.addAndGet(fileSize);
-            TotalMapedFiles.incrementAndGet();
+            TOTAL_MAPED_VITUAL_MEMORY.addAndGet(fileSize);
+            TOTAL_MAPED_FILES.incrementAndGet();
             ok = true;
         } catch (FileNotFoundException e) {
             log.error("create file channel " + this.fileName + " Failed. ", e);
@@ -179,12 +190,12 @@ public class MappedFile extends ReferenceResource {
 
 
     public static int getTotalmapedfiles() {
-        return TotalMapedFiles.get();
+        return TOTAL_MAPED_FILES.get();
     }
 
 
     public static long getTotalMapedVitualMemory() {
-        return TotalMapedVitualMemory.get();
+        return TOTAL_MAPED_VITUAL_MEMORY.get();
     }
 
 
@@ -259,7 +270,7 @@ public class MappedFile extends ReferenceResource {
      * @param flushLeastPages
 
      *
-     * @return
+     * @return The current flushed position
      */
     public int flush(final int flushLeastPages) {
         if (this.isAbleToFlush(flushLeastPages)) {
@@ -287,7 +298,6 @@ public class MappedFile extends ReferenceResource {
         return this.getFlushedPosition();
     }
 
-    private int commitCompensation = 0; //avoid commit repeatedly
     public int commit(final int commitLeastPages) {
         if (writeBuffer == null) {
             //no need to commit data to file channel, so just regard wrotePosition as committedPosition.
@@ -295,60 +305,10 @@ public class MappedFile extends ReferenceResource {
         }
         if (this.isAbleToCommit(commitLeastPages)) {
             if (this.hold()) {
-                int lastCommittedPosition = this.committedPosition.get() + this.commitCompensation;
-
-                int value = this.wrotePosition.get() - this.wrotePosition.get() % OS_PAGE_SIZE;
-
-                int newValue = -1; // avoid dispatch noise.
-                // commitLeastPages=0 means must commit all data to FileChannel immediately
-                if (commitLeastPages == 0 || isFull() || value <= lastCommittedPosition) {
-                    value = this.wrotePosition.get();
-                } else {
-                    value -= OS_PAGE_SIZE;
-                    // seek a message start position
-                    ByteBuffer byteBuffer = writeBuffer.slice();
-                    for (int i = this.committedPosition.get(); i <= value;) {
-                        byteBuffer.position(i);
-                        if (value - i < 4) {
-                            newValue = i;
-                            break;
-                        }
-                        int msgLen = byteBuffer.getInt();
-                        if (value - i < msgLen) {
-                            newValue = i;
-                            break;
-                        }
-                        i += msgLen;
-
-                        if (msgLen == 0) {
-                            newValue = -1;
-                            break;
-                        }
-                    }
-                    value += OS_PAGE_SIZE;
-
-                    if (newValue == -1) {
-                        value = this.wrotePosition.get();
-                    }
-                }
-
-                if ((value - this.committedPosition.get() > 0)) {
-                    try {
-                        ByteBuffer byteBuffer = writeBuffer.slice();
-                        byteBuffer.position(lastCommittedPosition);
-                        byteBuffer.limit(value);
-                        this.fileChannel.position(lastCommittedPosition);
-                        this.fileChannel.write(byteBuffer);
-                        commitCompensation = newValue == -1 ? 0 : value - newValue;
-                        this.committedPosition.set(newValue == -1 ? value : newValue);
-                    } catch (Throwable e) {
-                        log.error("Error occurred when flush data to FileChannel.", e);
-                    }
-                }
-
+                commit0(commitLeastPages);
                 this.release();
             } else {
-                log.warn("in flush, hold failed, flush offset = " + this.committedPosition.get());
+                log.warn("in commit, hold failed, commit offset = " + this.committedPosition.get());
             }
         }
 
@@ -359,6 +319,24 @@ public class MappedFile extends ReferenceResource {
         }
 
         return this.committedPosition.get();
+    }
+
+    protected void commit0(final int commitLeastPages) {
+        int writePos = this.wrotePosition.get();
+        int lastCommittedPosition = this.committedPosition.get();
+
+        if (writePos - this.committedPosition.get() > 0) {
+            try {
+                ByteBuffer byteBuffer = writeBuffer.slice();
+                byteBuffer.position(lastCommittedPosition);
+                byteBuffer.limit(writePos);
+                this.fileChannel.position(lastCommittedPosition);
+                this.fileChannel.write(byteBuffer);
+                this.committedPosition.set(writePos);
+            } catch (Throwable e) {
+                log.error("Error occurred when commit data to FileChannel.", e);
+            }
+        }
     }
 
     private boolean isAbleToFlush(final int flushLeastPages) {
@@ -376,7 +354,7 @@ public class MappedFile extends ReferenceResource {
         return write > flush;
     }
 
-    private boolean isAbleToCommit(final int commitLeastPages) {
+    protected boolean isAbleToCommit(final int commitLeastPages) {
         int flush = this.committedPosition.get();
         int write = this.wrotePosition.get();
 
@@ -419,9 +397,7 @@ public class MappedFile extends ReferenceResource {
                 log.warn("matched, but hold failed, request pos: " + pos + ", fileFromOffset: "
                         + this.fileFromOffset);
             }
-        }
-
-        else {
+        } else {
             log.warn("selectMappedBuffer request pos invalid, request pos: " + pos + ", size: " + size
                     + ", fileFromOffset: " + this.fileFromOffset);
         }
@@ -465,8 +441,8 @@ public class MappedFile extends ReferenceResource {
         }
 
         clean(this.mappedByteBuffer);
-        TotalMapedVitualMemory.addAndGet(this.fileSize * (-1));
-        TotalMapedFiles.decrementAndGet();
+        TOTAL_MAPED_VITUAL_MEMORY.addAndGet(this.fileSize * (-1));
+        TOTAL_MAPED_FILES.decrementAndGet();
         log.info("unmap file[REF:" + currentRef + "] " + this.fileName + " OK");
         return true;
     }

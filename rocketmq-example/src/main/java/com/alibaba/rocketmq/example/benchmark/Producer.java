@@ -83,15 +83,10 @@ public class Producer {
                     Long[] end = snapshotList.getLast();
 
                     final long sendTps = (long) (((end[3] - begin[3]) / (double) (end[0] - begin[0])) * 1000L);
-                    final double averageRT = ((end[5] - begin[5]) / (double) (end[3] - begin[3]));
+                    final double averageRT = (end[5] - begin[5]) / (double) (end[3] - begin[3]);
 
-                    System.out.printf("Send TPS: %d Max RT: %d Average RT: %7.3f Send Failed: %d Response Failed: %d%n"//
-                            , sendTps//
-                            , statsBenchmark.getSendMessageMaxRT().get()//
-                            , averageRT//
-                            , end[2]//
-                            , end[4]//
-                    );
+                    System.out.printf("Send TPS: %d Max RT: %d Average RT: %7.3f Send Failed: %d Response Failed: %d%n",
+                            sendTps, statsBenchmark.getSendMessageMaxRT().get(), averageRT, end[2], end[4]);
                 }
             }
 
@@ -209,28 +204,27 @@ public class Producer {
 
 
 class StatsBenchmarkProducer {
-    // 1
     private final AtomicLong sendRequestSuccessCount = new AtomicLong(0L);
-    // 2
+
     private final AtomicLong sendRequestFailedCount = new AtomicLong(0L);
-    // 3
+
     private final AtomicLong receiveResponseSuccessCount = new AtomicLong(0L);
-    // 4
+
     private final AtomicLong receiveResponseFailedCount = new AtomicLong(0L);
-    // 5
+
     private final AtomicLong sendMessageSuccessTimeTotal = new AtomicLong(0L);
-    // 6
+
     private final AtomicLong sendMessageMaxRT = new AtomicLong(0L);
 
 
     public Long[] createSnapshot() {
-        Long[] snap = new Long[]{//
-                System.currentTimeMillis(),//
-                this.sendRequestSuccessCount.get(),//
-                this.sendRequestFailedCount.get(),//
-                this.receiveResponseSuccessCount.get(),//
-                this.receiveResponseFailedCount.get(),//
-                this.sendMessageSuccessTimeTotal.get(), //
+        Long[] snap = new Long[]{
+                System.currentTimeMillis(),
+                this.sendRequestSuccessCount.get(),
+                this.sendRequestFailedCount.get(),
+                this.receiveResponseSuccessCount.get(),
+                this.receiveResponseFailedCount.get(),
+                this.sendMessageSuccessTimeTotal.get(),
         };
 
         return snap;

@@ -28,8 +28,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @author xinyuzhou.zxy
  */
 public abstract class ServiceThread implements Runnable {
-    private static final Logger stlog = LoggerFactory.getLogger(LoggerName.CommonLoggerName);
-    private static final long JoinTime = 90 * 1000;
+    private static final Logger STLOG = LoggerFactory.getLogger(LoggerName.COMMON_LOGGER_NAME);
+    private static final long JOIN_TIME = 90 * 1000;
 
     protected final Thread thread;
 
@@ -59,7 +59,7 @@ public abstract class ServiceThread implements Runnable {
 
     public void shutdown(final boolean interrupt) {
         this.stopped = true;
-        stlog.info("shutdown thread " + this.getServiceName() + " interrupt " + interrupt);
+        STLOG.info("shutdown thread " + this.getServiceName() + " interrupt " + interrupt);
 
         if (hasNotified.compareAndSet(false, true)) {
             waitPoint.countDown(); // notify
@@ -75,7 +75,7 @@ public abstract class ServiceThread implements Runnable {
                 this.thread.join(this.getJointime());
             }
             long eclipseTime = System.currentTimeMillis() - beginTime;
-            stlog.info("join thread " + this.getServiceName() + " eclipse time(ms) " + eclipseTime + " "
+            STLOG.info("join thread " + this.getServiceName() + " eclipse time(ms) " + eclipseTime + " "
                     + this.getJointime());
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -83,7 +83,7 @@ public abstract class ServiceThread implements Runnable {
     }
 
     public long getJointime() {
-        return JoinTime;
+        return JOIN_TIME;
     }
 
     public void stop() {
@@ -92,7 +92,7 @@ public abstract class ServiceThread implements Runnable {
 
     public void stop(final boolean interrupt) {
         this.stopped = true;
-        stlog.info("stop thread " + this.getServiceName() + " interrupt " + interrupt);
+        STLOG.info("stop thread " + this.getServiceName() + " interrupt " + interrupt);
 
         if (hasNotified.compareAndSet(false, true)) {
             waitPoint.countDown(); // notify
@@ -105,7 +105,7 @@ public abstract class ServiceThread implements Runnable {
 
     public void makeStop() {
         this.stopped = true;
-        stlog.info("makestop thread " + this.getServiceName());
+        STLOG.info("makestop thread " + this.getServiceName());
     }
 
     public void wakeup() {

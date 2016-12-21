@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.alibaba.rocketmq.common.message;
 
@@ -38,38 +38,38 @@ public class MessageConst {
     public static final String PROPERTY_MQ2_FLAG = "MQ2_FLAG";
     public static final String PROPERTY_RECONSUME_TIME = "RECONSUME_TIME";
     public static final String PROPERTY_MSG_REGION = "MSG_REGION";
-    public static final String PROPERTY_TRACE_SWITCH="TRACE_ON";
+    public static final String PROPERTY_TRACE_SWITCH = "TRACE_ON";
     public static final String PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX = "UNIQ_KEY";
     public static final String PROPERTY_MAX_RECONSUME_TIMES = "MAX_RECONSUME_TIMES";
     public static final String PROPERTY_CONSUME_START_TIMESTAMP = "CONSUME_START_TIME";
 
     public static final String KEY_SEPARATOR = " ";
 
-    public static final HashSet<String> systemKeySet = new HashSet<String>();
+    public static final HashSet<String> STRING_HASH_SET = new HashSet<String>();
 
 
     static {
-        systemKeySet.add(PROPERTY_TRACE_SWITCH);
-        systemKeySet.add(PROPERTY_MSG_REGION);
-        systemKeySet.add(PROPERTY_KEYS);
-        systemKeySet.add(PROPERTY_TAGS);
-        systemKeySet.add(PROPERTY_WAIT_STORE_MSG_OK);
-        systemKeySet.add(PROPERTY_DELAY_TIME_LEVEL);
-        systemKeySet.add(PROPERTY_RETRY_TOPIC);
-        systemKeySet.add(PROPERTY_REAL_TOPIC);
-        systemKeySet.add(PROPERTY_REAL_QUEUE_ID);
-        systemKeySet.add(PROPERTY_TRANSACTION_PREPARED);
-        systemKeySet.add(PROPERTY_PRODUCER_GROUP);
-        systemKeySet.add(PROPERTY_MIN_OFFSET);
-        systemKeySet.add(PROPERTY_MAX_OFFSET);
-        systemKeySet.add(PROPERTY_BUYER_ID);
-        systemKeySet.add(PROPERTY_ORIGIN_MESSAGE_ID);
-        systemKeySet.add(PROPERTY_TRANSFER_FLAG);
-        systemKeySet.add(PROPERTY_CORRECTION_FLAG);
-        systemKeySet.add(PROPERTY_MQ2_FLAG);
-        systemKeySet.add(PROPERTY_RECONSUME_TIME);
-        systemKeySet.add(PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX);
-        systemKeySet.add(PROPERTY_MAX_RECONSUME_TIMES);
-        systemKeySet.add(PROPERTY_CONSUME_START_TIMESTAMP);
+        STRING_HASH_SET.add(PROPERTY_TRACE_SWITCH);
+        STRING_HASH_SET.add(PROPERTY_MSG_REGION);
+        STRING_HASH_SET.add(PROPERTY_KEYS);
+        STRING_HASH_SET.add(PROPERTY_TAGS);
+        STRING_HASH_SET.add(PROPERTY_WAIT_STORE_MSG_OK);
+        STRING_HASH_SET.add(PROPERTY_DELAY_TIME_LEVEL);
+        STRING_HASH_SET.add(PROPERTY_RETRY_TOPIC);
+        STRING_HASH_SET.add(PROPERTY_REAL_TOPIC);
+        STRING_HASH_SET.add(PROPERTY_REAL_QUEUE_ID);
+        STRING_HASH_SET.add(PROPERTY_TRANSACTION_PREPARED);
+        STRING_HASH_SET.add(PROPERTY_PRODUCER_GROUP);
+        STRING_HASH_SET.add(PROPERTY_MIN_OFFSET);
+        STRING_HASH_SET.add(PROPERTY_MAX_OFFSET);
+        STRING_HASH_SET.add(PROPERTY_BUYER_ID);
+        STRING_HASH_SET.add(PROPERTY_ORIGIN_MESSAGE_ID);
+        STRING_HASH_SET.add(PROPERTY_TRANSFER_FLAG);
+        STRING_HASH_SET.add(PROPERTY_CORRECTION_FLAG);
+        STRING_HASH_SET.add(PROPERTY_MQ2_FLAG);
+        STRING_HASH_SET.add(PROPERTY_RECONSUME_TIME);
+        STRING_HASH_SET.add(PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX);
+        STRING_HASH_SET.add(PROPERTY_MAX_RECONSUME_TIMES);
+        STRING_HASH_SET.add(PROPERTY_CONSUME_START_TIMESTAMP);
     }
 }

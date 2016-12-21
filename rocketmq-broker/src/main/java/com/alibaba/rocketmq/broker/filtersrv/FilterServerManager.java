@@ -6,13 +6,13 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package com.alibaba.rocketmq.broker.filtersrv;
@@ -38,8 +38,8 @@ import java.util.concurrent.TimeUnit;
 
 public class FilterServerManager {
 
-    public static final long FilterServerMaxIdleTimeMills = 30000;
-    private static final Logger log = LoggerFactory.getLogger(LoggerName.BrokerLoggerName);
+    public static final long FILTER_SERVER_MAX_IDLE_TIME_MILLS = 30000;
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
     private final ConcurrentHashMap<Channel, FilterServerInfo> filterServerTable =
             new ConcurrentHashMap<Channel, FilterServerInfo>(16);
     private final BrokerController brokerController;
@@ -85,12 +85,12 @@ public class FilterServerManager {
         }
 
         if (RemotingUtil.isWindowsPlatform()) {
-            return String.format("start /b %s\\bin\\mqfiltersrv.exe %s", //
-                    this.brokerController.getBrokerConfig().getRocketmqHome(),//
+            return String.format("start /b %s\\bin\\mqfiltersrv.exe %s",
+                    this.brokerController.getBrokerConfig().getRocketmqHome(),
                     config);
         } else {
-            return String.format("sh %s/bin/startfsrv.sh %s", //
-                    this.brokerController.getBrokerConfig().getRocketmqHome(),//
+            return String.format("sh %s/bin/startfsrv.sh %s",
+                    this.brokerController.getBrokerConfig().getRocketmqHome(),
                     config);
         }
     }
@@ -122,7 +122,7 @@ public class FilterServerManager {
             Entry<Channel, FilterServerInfo> next = it.next();
             long timestamp = next.getValue().getLastUpdateTimestamp();
             Channel channel = next.getKey();
-            if ((System.currentTimeMillis() - timestamp) > FilterServerMaxIdleTimeMills) {
+            if ((System.currentTimeMillis() - timestamp) > FILTER_SERVER_MAX_IDLE_TIME_MILLS) {
                 log.info("The Filter Server<{}> expired, remove it", next.getKey());
                 it.remove();
                 RemotingUtil.closeChannel(channel);

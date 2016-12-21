@@ -20,7 +20,7 @@
     <parent>
         <groupId>com.alibaba.rocketmq</groupId>
         <artifactId>rocketmq-all</artifactId>
-        <version>3.6.3-SNAPSHOT</version>
+        <version>4.0.0-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -70,14 +70,6 @@
         <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>fastjson</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>mysql</groupId>
-            <artifactId>mysql-connector-java</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.derby</groupId>
-            <artifactId>derby</artifactId>
         </dependency>
         <dependency>
             <groupId>org.javassist</groupId>

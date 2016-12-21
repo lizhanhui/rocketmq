@@ -164,14 +164,13 @@ public class UpdateSubGroupSubCommand implements SubCommand {
 
                 defaultMQAdminExt.createAndUpdateSubscriptionGroupConfig(addr, subscriptionGroupConfig);
                 System.out.printf("create subscription group to %s success.%n", addr);
-                System.out.println(subscriptionGroupConfig);
+                System.out.printf("%s", subscriptionGroupConfig);
                 return;
 
             } else if (commandLine.hasOption('c')) {
                 String clusterName = commandLine.getOptionValue('c').trim();
 
                 defaultMQAdminExt.start();
-
                 Set<String> masterSet =
                         CommandUtil.fetchMasterAddrByClusterName(defaultMQAdminExt, clusterName);
                 for (String addr : masterSet) {
@@ -183,7 +182,7 @@ public class UpdateSubGroupSubCommand implements SubCommand {
                         Thread.sleep(1000 * 1);
                     }
                 }
-                System.out.println(subscriptionGroupConfig);
+                System.out.printf("%s", subscriptionGroupConfig);
                 return;
             }
 
