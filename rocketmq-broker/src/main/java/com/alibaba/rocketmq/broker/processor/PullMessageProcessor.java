@@ -300,16 +300,16 @@ public class PullMessageProcessor implements NettyRequestProcessor {
                 switch (response.getCode()) {
                     case ResponseCode.SUCCESS:
 
+                        int commercialBaseCount = brokerController.getBrokerConfig().getCommercialBaseCount();
+                        int incValue = getMessageResult.getMsgCount4Commercial() * commercialBaseCount;
                         context.setCommercialRcvStats(BrokerStatsManager.StatsType.RCV_SUCCESS);
-                        context.setCommercialRcvTimes(getMessageResult.getMsgCount4Commercial());
+                        context.setCommercialRcvTimes(incValue);
                         context.setCommercialRcvSize(getMessageResult.getBufferTotalSize());
                         context.setCommercialOwner(owner);
 
                         break;
                     case ResponseCode.PULL_NOT_FOUND:
                         if (!brokerAllowSuspend) {
-
-
                             context.setCommercialRcvStats(BrokerStatsManager.StatsType.RCV_EPOLLS);
                             context.setCommercialRcvTimes(1);
                             context.setCommercialOwner(owner);
