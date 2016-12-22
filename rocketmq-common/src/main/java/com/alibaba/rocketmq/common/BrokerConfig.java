@@ -85,6 +85,7 @@ public class BrokerConfig {
     private int commercialTimerCount = 1;
     private int commercialTransCount = 1;
     private int commercialBigCount = 1;
+    private int commercialBaseCount = 1;
 
     private boolean transferMsgByHeap = true;
     private int maxDelayTime = 40;
@@ -503,6 +504,14 @@ public class BrokerConfig {
 
     public void setCommercialBigCount(final int commercialBigCount) {
         this.commercialBigCount = commercialBigCount;
+    }
+
+    public int getCommercialBaseCount() {
+        return commercialBaseCount;
+    }
+
+    public void setCommercialBaseCount(final int commercialBaseCount) {
+        this.commercialBaseCount = commercialBaseCount;
     }
 
     public int getMaxDelayTime() {
