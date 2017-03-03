@@ -15,5 +15,16 @@ rem See the License for the specific language governing permissions and
 rem limitations under the License.
 
 START /B mqnamesrv > ns.log
+IF %ERRORLEVEL% NEQ 0 (
+    echo "Failed to start name server. Please check ns.log"
+    EXIT /B 1
+)
+
 START /B mqbroker -n localhost:9876 > bk.log
+
+IF %ERRORLEVEL% NEQ 0 (
+   ECHO "Failed to start broker. Please check ns.log"
+   EXIT /B 1
+)
+
 echo "Start Name Server and Broker Successfully."
