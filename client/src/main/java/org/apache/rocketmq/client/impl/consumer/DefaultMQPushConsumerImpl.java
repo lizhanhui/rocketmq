@@ -30,6 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.rocketmq.client.QueryResult;
 import org.apache.rocketmq.client.Validators;
 import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
+import org.apache.rocketmq.client.consumer.MessageSelector;
 import org.apache.rocketmq.client.consumer.PullCallback;
 import org.apache.rocketmq.client.consumer.PullResult;
 import org.apache.rocketmq.client.consumer.listener.MessageListener;
@@ -384,12 +385,13 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
             }
         }
 
-        String subExpression = null;
+        String subExpression = null, subProperties = null;
         boolean classFilter = false;
         SubscriptionData sd = this.rebalanceImpl.getSubscriptionInner().get(pullRequest.getMessageQueue().getTopic());
         if (sd != null) {
             if (this.defaultMQPushConsumer.isPostSubscriptionWhenPull() && !sd.isClassFilterMode()) {
                 subExpression = sd.getSubString();
+                subProperties = sd.getPropertiesStr();
             }
 
             classFilter = sd.isClassFilterMode();
@@ -413,7 +415,8 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                 BROKER_SUSPEND_MAX_TIME_MILLIS, // 8
                 CONSUMER_TIMEOUT_MILLIS_WHEN_SUSPEND, // 9
                 CommunicationMode.ASYNC, // 10
-                pullCallback// 11
+                pullCallback, // 11
+                subProperties // 12
             );
         } catch (Exception e) {
             log.error("pullKernelImpl exception", e);
@@ -833,6 +836,29 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                 this.mQClientFactory.sendHeartbeatToAllBrokerWithLock();
             }
 
+        } catch (Exception e) {
+            throw new MQClientException("subscription exception", e);
+        }
+    }
+
+    public void subscribe(final String topic, final MessageSelector messageSelector) throws MQClientException {
+        try {
+            if (messageSelector == null) {
+                subscribe(topic, SubscriptionData.SUB_ALL);
+                return;
+            }
+
+            SubscriptionData subscriptionData = FilterAPI.buildSubscriptionData(
+                this.defaultMQPushConsumer.getConsumerGroup(),
+                topic,
+                messageSelector.getExpression()
+            );
+            subscriptionData.setProperties(messageSelector.getProperties());
+
+            this.rebalanceImpl.getSubscriptionInner().put(topic, subscriptionData);
+            if (this.mQClientFactory != null) {
+                this.mQClientFactory.sendHeartbeatToAllBrokerWithLock();
+            }
         } catch (Exception e) {
             throw new MQClientException("subscription exception", e);
         }

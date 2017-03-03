@@ -17,6 +17,8 @@
 package org.apache.rocketmq.common.filter;
 
 import java.net.URL;
+
+import org.apache.rocketmq.common.message.MessageDecoder;
 import org.apache.rocketmq.common.protocol.heartbeat.SubscriptionData;
 
 public class FilterAPI {
@@ -59,6 +61,18 @@ public class FilterAPI {
             } else {
                 throw new Exception("subString split error");
             }
+        }
+
+        return subscriptionData;
+    }
+
+    public static SubscriptionData buildSubscriptionData(
+        final String consumerGroup, String topic,
+        String subString, String properties) throws Exception {
+        SubscriptionData subscriptionData = buildSubscriptionData(consumerGroup, topic, subString);
+
+        if (properties != null) {
+            subscriptionData.setProperties(MessageDecoder.string2messageProperties(properties));
         }
 
         return subscriptionData;

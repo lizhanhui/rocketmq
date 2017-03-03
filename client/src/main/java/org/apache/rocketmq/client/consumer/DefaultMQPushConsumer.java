@@ -244,16 +244,36 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
         return consumeThreadMax;
     }
 
+    /**
+     * Set maximum thread count of consume thread pool.
+     * <p>
+     * Also, if consumeThreadMax is less than consumeThreadMin, set consumeThreadMin equal to consumeThreadMax.
+     * </p>
+     * @param consumeThreadMax
+     */
     public void setConsumeThreadMax(int consumeThreadMax) {
         this.consumeThreadMax = consumeThreadMax;
+        if (this.consumeThreadMax < this.consumeThreadMin) {
+            this.consumeThreadMin = consumeThreadMax;
+        }
     }
 
     public int getConsumeThreadMin() {
         return consumeThreadMin;
     }
 
+    /**
+     * Set minimum thread count of consume thread pool.
+     * <p>
+     * Also, if consumeThreadMax is less than consumeThreadMin, set consumeThreadMax equal to consumeThreadMin.
+     * </p>
+     * @param consumeThreadMin
+     */
     public void setConsumeThreadMin(int consumeThreadMin) {
         this.consumeThreadMin = consumeThreadMin;
+        if (this.consumeThreadMax < this.consumeThreadMin) {
+            this.consumeThreadMax = consumeThreadMin;
+        }
     }
 
     public DefaultMQPushConsumerImpl getDefaultMQPushConsumerImpl() {
@@ -362,6 +382,11 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
     @Override
     public void subscribe(String topic, String fullClassName, String filterClassSource) throws MQClientException {
         this.defaultMQPushConsumerImpl.subscribe(topic, fullClassName, filterClassSource);
+    }
+
+    @Override
+    public void subscribe(final String topic, final MessageSelector messageSelector) throws MQClientException {
+        this.defaultMQPushConsumerImpl.subscribe(topic, messageSelector);
     }
 
     @Override

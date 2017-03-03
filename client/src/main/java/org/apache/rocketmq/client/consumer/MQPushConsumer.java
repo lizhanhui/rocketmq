@@ -70,6 +70,15 @@ public interface MQPushConsumer extends MQConsumer {
     void subscribe(final String topic, final String fullClassName, final String filterClassSource) throws MQClientException;
 
     /**
+     * Subscribe some topic with selector.
+     *
+     * @param topic
+     * @param selector
+     * @throws MQClientException
+     */
+    void subscribe(final String topic, final MessageSelector selector) throws MQClientException;
+
+    /**
      * Unsubscribe consumption some topic
      *
      * @param topic message topic

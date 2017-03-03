@@ -252,6 +252,18 @@ public class DefaultMQPullConsumer extends ClientConfig implements MQPullConsume
     }
 
     @Override
+    public PullResult pull(MessageQueue mq, PullMessageSelector messageSelector)
+        throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+        return this.defaultMQPullConsumerImpl.pull(mq, messageSelector);
+    }
+
+    @Override
+    public void pull(MessageQueue mq, PullMessageSelector messageSelector, PullCallback callback)
+        throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+        this.defaultMQPullConsumerImpl.pull(mq, messageSelector, callback);
+    }
+
+    @Override
     public PullResult pull(MessageQueue mq, String subExpression, long offset, int maxNums, long timeout)
         throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
         return this.defaultMQPullConsumerImpl.pull(mq, subExpression, offset, maxNums, timeout);
