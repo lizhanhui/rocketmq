@@ -23,7 +23,7 @@ IF %ERRORLEVEL% NEQ 0 (
 START /B mqbroker -n localhost:9876 > bk.log
 
 IF %ERRORLEVEL% NEQ 0 (
-   ECHO "Failed to start broker. Please check ns.log"
+   ECHO "Failed to start broker. Please check bk.log"
    EXIT /B 1
 )
 
