@@ -15,7 +15,7 @@ rem See the License for the specific language governing permissions and
 rem limitations under the License.
 
 
-if not exist "%JAVA_HOME%\bin\java.exe" echo Please set the JAVA_HOME variable in your environment, We need java(x64)! & goto end
+if not exist "%JAVA_HOME%\bin\java.exe" echo Please set the JAVA_HOME variable in your environment, We need java(x64)! & EXIT /B 1
 set "JAVA=%JAVA_HOME%\bin\java.exe"
 
 setlocal
@@ -35,5 +35,3 @@ set "JAVA_OPT=%JAVA_OPT% -Djava.ext.dirs=%BASE_DIR%lib"
 set "JAVA_OPT=%JAVA_OPT% -cp "%CLASSPATH%""
 
 "%JAVA%" %JAVA_OPT% %*
-
-:end
