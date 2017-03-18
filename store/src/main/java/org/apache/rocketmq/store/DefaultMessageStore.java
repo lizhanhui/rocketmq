@@ -306,7 +306,7 @@ public class DefaultMessageStore implements MessageStore {
         }
 
         if (this.isOSPageCacheBusy()) {
-            return new PutMessageResult(PutMessageStatus.OS_PAGECACHE_BUSY, null);
+            return new PutMessageResult(PutMessageStatus.OS_PAGE_CACHE_BUSY, null);
         }
 
         long beginTime = this.getSystemClock().now();

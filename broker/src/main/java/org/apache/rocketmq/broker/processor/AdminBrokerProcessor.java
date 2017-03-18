@@ -106,16 +106,46 @@ import org.apache.rocketmq.store.SelectMappedBufferResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * <p>
+ *     This processor handles various administration commands.
+ * </p>
+ *
+ * <p>
+ *     <strong>Thread Safety:</strong> This class is thread safe.
+ * </p>
+ */
 public class AdminBrokerProcessor implements NettyRequestProcessor {
+
+    /**
+     * Logger instance.
+     */
     private static final Logger log = LoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
+
+    /**
+     * Reference to {@link BrokerController}.
+     */
     private final BrokerController brokerController;
 
+    /**
+     * Constructor.
+     * @param brokerController Broker controller.
+     */
     public AdminBrokerProcessor(final BrokerController brokerController) {
         this.brokerController = brokerController;
     }
 
+    /**
+     * Process incoming administrative requests.
+     *
+     * @param ctx The channel handler context.
+     * @param request Incoming request.
+     * @return Response remoting command.
+     * @throws RemotingCommandException If there is any error.
+     */
     @Override
-    public RemotingCommand processRequest(ChannelHandlerContext ctx, RemotingCommand request) throws RemotingCommandException {
+    public RemotingCommand processRequest(ChannelHandlerContext ctx, RemotingCommand request)
+            throws RemotingCommandException {
         switch (request.getCode()) {
             case RequestCode.UPDATE_AND_CREATE_TOPIC:
                 return this.updateAndCreateTopic(ctx, request);
@@ -194,12 +224,25 @@ public class AdminBrokerProcessor implements NettyRequestProcessor {
         return null;
     }
 
+    /**
+     * Will not reject any administrative operation.
+     *
+     * @return false, always.
+     */
     @Override
     public boolean rejectRequest() {
         return false;
     }
 
-    private RemotingCommand updateAndCreateTopic(ChannelHandlerContext ctx, RemotingCommand request) throws RemotingCommandException {
+    /**
+     * Create new topic or update existing topic configuration.
+     * @param ctx The channel handler context.
+     * @param request Incoming request.
+     * @return Response remoting command.
+     * @throws RemotingCommandException If there is any unexpected error.
+     */
+    private RemotingCommand updateAndCreateTopic(ChannelHandlerContext ctx, RemotingCommand request)
+            throws RemotingCommandException {
         final RemotingCommand response = RemotingCommand.createResponseCommand(null);
         final CreateTopicRequestHeader requestHeader =
             (CreateTopicRequestHeader) request.decodeCommandCustomHeader(CreateTopicRequestHeader.class);

@@ -433,7 +433,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
                     break;
 
                 // Failed
-                case CREATE_MAPEDFILE_FAILED:
+                case CREATE_MAPPED_FILE_FAILED:
                     response.setCode(ResponseCode.SYSTEM_ERROR);
                     response.setRemark("create mapped file failed, server is busy or broken.");
                     break;
@@ -448,7 +448,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
                     response.setRemark(
                         "service not available now, maybe disk full, " + diskUtil() + ", maybe your broker machine memory too small.");
                     break;
-                case OS_PAGECACHE_BUSY:
+                case OS_PAGE_CACHE_BUSY:
                     response.setCode(ResponseCode.SYSTEM_ERROR);
                     response.setRemark("[PC_SYNCHRONIZED]broker busy, start flow control for a while");
                     break;

@@ -57,7 +57,7 @@ public class CommitLog {
     private final FlushCommitLogService commitLogService;
 
     private final AppendMessageCallback appendMessageCallback;
-    private HashMap<String/* topic-queueid */, Long/* offset */> topicQueueTable = new HashMap<String, Long>(1024);
+    private HashMap<String/* topic-queue-id */, Long/* offset */> topicQueueTable = new HashMap<String, Long>(1024);
     private volatile long confirmOffset = -1L;
 
     private volatile long beginTimeInLock = 0;
@@ -580,9 +580,9 @@ public class CommitLog {
                 mappedFile = this.mappedFileQueue.getLastMappedFile(0); // Mark: NewFile may be cause noise
             }
             if (null == mappedFile) {
-                log.error("create maped file1 error, topic: " + msg.getTopic() + " clientAddr: " + msg.getBornHostString());
+                log.error("create mapped file1 error, topic: " + msg.getTopic() + " clientAddr: " + msg.getBornHostString());
                 beginTimeInLock = 0;
-                return new PutMessageResult(PutMessageStatus.CREATE_MAPEDFILE_FAILED, null);
+                return new PutMessageResult(PutMessageStatus.CREATE_MAPPED_FILE_FAILED, null);
             }
 
             result = mappedFile.appendMessage(msg, this.appendMessageCallback);
@@ -597,7 +597,7 @@ public class CommitLog {
                         // XXX: warn and notify me
                         log.error("create maped file2 error, topic: " + msg.getTopic() + " clientAddr: " + msg.getBornHostString());
                         beginTimeInLock = 0;
-                        return new PutMessageResult(PutMessageStatus.CREATE_MAPEDFILE_FAILED, result);
+                        return new PutMessageResult(PutMessageStatus.CREATE_MAPPED_FILE_FAILED, result);
                     }
                     result = mappedFile.appendMessage(msg, this.appendMessageCallback);
                     break;
@@ -643,7 +643,7 @@ public class CommitLog {
                 service.putRequest(request);
                 boolean flushOK = request.waitForFlush(this.defaultMessageStore.getMessageStoreConfig().getSyncFlushTimeout());
                 if (!flushOK) {
-                    log.error("do groupcommit, wait for flush failed, topic: " + msg.getTopic() + " tags: " + msg.getTags()
+                    log.error("do group commit, wait for flush failed, topic: " + msg.getTopic() + " tags: " + msg.getTags()
                         + " client address: " + msg.getBornHostString());
                     putMessageResult.setPutMessageStatus(PutMessageStatus.FLUSH_DISK_TIMEOUT);
                 }
