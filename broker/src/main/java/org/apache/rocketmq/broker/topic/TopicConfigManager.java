@@ -16,6 +16,7 @@
  */
 package org.apache.rocketmq.broker.topic;
 
+import java.io.File;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
@@ -380,8 +381,8 @@ public class TopicConfigManager extends ConfigManager {
 
     @Override
     public String configFilePath() {
-        return BrokerPathConfigHelper.getTopicConfigPath(this.brokerController.getMessageStoreConfig()
-                .getStorePathRootDir());
+        //return BrokerPathConfigHelper.getSubscriptionGroupPath(this.brokerController.getMessageStoreConfig().getStorePathRootDir());
+        return BrokerPathConfigHelper.getSubscriptionGroupPath(System.getProperty("user.home") + File.separator + "store");
     }
 
     @Override
