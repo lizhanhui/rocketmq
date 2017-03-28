@@ -66,6 +66,34 @@ public interface MQPullConsumer extends MQConsumer {
         InterruptedException;
 
     /**
+     * Pulling the messages with MessageSelector in a sync. way
+     *
+     * @param mq from which message queue
+     * @param messageSelector message selector
+     * @return
+     * @throws MQClientException
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
+    PullResult pull(final MessageQueue mq, final PullMessageSelector messageSelector)
+        throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+
+    /**
+     * Pulling the messages with MessageSelector and PullCallback in an async. way
+     *
+     * @param mq from which message queue
+     * @param messageSelector message selector
+     * @param callback callback, can not be null
+     * @throws MQClientException
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
+    void pull(final MessageQueue mq, final PullMessageSelector messageSelector, final PullCallback callback)
+        throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+
+    /**
      * Pulling the messages in the specified timeout
      *
      * @param mq
