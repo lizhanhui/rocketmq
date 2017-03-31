@@ -29,6 +29,7 @@ import org.apache.rocketmq.common.protocol.heartbeat.MessageModel;
 import org.apache.rocketmq.common.protocol.heartbeat.SubscriptionData;
 import org.apache.rocketmq.remoting.common.RemotingHelper;
 import org.apache.rocketmq.remoting.common.RemotingUtil;
+import org.apache.rocketmq.store.stats.BrokerStatsManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,9 +39,16 @@ public class ConsumerManager {
     private final ConcurrentHashMap<String/* Group */, ConsumerGroupInfo> consumerTable =
         new ConcurrentHashMap<String, ConsumerGroupInfo>(1024);
     private final ConsumerIdsChangeListener consumerIdsChangeListener;
+    protected final BrokerStatsManager brokerStatsManager;
 
     public ConsumerManager(final ConsumerIdsChangeListener consumerIdsChangeListener) {
         this.consumerIdsChangeListener = consumerIdsChangeListener;
+        this.brokerStatsManager = null;
+    }
+
+    public ConsumerManager(final ConsumerIdsChangeListener consumerIdsChangeListener, final BrokerStatsManager brokerStatsManager) {
+        this.consumerIdsChangeListener = consumerIdsChangeListener;
+        this.brokerStatsManager = brokerStatsManager;
     }
 
     public ClientChannelInfo findChannel(final String group, final String clientId) {
@@ -96,7 +104,7 @@ public class ConsumerManager {
     public boolean registerConsumer(final String group, final ClientChannelInfo clientChannelInfo,
         ConsumeType consumeType, MessageModel messageModel, ConsumeFromWhere consumeFromWhere,
         final Set<SubscriptionData> subList, boolean isNotifyConsumerIdsChangedEnable) {
-
+        long start = System.currentTimeMillis();
         ConsumerGroupInfo consumerGroupInfo = this.consumerTable.get(group);
         if (null == consumerGroupInfo) {
             ConsumerGroupInfo tmp = new ConsumerGroupInfo(group, consumeType, messageModel, consumeFromWhere);
@@ -113,6 +121,9 @@ public class ConsumerManager {
             if (isNotifyConsumerIdsChangedEnable) {
                 this.consumerIdsChangeListener.consumerIdsChanged(group, consumerGroupInfo.getAllChannel());
             }
+        }
+        if (null != this.brokerStatsManager) {
+            this.brokerStatsManager.incProducerRegisterTime((int) (System.currentTimeMillis() - start));
         }
 
         return r1 || r2;

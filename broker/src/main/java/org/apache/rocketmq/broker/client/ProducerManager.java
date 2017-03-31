@@ -27,18 +27,29 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.remoting.common.RemotingHelper;
 import org.apache.rocketmq.remoting.common.RemotingUtil;
+import org.apache.rocketmq.store.stats.BrokerStatsManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ProducerManager {
-    private static final Logger log = LoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
+    protected static final Logger log = LoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
     private static final long LOCK_TIMEOUT_MILLIS = 3000;
-    private static final long CHANNEL_EXPIRED_TIMEOUT = 1000 * 120;
+    protected static final long CHANNEL_EXPIRED_TIMEOUT = 1000 * 120;
     private final Lock groupChannelLock = new ReentrantLock();
     private final HashMap<String /* group name */, HashMap<Channel, ClientChannelInfo>> groupChannelTable =
         new HashMap<String, HashMap<Channel, ClientChannelInfo>>();
+    protected final BrokerStatsManager brokerStatsManager;
 
     public ProducerManager() {
+        this.brokerStatsManager = null;
+    }
+
+    public ProducerManager(final BrokerStatsManager brokerStatsManager) {
+        this.brokerStatsManager = brokerStatsManager;
+    }
+
+    public int groupSize() {
+        return this.groupChannelTable.size();
     }
 
     public HashMap<String, HashMap<Channel, ClientChannelInfo>> getGroupChannelTable() {
@@ -126,6 +137,7 @@ public class ProducerManager {
     }
 
     public void registerProducer(final String group, final ClientChannelInfo clientChannelInfo) {
+        long start = System.currentTimeMillis();
         try {
             ClientChannelInfo clientChannelInfoFound = null;
 
@@ -155,6 +167,9 @@ public class ProducerManager {
             }
         } catch (InterruptedException e) {
             log.error("", e);
+        }
+        if (null != this.brokerStatsManager) {
+            this.brokerStatsManager.incProducerRegisterTime((int) (System.currentTimeMillis() - start));
         }
     }
 

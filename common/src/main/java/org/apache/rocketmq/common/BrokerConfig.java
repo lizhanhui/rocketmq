@@ -99,6 +99,8 @@ public class BrokerConfig {
 
     private boolean traceOn = true;
 
+    private boolean useLockFreeProducerManager = false;
+
     public static String localHostName() {
         try {
             return InetAddress.getLocalHost().getHostName();
@@ -483,5 +485,13 @@ public class BrokerConfig {
 
     public void setCommercialBaseCount(int commercialBaseCount) {
         this.commercialBaseCount = commercialBaseCount;
+    }
+
+    public boolean isUseLockFreeProducerManager() {
+        return useLockFreeProducerManager;
+    }
+
+    public void setUseLockFreeProducerManager(boolean useLockFreeProducerManager) {
+        this.useLockFreeProducerManager = useLockFreeProducerManager;
     }
 }

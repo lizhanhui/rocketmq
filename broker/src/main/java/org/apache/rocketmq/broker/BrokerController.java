@@ -28,12 +28,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.apache.rocketmq.broker.client.ClientHousekeepingService;
 import org.apache.rocketmq.broker.client.ConsumerIdsChangeListener;
 import org.apache.rocketmq.broker.client.ConsumerManager;
 import org.apache.rocketmq.broker.client.DefaultConsumerIdsChangeListener;
+import org.apache.rocketmq.broker.client.LockFreeProducerManager;
 import org.apache.rocketmq.broker.client.ProducerManager;
 import org.apache.rocketmq.broker.client.net.Broker2Client;
 import org.apache.rocketmq.broker.client.rebalance.RebalanceLockManager;
@@ -142,14 +142,19 @@ public class BrokerController {
         this.nettyServerConfig = nettyServerConfig;
         this.nettyClientConfig = nettyClientConfig;
         this.messageStoreConfig = messageStoreConfig;
+        this.brokerStatsManager = new BrokerStatsManager(this.brokerConfig.getBrokerClusterName());
         this.consumerOffsetManager = new ConsumerOffsetManager(this);
         this.topicConfigManager = new TopicConfigManager(this);
         this.pullMessageProcessor = new PullMessageProcessor(this);
         this.pullRequestHoldService = new PullRequestHoldService(this);
         this.messageArrivingListener = new NotifyMessageArrivingListener(this.pullRequestHoldService);
         this.consumerIdsChangeListener = new DefaultConsumerIdsChangeListener(this);
-        this.consumerManager = new ConsumerManager(this.consumerIdsChangeListener);
-        this.producerManager = new ProducerManager();
+        this.consumerManager = new ConsumerManager(this.consumerIdsChangeListener, this.brokerStatsManager);
+        if (brokerConfig.isUseLockFreeProducerManager()) {
+            this.producerManager = new LockFreeProducerManager(this.brokerStatsManager);
+        } else {
+            this.producerManager = new ProducerManager(this.brokerStatsManager);
+        }
         this.clientHousekeepingService = new ClientHousekeepingService(this);
         this.broker2Client = new Broker2Client(this);
         this.subscriptionGroupManager = new SubscriptionGroupManager(this);
@@ -164,7 +169,6 @@ public class BrokerController {
         this.clientManagerThreadPoolQueue = new LinkedBlockingQueue<Runnable>(this.brokerConfig.getClientManagerThreadPoolQueueCapacity());
         this.consumerManagerThreadPoolQueue = new LinkedBlockingQueue<Runnable>(this.brokerConfig.getConsumerManagerThreadPoolQueueCapacity());
 
-        this.brokerStatsManager = new BrokerStatsManager(this.brokerConfig.getBrokerClusterName());
         this.setStoreHost(new InetSocketAddress(this.getBrokerConfig().getBrokerIP1(), this.getNettyServerConfig().getListenPort()));
 
         this.brokerFastFailure = new BrokerFastFailure(this);
@@ -237,7 +241,7 @@ public class BrokerController {
                 Executors.newFixedThreadPool(this.brokerConfig.getAdminBrokerThreadPoolNums(), new ThreadFactoryImpl(
                     "AdminBrokerThread_"));
 
-            this.clientManageExecutor = new ThreadPoolExecutor(
+            this.clientManageExecutor = new BrokerFixedThreadPoolExecutor(
                 this.brokerConfig.getClientManageThreadPoolNums(),
                 this.brokerConfig.getClientManageThreadPoolNums(),
                 1000 * 60,
@@ -477,8 +481,13 @@ public class BrokerController {
     }
 
     public void printWaterMark() {
-        LOG_WATER_MARK.info("[WATERMARK] Send Queue Size: {} SlowTimeMills: {}", this.sendThreadPoolQueue.size(), headSlowTimeMills4SendThreadPoolQueue());
-        LOG_WATER_MARK.info("[WATERMARK] Pull Queue Size: {} SlowTimeMills: {}", this.pullThreadPoolQueue.size(), headSlowTimeMills4PullThreadPoolQueue());
+        // SQS: Send Queue Size, STM: Send Slow Time, PQS: Pull Queue Size, PTM: Pull Slow Time
+        // CQS: Client Queue Size, CTM: Client Slow Time, PMS: Producer Manager Size
+        LOG_WATER_MARK.info("[WATERMARK] SQS:{} STM:{} PQS:{} PTM:{} CQS:{} CTM:{} PMS:{}",
+            this.sendThreadPoolQueue.size(), headSlowTimeMills4SendThreadPoolQueue(),
+            this.pullThreadPoolQueue.size(), headSlowTimeMills4PullThreadPoolQueue(),
+            this.clientManagerThreadPoolQueue.size(), this.headSlowTimeMills(this.clientManagerThreadPoolQueue),
+            this.producerManager.groupSize());
     }
 
     public MessageStore getMessageStore() {

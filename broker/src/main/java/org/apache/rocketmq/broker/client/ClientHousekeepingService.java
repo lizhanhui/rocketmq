@@ -64,7 +64,7 @@ public class ClientHousekeepingService implements ChannelEventListener {
 
     @Override
     public void onChannelConnect(String remoteAddr, Channel channel) {
-
+        this.brokerController.getBrokerStatsManager().incChannelConnectNum();
     }
 
     @Override
@@ -72,6 +72,7 @@ public class ClientHousekeepingService implements ChannelEventListener {
         this.brokerController.getProducerManager().doChannelCloseEvent(remoteAddr, channel);
         this.brokerController.getConsumerManager().doChannelCloseEvent(remoteAddr, channel);
         this.brokerController.getFilterServerManager().doChannelCloseEvent(remoteAddr, channel);
+        this.brokerController.getBrokerStatsManager().incChannelCloseNum();
     }
 
     @Override
@@ -79,6 +80,7 @@ public class ClientHousekeepingService implements ChannelEventListener {
         this.brokerController.getProducerManager().doChannelCloseEvent(remoteAddr, channel);
         this.brokerController.getConsumerManager().doChannelCloseEvent(remoteAddr, channel);
         this.brokerController.getFilterServerManager().doChannelCloseEvent(remoteAddr, channel);
+        this.brokerController.getBrokerStatsManager().incChannelExceptionNum();
     }
 
     @Override
@@ -86,5 +88,6 @@ public class ClientHousekeepingService implements ChannelEventListener {
         this.brokerController.getProducerManager().doChannelCloseEvent(remoteAddr, channel);
         this.brokerController.getConsumerManager().doChannelCloseEvent(remoteAddr, channel);
         this.brokerController.getFilterServerManager().doChannelCloseEvent(remoteAddr, channel);
+        this.brokerController.getBrokerStatsManager().incChannelIdleNum();
     }
 }
