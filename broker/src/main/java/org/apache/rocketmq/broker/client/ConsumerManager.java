@@ -123,7 +123,7 @@ public class ConsumerManager {
             }
         }
         if (null != this.brokerStatsManager) {
-            this.brokerStatsManager.incProducerRegisterTime((int) (System.currentTimeMillis() - start));
+            this.brokerStatsManager.incConsumerRegisterTime((int) (System.currentTimeMillis() - start));
         }
 
         return r1 || r2;
