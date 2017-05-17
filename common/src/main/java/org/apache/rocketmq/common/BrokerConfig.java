@@ -99,6 +99,9 @@ public class BrokerConfig {
 
     private boolean traceOn = true;
 
+    //Reject the pull consumer instance to pull messages from broker.
+    private boolean rejectPullConsumerEnable = true;
+
     public static String localHostName() {
         try {
             return InetAddress.getLocalHost().getHostName();
@@ -483,5 +486,13 @@ public class BrokerConfig {
 
     public void setCommercialBaseCount(int commercialBaseCount) {
         this.commercialBaseCount = commercialBaseCount;
+    }
+
+    public boolean isRejectPullConsumerEnable() {
+        return rejectPullConsumerEnable;
+    }
+
+    public void setRejectPullConsumerEnable(final boolean rejectPullConsumerEnable) {
+        this.rejectPullConsumerEnable = rejectPullConsumerEnable;
     }
 }
