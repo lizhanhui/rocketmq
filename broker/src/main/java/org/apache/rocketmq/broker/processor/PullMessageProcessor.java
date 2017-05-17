@@ -191,7 +191,8 @@ public class PullMessageProcessor implements NettyRequestProcessor {
         if (brokerController.getBrokerConfig().isRejectPullConsumerEnable()) {
             ConsumerGroupInfo consumerGroupInfo =
                 this.brokerController.getConsumerManager().getConsumerGroupInfo(requestHeader.getConsumerGroup());
-            if (null == consumerGroupInfo || ConsumeType.CONSUME_ACTIVELY == consumerGroupInfo.getConsumeType()) {
+            if (null == consumerGroupInfo || null == consumerGroupInfo.findChannel(channel) ||
+                ConsumeType.CONSUME_ACTIVELY == consumerGroupInfo.getConsumeType()) {
                 LOG.warn("The consumer's group[{}] info not exist, or the pull consumer is rejected by server.", requestHeader.getConsumerGroup());
                 response.setCode(ResponseCode.SUBSCRIPTION_NOT_EXIST);
                 response.setRemark("the consumer's group info not exist, or the pull consumer is rejected by server." + FAQUrl.suggestTodo(FAQUrl.SUBSCRIPTION_GROUP_NOT_EXIST));
