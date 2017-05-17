@@ -100,7 +100,7 @@ public class BrokerConfig {
     private boolean traceOn = true;
 
     //Reject the pull consumer instance to pull messages from broker.
-    private boolean rejectPullConsumerEnable = true;
+    private boolean rejectPullConsumerEnable = false;
 
     public static String localHostName() {
         try {
