@@ -500,7 +500,7 @@ public class MQClientInstance {
                             }
                         } catch (Exception e) {
                             if (this.isBrokerInNameServer(addr)) {
-                                log.error("send heart beat to broker exception", e);
+                                log.info("send heart beat to broker[{} {} {}] failed", brokerName, id, addr);
                             } else {
                                 log.info("send heart beat to broker[{} {} {}] exception, because the broker not up, forget it", brokerName,
                                     id, addr);
