@@ -174,7 +174,11 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
         this.timer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
-                NettyRemotingClient.this.scanChannelTablesOfNameServer();
+                try {
+                    NettyRemotingClient.this.scanChannelTablesOfNameServer();
+                } catch (Exception e) {
+                    log.error("scanChannelTablesOfNameServer exception", e);
+                }
             }
         }, 1000 * 3, 10 * 1000);
 
