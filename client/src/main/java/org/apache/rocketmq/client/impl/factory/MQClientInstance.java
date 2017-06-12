@@ -500,7 +500,7 @@ public class MQClientInstance {
                             }
                         } catch (Exception e) {
                             if (this.isBrokerInNameServer(addr)) {
-                                log.error("send heart beat to broker exception", e);
+                                log.info("send heart beat to broker[{} {} {}] failed", brokerName, id, addr);
                             } else {
                                 log.info("send heart beat to broker[{} {} {}] exception, because the broker not up, forget it", brokerName,
                                     id, addr);
@@ -842,7 +842,11 @@ public class MQClientInstance {
                         try {
                             this.mQClientAPIImpl.unregisterClient(addr, this.clientId, producerGroup, consumerGroup, 3000);
                             log.info("unregister client[Producer: {} Consumer: {}] from broker[{} {} {}] success", producerGroup, consumerGroup, brokerName, entry1.getKey(), addr);
-                        } catch (RemotingException | InterruptedException | MQBrokerException e) {
+                        } catch (RemotingException e) {
+                            log.error("unregister client exception from broker: " + addr, e);
+                        } catch (InterruptedException e) {
+                            log.error("unregister client exception from broker: " + addr, e);
+                        } catch (MQBrokerException e) {
                             log.error("unregister client exception from broker: " + addr, e);
                         }
                     }

@@ -18,7 +18,7 @@ package org.apache.rocketmq.common;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.FileReader;
+import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -177,30 +177,24 @@ public class MixAll {
         }
     }
 
-    public static String file2String(final String fileName) {
+    public static String file2String(final String fileName) throws IOException {
         File file = new File(fileName);
         return file2String(file);
     }
 
-    public static String file2String(final File file) {
+    public static String file2String(final File file) throws IOException {
         if (file.exists()) {
-            char[] data = new char[(int) file.length()];
-            boolean result = false;
+            byte[] data = new byte[(int) file.length()];
+            boolean result;
 
-            FileReader fileReader = null;
+            FileInputStream inputStream = null;
             try {
-                fileReader = new FileReader(file);
-                int len = fileReader.read(data);
+                inputStream = new FileInputStream(file);
+                int len = inputStream.read(data);
                 result = len == data.length;
-            } catch (IOException e) {
-                // e.printStackTrace();
             } finally {
-                if (fileReader != null) {
-                    try {
-                        fileReader.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+                if (inputStream != null) {
+                    inputStream.close();
                 }
             }
 
@@ -256,7 +250,7 @@ public class MixAll {
                         if (null == value) {
                             value = "";
                         }
-                    } catch (IllegalArgumentException | IllegalAccessException e) {
+                    } catch (IllegalAccessException e) {
                         e.printStackTrace();
                     }
 
@@ -313,7 +307,7 @@ public class MixAll {
                     try {
                         field.setAccessible(true);
                         value = field.get(object);
-                    } catch (IllegalArgumentException | IllegalAccessException e) {
+                    } catch (IllegalAccessException e) {
                         e.printStackTrace();
                     }
 

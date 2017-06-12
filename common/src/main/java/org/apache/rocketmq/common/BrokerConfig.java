@@ -101,6 +101,9 @@ public class BrokerConfig {
 
     private boolean useLockFreeProducerManager = false;
 
+    //Reject the pull consumer instance to pull messages from broker.
+    private boolean rejectPullConsumerEnable = false;
+
     public static String localHostName() {
         try {
             return InetAddress.getLocalHost().getHostName();
@@ -493,5 +496,13 @@ public class BrokerConfig {
 
     public void setUseLockFreeProducerManager(boolean useLockFreeProducerManager) {
         this.useLockFreeProducerManager = useLockFreeProducerManager;
+    }
+
+    public boolean isRejectPullConsumerEnable() {
+        return rejectPullConsumerEnable;
+    }
+
+    public void setRejectPullConsumerEnable(final boolean rejectPullConsumerEnable) {
+        this.rejectPullConsumerEnable = rejectPullConsumerEnable;
     }
 }
