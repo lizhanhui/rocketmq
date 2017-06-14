@@ -99,6 +99,8 @@ public class BrokerConfig {
 
     private boolean traceOn = true;
 
+    private boolean useLockFreeProducerManager = false;
+
     //Reject the pull consumer instance to pull messages from broker.
     private boolean rejectPullConsumerEnable = false;
 
@@ -486,6 +488,14 @@ public class BrokerConfig {
 
     public void setCommercialBaseCount(int commercialBaseCount) {
         this.commercialBaseCount = commercialBaseCount;
+    }
+
+    public boolean isUseLockFreeProducerManager() {
+        return useLockFreeProducerManager;
+    }
+
+    public void setUseLockFreeProducerManager(boolean useLockFreeProducerManager) {
+        this.useLockFreeProducerManager = useLockFreeProducerManager;
     }
 
     public boolean isRejectPullConsumerEnable() {
