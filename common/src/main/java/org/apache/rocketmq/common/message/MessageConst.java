@@ -41,6 +41,10 @@ public class MessageConst {
     public static final String PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX = "UNIQ_KEY";
     public static final String PROPERTY_MAX_RECONSUME_TIMES = "MAX_RECONSUME_TIMES";
     public static final String PROPERTY_CONSUME_START_TIMESTAMP = "CONSUME_START_TIME";
+    public static final String PROPERTY_TIMER_DELAY_MS = "TIMER_DELAY_MS";
+    public static final String PROPERTY_TIMER_ENQUEUE_MS = "TIMER_ENQUEUE_MS";
+    public static final String PROPERTY_TIMER_DEQUEUE_MS = "TIMER_DEQUEUE_MS";
+    public static final String PROPERTY_TIMER_ROLL_TIMES = "TIMER_ROLL_TIMES";
 
     public static final String KEY_SEPARATOR = " ";
 
@@ -69,5 +73,10 @@ public class MessageConst {
         STRING_HASH_SET.add(PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX);
         STRING_HASH_SET.add(PROPERTY_MAX_RECONSUME_TIMES);
         STRING_HASH_SET.add(PROPERTY_CONSUME_START_TIMESTAMP);
+        STRING_HASH_SET.add(PROPERTY_TIMER_DELAY_MS);
+        STRING_HASH_SET.add(PROPERTY_TIMER_ENQUEUE_MS);
+        STRING_HASH_SET.add(PROPERTY_TIMER_DEQUEUE_MS);
+        STRING_HASH_SET.add(PROPERTY_TIMER_ROLL_TIMES);
+
     }
 }

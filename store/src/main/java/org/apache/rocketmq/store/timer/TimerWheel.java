@@ -23,6 +23,7 @@ public class TimerWheel {
     public TimerWheel(String fileName, int ttlSecs) throws IOException {
         this.TTL_SECS = ttlSecs;
         this.fileName = fileName;
+        init();
     }
 
     public void init() throws IOException {
@@ -60,9 +61,6 @@ public class TimerWheel {
     }
 
     public void putSlot(long timeSecs, long firstPos, long lastPos){
-        if ((timeSecs - (System.currentTimeMillis()/1000)) >= TTL_SECS) {
-            throw new OutOfTtlException(timeSecs, TTL_SECS, System.currentTimeMillis()/1000);
-        }
         int slotIndex = (int)(timeSecs % (TTL_SECS * 2));
         writeBuffer.position(slotIndex * Slot.SIZE);
         writeBuffer.putLong(timeSecs);

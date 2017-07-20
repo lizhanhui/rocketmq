@@ -31,6 +31,7 @@ import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.store.ConsumeQueue;
 import org.apache.rocketmq.store.MessageExtBrokerInner;
 import org.apache.rocketmq.store.MessageStore;
+import org.apache.rocketmq.store.PutMessageResult;
 import org.apache.rocketmq.store.SelectMappedBufferResult;
 import org.apache.rocketmq.store.config.MessageStoreConfig;
 import org.slf4j.Logger;
@@ -38,10 +39,10 @@ import org.slf4j.LoggerFactory;
 
 public class TimerMessageFlow {
     public static final String TIMER_TOPIC = "%SYS_TIMER_TOPIC%";
-    public static final String TIMER_DELAY_KEY = "timer_delay_ms";
-    public static final String TIMER_ENQUEUE_KEY = "timer_enqueue_ms";
-    public static final String TIMER_DEQUEUE_KEY = "timer_dequeue_ms";
-    public static final String TIMER_ROLL_TIMES_KEY = "timer_roll_times";
+    public static final String TIMER_DELAY_KEY = MessageConst.PROPERTY_TIMER_DELAY_MS;
+    public static final String TIMER_ENQUEUE_KEY = MessageConst.PROPERTY_TIMER_ENQUEUE_MS;
+    public static final String TIMER_DEQUEUE_KEY = MessageConst.PROPERTY_TIMER_DEQUEUE_MS;
+    public static final String TIMER_ROLL_TIMES_KEY = MessageConst.PROPERTY_TIMER_ROLL_TIMES;
     public static final int DAY_SECS = 24 * 3600;
     private static final Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
 
@@ -109,10 +110,12 @@ public class TimerMessageFlow {
                         log.warn("Get message failed in enqueuing offsetPy:{} sizePy:{}", offsetPy, sizePy);
                         continue;
                     }
+                    //TODO TIMER_DELAY_KEY dose not exist
                     long delayedTime = Long.valueOf(msgExt.getProperty(TIMER_DELAY_KEY));
                     doEnqueue(offsetPy, sizePy, delayedTime);
                 } catch (Exception e) {
                     //TODO retry
+                    e.printStackTrace();
                 }
             }
             offsetTable.put(queueId, offset + (i / ConsumeQueue.CQ_STORE_UNIT_SIZE));
@@ -127,7 +130,6 @@ public class TimerMessageFlow {
 
 
     public void doEnqueue(long offsetPy, int sizePy, long delayedTime) {
-        maybeMoveWriteTime();
         if (delayedTime < currWriteTimeMs) {
             //TODO
         }
@@ -160,17 +162,18 @@ public class TimerMessageFlow {
             //TODO
         }
         timerWheel.putSlot(delayedTime/1000, slot.FIRST_POS == -1 ? ret : slot.FIRST_POS, ret);
+        maybeMoveWriteTime();
     }
 
 
-    public boolean dequeue() {
+    public int dequeue() {
         if (currReadTimeMs >= currWriteTimeMs) {
-            return false;
+            return -1;
         }
         Slot slot = timerWheel.getSlot(currReadTimeMs/1000);
         if (-1 == slot.TIME_SECS) {
             moveReadTime();
-            return true;
+            return 0;
         }
 
         long currOffsetPy = slot.LAST_POS;
@@ -219,7 +222,7 @@ public class TimerMessageFlow {
             sbr =  stack.pollFirst();
         }
         moveReadTime();
-        return true;
+        return 1;
     }
 
     private MessageExt getMessageByCommitOffset(long offsetPy, int sizePy) {
@@ -236,17 +239,18 @@ public class TimerMessageFlow {
 
     private void doReput(MessageExt messageExt, long enqueueTime, boolean needRoll) {
         if (enqueueTime != -1) {
-            messageExt.putUserProperty(TIMER_ENQUEUE_KEY, enqueueTime + "");
+            MessageAccessor.putProperty(messageExt, TIMER_ENQUEUE_KEY, enqueueTime + "");
         }
         if (needRoll) {
             if (messageExt.getProperty(TIMER_ROLL_TIMES_KEY) != null) {
-                messageExt.putUserProperty(TIMER_ROLL_TIMES_KEY,Integer.parseInt(messageExt.getProperty(TIMER_ROLL_TIMES_KEY)) + 1 + "");
+                MessageAccessor.putProperty(messageExt, TIMER_ROLL_TIMES_KEY,Integer.parseInt(messageExt.getProperty(TIMER_ROLL_TIMES_KEY)) + 1 + "");
             } else {
-                messageExt.putUserProperty(TIMER_ROLL_TIMES_KEY,1 + "");
+                MessageAccessor.putProperty(messageExt, TIMER_ROLL_TIMES_KEY,1 + "");
             }
         }
-        messageExt.putUserProperty(TIMER_DEQUEUE_KEY, System.currentTimeMillis() + "");
-        messageStore.putMessage(convertMessage(messageExt, needRoll));
+        MessageAccessor.putProperty(messageExt, TIMER_DEQUEUE_KEY, System.currentTimeMillis() + "");
+        PutMessageResult putMessageResult = messageStore.putMessage(convertMessage(messageExt, needRoll));
+        //TODO handle putMessageResult
     }
 
     private MessageExtBrokerInner convertMessage(MessageExt msgExt, boolean needRoll) {

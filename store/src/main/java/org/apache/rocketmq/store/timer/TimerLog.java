@@ -23,7 +23,7 @@ public class TimerLog {
     public TimerLog(final MessageStoreConfig storeConfig) {
         this.mappedFileQueue = new MappedFileQueue(storeConfig.getStorePathRootDir() + File.separator + "timerlog",
             storeConfig.getMapedFileSizeCommitLog(), null);
-        //TODO check allocate mapedfile service
+        //TODO check allocate mapped file service
     }
 
     public long append(ByteBuffer buffer) {
