@@ -1,6 +1,5 @@
 package org.apache.rocketmq.store.timer;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -8,7 +7,6 @@ import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import org.apache.rocketmq.common.constant.LoggerName;
-import org.apache.rocketmq.store.MappedFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,11 +65,5 @@ public class TimerWheel {
         writeBuffer.putLong(firstPos);
         writeBuffer.putLong(lastPos);
     }
-
-
-    public void recover() {
-        //TODO
-    }
-
 
 }

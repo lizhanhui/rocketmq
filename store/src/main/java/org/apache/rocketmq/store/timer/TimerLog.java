@@ -18,7 +18,6 @@ public class TimerLog {
     private final static int BLANK_MAGIC_CODE = 0xBBCCDDEE ^ 1880681586 + 8;
     private final static int MIN_BLANK_LEN = 4 + 4;
     private final MappedFileQueue mappedFileQueue;
-    private AtomicInteger flushedPos;
 
     public TimerLog(final MessageStoreConfig storeConfig) {
         this.mappedFileQueue = new MappedFileQueue(storeConfig.getStorePathRootDir() + File.separator + "timerlog",
@@ -48,7 +47,7 @@ public class TimerLog {
             }
             mappedFile = this.mappedFileQueue.getLastMappedFile(0);
             if (null == mappedFile) {
-                log.error("create maped file2 error for timer log");
+                log.error("create mapped file2 error for timer log");
                 return -1;
             }
         }
@@ -64,6 +63,10 @@ public class TimerLog {
         MappedFile mappedFile = mappedFileQueue.findMappedFileByOffset(offsetPy);
         if (null == mappedFile) return null;
         return mappedFile.selectMappedBuffer((int) (offsetPy % mappedFile.getFileSize()));
+    }
+
+    public MappedFileQueue getMappedFileQueue() {
+        return mappedFileQueue;
     }
 
 }

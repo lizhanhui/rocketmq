@@ -22,6 +22,7 @@ import java.nio.ByteBuffer;
 import java.util.LinkedList;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import org.apache.rocketmq.common.ServiceThread;
 import org.apache.rocketmq.common.TopicFilterType;
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.common.message.MessageAccessor;
@@ -37,7 +38,7 @@ import org.apache.rocketmq.store.config.MessageStoreConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TimerMessageFlow {
+public class TimerMessageStore {
     public static final String TIMER_TOPIC = "%SYS_TIMER_TOPIC%";
     public static final String TIMER_DELAY_KEY = MessageConst.PROPERTY_TIMER_DELAY_MS;
     public static final String TIMER_ENQUEUE_KEY = MessageConst.PROPERTY_TIMER_ENQUEUE_MS;
@@ -46,27 +47,27 @@ public class TimerMessageFlow {
     public static final int DAY_SECS = 24 * 3600;
     private static final Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
 
+    //currently only use the queue 0
     private final ConcurrentMap<Integer /* queue */, Long/* offset */> offsetTable =
         new ConcurrentHashMap<Integer, Long>(32);
 
-
+    private final ByteBuffer timerLogBuffer = ByteBuffer.allocate(1024);
 
     private final MessageStore messageStore;
-    private final MessageStoreConfig storeConfig;
-
     private final TimerWheel timerWheel;
     private final TimerLog timerLog;
-    private final ByteBuffer timerLogBuffer;
+    private final TimerCheckpoint timerCheckpoint;
+
     private volatile long currReadTimeMs;
     private volatile long currWriteTimeMs;
+    private long currTimerLogFlushPos;
 
 
-    public TimerMessageFlow(final MessageStore messageStore, final MessageStoreConfig storeConfig) throws IOException {
+    public TimerMessageStore(final MessageStore messageStore, final MessageStoreConfig storeConfig) throws IOException {
         this.messageStore = messageStore;
-        this.storeConfig = storeConfig;
         this.timerWheel = new TimerWheel(storeConfig.getStorePathRootDir() + File.separator + "timerwheel", 2 * DAY_SECS );
         this.timerLog = new TimerLog(storeConfig);
-        timerLogBuffer = ByteBuffer.allocate(1024);
+        this.timerCheckpoint = new TimerCheckpoint(storeConfig.getStorePathRootDir() + File.separator + "timercheck");
 
     }
 
@@ -282,5 +283,30 @@ public class TimerMessageFlow {
             MessageAccessor.clearProperty(msgInner, MessageConst.PROPERTY_REAL_QUEUE_ID);
         }
         return msgInner;
+    }
+
+    class FlushTimerService  extends ServiceThread {
+
+        @Override public String getServiceName() {
+            return FlushTimerService.class.getSimpleName();
+        }
+
+        @Override public void run() {
+            TimerMessageStore.log.info(this.getServiceName() + " service start");
+            while (!this.isStopped()) {
+                try {
+                    waitForRunning(200);
+                } catch (Exception e) {
+                    TimerMessageStore.log.info("Error occurred in " + getServiceName(), e);
+                }
+            }
+            TimerMessageStore.log.info(this.getServiceName() + " service end");
+        }
+    }
+
+    public void prepareCheckPoint() {
+        timerCheckpoint.setLastReadTimeMs(currReadTimeMs);
+        timerCheckpoint.setLastTimerLogFlushPos(timerLog.getMappedFileQueue().getFlushedWhere());
+        timerCheckpoint.setLastTimerQueueOffset(offsetTable.get(0));
     }
 }

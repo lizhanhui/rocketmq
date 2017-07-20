@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.rocketmq.common.BrokerConfig;
 import org.apache.rocketmq.common.TopicFilterType;
-import org.apache.rocketmq.common.message.Message;
 import org.apache.rocketmq.common.message.MessageAccessor;
 import org.apache.rocketmq.common.message.MessageConst;
 import org.apache.rocketmq.common.message.MessageDecoder;
@@ -47,7 +46,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 
-public class TimerMessageFlowTest {
+public class TimerMessageStoreTest {
     private final String StoreMessage = "Once, there was a chance for me!";
     private int QUEUE_TOTAL = 100;
     private AtomicInteger QueueId = new AtomicInteger(0);
@@ -56,7 +55,7 @@ public class TimerMessageFlowTest {
     private MessageStore messageStore;
     private SocketAddress bornHost;
     private SocketAddress storeHost;
-    private TimerMessageFlow timerMessageFlow;
+    private TimerMessageStore timerMessageStore;
 
     @Before
     public void init() throws Exception {
@@ -75,7 +74,7 @@ public class TimerMessageFlowTest {
         boolean load = messageStore.load();
         assertTrue(load);
         messageStore.start();
-        timerMessageFlow = new TimerMessageFlow(messageStore, storeConfig);
+        timerMessageStore = new TimerMessageStore(messageStore, storeConfig);
     }
 
     @Test
@@ -86,24 +85,24 @@ public class TimerMessageFlowTest {
         System.out.println(inner);
         PutMessageResult putMessageResult = messageStore.putMessage(inner);
         System.out.println(putMessageResult);
-        assertNotNull(getOneMessage(TimerMessageFlow.TIMER_TOPIC, 0, 0, 3000));
-        timerMessageFlow.updateOffset(0, 0);
-        timerMessageFlow.updateCurrReadTimeMs(curr);
-        assertTrue(timerMessageFlow.enqueue(0));
+        assertNotNull(getOneMessage(TimerMessageStore.TIMER_TOPIC, 0, 0, 3000));
+        timerMessageStore.updateOffset(0, 0);
+        timerMessageStore.updateCurrReadTimeMs(curr);
+        assertTrue(timerMessageStore.enqueue(0));
         int retry = 20;
         int dequeue = 0;
         while (retry-- > 0) {
-            dequeue =  timerMessageFlow.dequeue();
+            dequeue =  timerMessageStore.dequeue();
             if (1 == dequeue) break;
-            assertFalse(timerMessageFlow.enqueue(0));
+            assertFalse(timerMessageStore.enqueue(0));
             Thread.sleep(100);
         }
         assertTrue(1 == dequeue);
         ByteBuffer msgBuff = getOneMessage("TimerTest", 0, 0, 1000);
         MessageExt msgExt = MessageDecoder.decode(msgBuff);
         assertNotNull(msgExt);
-        long delayTime = Long.valueOf(msgExt.getProperty(TimerMessageFlow.TIMER_DELAY_KEY));
-        long dequeueTime = Long.valueOf(msgExt.getProperty(TimerMessageFlow.TIMER_ENQUEUE_KEY));
+        long delayTime = Long.valueOf(msgExt.getProperty(TimerMessageStore.TIMER_DELAY_KEY));
+        long dequeueTime = Long.valueOf(msgExt.getProperty(TimerMessageStore.TIMER_ENQUEUE_KEY));
         assertTrue(dequeueTime - delayTime - 1 <= 300);
     }
 
@@ -121,12 +120,12 @@ public class TimerMessageFlowTest {
 
     public MessageExtBrokerInner buildMessage(long delayedMs) {
         MessageExtBrokerInner msg = new MessageExtBrokerInner();
-        msg.setTopic(TimerMessageFlow.TIMER_TOPIC);
+        msg.setTopic(TimerMessageStore.TIMER_TOPIC);
         MessageAccessor.putProperty(msg, MessageConst.PROPERTY_REAL_TOPIC, "TimerTest");
         MessageAccessor.putProperty(msg, MessageConst.PROPERTY_REAL_QUEUE_ID, "0");
         msg.setTags("timer");
         msg.setKeys("timer");
-        MessageAccessor.putProperty(msg, TimerMessageFlow.TIMER_DELAY_KEY, delayedMs + "");
+        MessageAccessor.putProperty(msg, TimerMessageStore.TIMER_DELAY_KEY, delayedMs + "");
         msg.setBody(StoreMessage.getBytes());
         msg.setKeys(String.valueOf(System.currentTimeMillis()));
         msg.setQueueId(0);
