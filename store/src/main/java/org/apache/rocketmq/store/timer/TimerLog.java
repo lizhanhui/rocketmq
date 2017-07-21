@@ -25,6 +25,10 @@ public class TimerLog {
         //TODO check allocate mapped file service
     }
 
+    public boolean load() {
+        return this.mappedFileQueue.load();
+    }
+
     public long append(ByteBuffer buffer) {
         MappedFile mappedFile = this.mappedFileQueue.getLastMappedFile();
         if (null == mappedFile || mappedFile.isFull()) {
@@ -67,6 +71,11 @@ public class TimerLog {
 
     public MappedFileQueue getMappedFileQueue() {
         return mappedFileQueue;
+    }
+
+    public void shutdown() {
+        this.mappedFileQueue.flush(0);
+        //it seems do not need to call shutdown
     }
 
 }

@@ -70,7 +70,7 @@ public class TimerCheckpoint {
         try {
             this.fileChannel.close();
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("Shutdown error in timer check point", e);
         }
     }
 
