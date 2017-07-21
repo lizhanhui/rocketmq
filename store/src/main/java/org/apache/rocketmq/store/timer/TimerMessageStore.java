@@ -20,6 +20,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.rocketmq.common.ServiceThread;
@@ -30,6 +31,7 @@ import org.apache.rocketmq.common.message.MessageConst;
 import org.apache.rocketmq.common.message.MessageDecoder;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.store.ConsumeQueue;
+import org.apache.rocketmq.store.MappedFile;
 import org.apache.rocketmq.store.MessageExtBrokerInner;
 import org.apache.rocketmq.store.MessageStore;
 import org.apache.rocketmq.store.PutMessageResult;
@@ -45,6 +47,7 @@ public class TimerMessageStore {
     public static final String TIMER_DEQUEUE_KEY = MessageConst.PROPERTY_TIMER_DEQUEUE_MS;
     public static final String TIMER_ROLL_TIMES_KEY = MessageConst.PROPERTY_TIMER_ROLL_TIMES;
     public static final int DAY_SECS = 24 * 3600;
+    public static final int TIME_BLANK = 60 * 1000;
     private static final Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
 
     //currently only use the queue 0
@@ -52,15 +55,21 @@ public class TimerMessageStore {
         new ConcurrentHashMap<Integer, Long>(32);
 
     private final ByteBuffer timerLogBuffer = ByteBuffer.allocate(1024);
+    private final int INITIAL= 0, RUNNING = 1, SHUTDOWN = 2;
+    private volatile int state = INITIAL;
 
     private final MessageStore messageStore;
     private final TimerWheel timerWheel;
     private final TimerLog timerLog;
     private final TimerCheckpoint timerCheckpoint;
 
+    private final TimerEnqueueService enqueueService;
+    private final TimerDequeueService dequeueService;
+    private final TimerFlushService timerFlushService;
+
+
     private volatile long currReadTimeMs;
     private volatile long currWriteTimeMs;
-    private long currTimerLogFlushPos;
 
 
     public TimerMessageStore(final MessageStore messageStore, final MessageStoreConfig storeConfig) throws IOException {
@@ -68,6 +77,110 @@ public class TimerMessageStore {
         this.timerWheel = new TimerWheel(storeConfig.getStorePathRootDir() + File.separator + "timerwheel", 2 * DAY_SECS );
         this.timerLog = new TimerLog(storeConfig);
         this.timerCheckpoint = new TimerCheckpoint(storeConfig.getStorePathRootDir() + File.separator + "timercheck");
+        enqueueService = new TimerEnqueueService();
+        dequeueService =  new TimerDequeueService();
+        timerFlushService = new TimerFlushService();
+
+    }
+
+    public boolean load() {
+        return timerLog.load();
+    }
+    public void recover() {
+        //recover timerLog
+        long lastFlushPos = timerCheckpoint.getLastTimerLogFlushPos();
+        MappedFile lastFile = timerLog.getMappedFileQueue().getLastMappedFile();
+        if (null != lastFile) {
+            lastFlushPos = lastFlushPos - lastFile.getFileSize();
+        }
+        long processOffset = recoverAndRevise(lastFlushPos, true);
+        prepareTimerLogFlushPos();
+        //check timer wheel
+        currReadTimeMs = timerCheckpoint.getLastReadTimeMs();
+        long minFirst = timerWheel.checkPhyPos(currReadTimeMs, processOffset);
+        if (minFirst < processOffset) {
+            recoverAndRevise(processOffset, false);
+        }
+        //dequeue old messages
+        maybeMoveWriteTime();
+        while (currReadTimeMs < currWriteTimeMs - ((timerWheel.TTL_SECS * 1000)/2)) {
+            dequeue();
+        }
+    }
+
+    //recover timerlog and revise timerwheel
+    //return process offset
+    private long recoverAndRevise(long beginOffset, boolean checkTimerLog) {
+        MappedFile lastFile = timerLog.getMappedFileQueue().getLastMappedFile();
+        if (null == lastFile) return 0;
+
+        List<MappedFile> mappedFiles = timerLog.getMappedFileQueue().getMappedFiles();
+        int index = mappedFiles.size() - 1;
+        for (; index >= 0 ; index--) {
+            MappedFile mappedFile = mappedFiles.get(index);
+            if (beginOffset >= mappedFile.getFileFromOffset()) {
+                break;
+            }
+        }
+        if (index < 0) index = 0;
+        long checkOffset = mappedFiles.get(index).getFileFromOffset();
+        for (; index < mappedFiles.size() ; index++) {
+            SelectMappedBufferResult sbr = mappedFiles.get(index).selectMappedBuffer(0, mappedFiles.get(index).getFileSize());
+            ByteBuffer bf = sbr.getByteBuffer();
+            int position = 0;
+            boolean stopCheck = false;
+            for (; position < sbr.getSize() ; position += 40) {
+                bf.position(position);
+                bf.getInt();//size
+                long prevPos = bf.getLong();
+                int magic = bf.getInt();
+                if (checkTimerLog && !checkMagic(magic)) {
+                    //TODO should truncate or continue
+                    //if we truncate, then should revert the queue offset too
+                    stopCheck = true;
+                    break;
+                }
+                long delayTime = bf.getLong() + bf.getInt();
+                timerWheel.reviseSlot(delayTime, TimerWheel.IGNORE, prevPos, true);
+            }
+            checkOffset =  mappedFiles.get(index).getFileFromOffset() + position;
+            if (stopCheck) {
+                break;
+            }
+        }
+        if (checkTimerLog) {
+            timerLog.getMappedFileQueue().truncateDirtyFiles(checkOffset);
+        }
+        return checkOffset;
+    }
+    private boolean checkMagic(int magic) {
+        //TODO use more complicated magic
+        if (0 == magic || 1 == magic) {
+            return true;
+        }
+        return false;
+    }
+
+    public void start() {
+        maybeMoveWriteTime();
+        if (currWriteTimeMs - currReadTimeMs + TIME_BLANK >= timerWheel.TTL_SECS * 1000) {
+            currReadTimeMs = currWriteTimeMs - timerWheel.TTL_SECS * 1000 + TIME_BLANK;
+        }
+        enqueueService.start();
+        dequeueService.start(); //TODO only master do
+        timerFlushService.start();
+        state = RUNNING;
+    }
+    public void shutdown() {
+        state = SHUTDOWN;
+        enqueueService.shutdown();
+        dequeueService.shutdown(); //TODO if not start, will it throw exception
+        timerWheel.shutdown();
+        timerLog.shutdown();
+        prepareReadTimeMs();
+        prepareTimerQueueOffset();
+        prepareTimerLogFlushPos();
+        timerCheckpoint.shutdown(); //TODO if the previous shutdown failed
 
     }
 
@@ -142,10 +255,10 @@ public class TimerMessageStore {
             +  8 //offsetPy
             +  4 //sizePy
             ;
-        boolean needRoll =  delayedTime - currWriteTimeMs >= timerWheel.TTL_SECS * 1000;
+        boolean needRoll =  delayedTime - currWriteTimeMs + TIME_BLANK >= timerWheel.TTL_SECS * 1000;
         int magic = needRoll ?  1 : 0;
         if (needRoll) {
-            delayedTime =  currWriteTimeMs +  timerWheel.TTL_SECS * 1000 - 1;
+            delayedTime =  currWriteTimeMs +  timerWheel.TTL_SECS * 1000 - TIME_BLANK;
         }
         Slot slot = timerWheel.getSlot(delayedTime/1000);
         ByteBuffer tmpBuffer = timerLogBuffer;
@@ -285,16 +398,65 @@ public class TimerMessageStore {
         return msgInner;
     }
 
-    class FlushTimerService  extends ServiceThread {
+    class TimerEnqueueService  extends ServiceThread {
 
         @Override public String getServiceName() {
-            return FlushTimerService.class.getSimpleName();
+            return this.getClass().getSimpleName();
         }
 
         @Override public void run() {
             TimerMessageStore.log.info(this.getServiceName() + " service start");
             while (!this.isStopped()) {
                 try {
+                    if(!TimerMessageStore.this.enqueue(0)) {
+                        waitForRunning(50);
+                    }
+                } catch (Exception e) {
+                    TimerMessageStore.log.info("Error occurred in " + getServiceName(), e);
+                }
+            }
+            TimerMessageStore.log.info(this.getServiceName() + " service end");
+        }
+    }
+
+    class TimerDequeueService  extends ServiceThread {
+
+        @Override public String getServiceName() {
+            return this.getClass().getSimpleName();
+        }
+
+        @Override public void run() {
+            TimerMessageStore.log.info(this.getServiceName() + " service start");
+            while (!this.isStopped()) {
+                try {
+                    if( -1 != TimerMessageStore.this.dequeue()) {
+                        waitForRunning(50);
+                    }
+                } catch (Exception e) {
+                    TimerMessageStore.log.info("Error occurred in " + getServiceName(), e);
+                }
+            }
+            TimerMessageStore.log.info(this.getServiceName() + " service end");
+        }
+    }
+
+    class TimerFlushService extends ServiceThread {
+
+        @Override public String getServiceName() {
+            return this.getClass().getSimpleName();
+        }
+
+        @Override public void run() {
+            TimerMessageStore.log.info(this.getServiceName() + " service start");
+            while (!this.isStopped()) {
+                try {
+                    prepareReadTimeMs();
+                    prepareTimerQueueOffset();
+                    timerWheel.flush();
+                    timerLog.getMappedFileQueue().flush(0);
+                    prepareTimerLogFlushPos();
+                    timerCheckpoint.flush();
+                    //TODO wait how long
                     waitForRunning(200);
                 } catch (Exception e) {
                     TimerMessageStore.log.info("Error occurred in " + getServiceName(), e);
@@ -304,9 +466,13 @@ public class TimerMessageStore {
         }
     }
 
-    public void prepareCheckPoint() {
+    public void prepareReadTimeMs() {
         timerCheckpoint.setLastReadTimeMs(currReadTimeMs);
+    }
+    public void prepareTimerLogFlushPos() {
         timerCheckpoint.setLastTimerLogFlushPos(timerLog.getMappedFileQueue().getFlushedWhere());
+    }
+    public void prepareTimerQueueOffset() {
         timerCheckpoint.setLastTimerQueueOffset(offsetTable.get(0));
     }
 }
