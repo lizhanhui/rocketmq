@@ -75,6 +75,7 @@ public class TimerMessageStoreTest {
         assertTrue(load);
         messageStore.start();
         timerMessageStore = new TimerMessageStore(messageStore, storeConfig);
+        timerMessageStore.setState(TimerMessageStore.RUNNING);
     }
 
     @Test
@@ -101,8 +102,8 @@ public class TimerMessageStoreTest {
         ByteBuffer msgBuff = getOneMessage("TimerTest", 0, 0, 1000);
         MessageExt msgExt = MessageDecoder.decode(msgBuff);
         assertNotNull(msgExt);
-        long delayTime = Long.valueOf(msgExt.getProperty(TimerMessageStore.TIMER_DELAY_KEY));
-        long dequeueTime = Long.valueOf(msgExt.getProperty(TimerMessageStore.TIMER_ENQUEUE_KEY));
+        long delayTime = Long.valueOf(msgExt.getProperty(TimerMessageStore.TIMER_DELAY_MS));
+        long dequeueTime = Long.valueOf(msgExt.getProperty(TimerMessageStore.TIMER_ENQUEUE_MS));
         assertTrue(dequeueTime - delayTime - 1 <= 300);
     }
 
@@ -125,7 +126,7 @@ public class TimerMessageStoreTest {
         MessageAccessor.putProperty(msg, MessageConst.PROPERTY_REAL_QUEUE_ID, "0");
         msg.setTags("timer");
         msg.setKeys("timer");
-        MessageAccessor.putProperty(msg, TimerMessageStore.TIMER_DELAY_KEY, delayedMs + "");
+        MessageAccessor.putProperty(msg, TimerMessageStore.TIMER_DELAY_MS, delayedMs + "");
         msg.setBody(StoreMessage.getBytes());
         msg.setKeys(String.valueOf(System.currentTimeMillis()));
         msg.setQueueId(0);

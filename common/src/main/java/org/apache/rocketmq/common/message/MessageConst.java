@@ -45,6 +45,7 @@ public class MessageConst {
     public static final String PROPERTY_TIMER_ENQUEUE_MS = "TIMER_ENQUEUE_MS";
     public static final String PROPERTY_TIMER_DEQUEUE_MS = "TIMER_DEQUEUE_MS";
     public static final String PROPERTY_TIMER_ROLL_TIMES = "TIMER_ROLL_TIMES";
+    public static final String PROPERTY_TIMER_DELETE_UNIQKEY = "TIMER_DELETE_UNIQKEY";
 
     public static final String KEY_SEPARATOR = " ";
 
