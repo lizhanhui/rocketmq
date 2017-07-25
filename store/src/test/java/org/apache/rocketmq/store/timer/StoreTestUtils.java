@@ -12,6 +12,9 @@ public class StoreTestUtils {
         }
         return baseDir;
     }
+    public static void deleteFile(String fileName) {
+        deleteFile(new File(fileName));
+    }
 
     public static void deleteFile(File file) {
         if (!file.exists()) {

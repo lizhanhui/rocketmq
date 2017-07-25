@@ -230,6 +230,7 @@ public class TimerMessageStore {
 
     }
 
+    //testable
     public void updateCurrReadTimeMs(long readTimeMs) {
         this.currReadTimeMs = readTimeMs;
     }
@@ -254,6 +255,7 @@ public class TimerMessageStore {
     private boolean isRunning() {
         return RUNNING == state;
     }
+
     public boolean enqueue(int queueId) {
         if (!isRunning()) {
             return false;

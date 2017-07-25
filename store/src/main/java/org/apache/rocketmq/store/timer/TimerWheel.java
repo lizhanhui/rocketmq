@@ -87,13 +87,17 @@ public class TimerWheel {
     }
 
     public Slot getSlot(long timeSecs) {
-        int slotIndex = (int)(timeSecs % (TTL_SECS * 2));
-        localBuffer.get().position(slotIndex * Slot.SIZE);
-        Slot slot = new Slot(localBuffer.get().getLong(), localBuffer.get().getLong(), localBuffer.get().getLong());
+        Slot slot = getRawSlot(timeSecs);
         if (slot.TIME_SECS != timeSecs) {
             return new Slot(-1, -1, -1);
         }
         return slot;
+    }
+    //testable
+    public Slot getRawSlot(long timeSecs) {
+        int slotIndex = (int)(timeSecs % (TTL_SECS * 2));
+        localBuffer.get().position(slotIndex * Slot.SIZE);
+        return  new Slot(localBuffer.get().getLong(), localBuffer.get().getLong(), localBuffer.get().getLong());
     }
 
     public void putSlot(long timeSecs, long firstPos, long lastPos){
