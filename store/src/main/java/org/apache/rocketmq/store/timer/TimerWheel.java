@@ -18,11 +18,16 @@ public class TimerWheel {
     public static int BLANK = -1, IGNORE = -2;
     public final int TTL_SECS;
     private String fileName;
-    private ByteBuffer readBuffer;
-    private ByteBuffer writeBuffer;
     private final RandomAccessFile randomAccessFile;
     private final FileChannel fileChannel;
     private final MappedByteBuffer mappedByteBuffer;
+    private final ByteBuffer byteBuffer;
+    private final ThreadLocal<ByteBuffer> localBuffer = new ThreadLocal<ByteBuffer>() {
+        @Override
+        protected ByteBuffer initialValue() {
+            return byteBuffer.duplicate();
+        }
+    };
     private final int LENGTH;
 
     public TimerWheel(String fileName, int ttlSecs) throws IOException {
@@ -33,15 +38,17 @@ public class TimerWheel {
 
         try {
             randomAccessFile = new RandomAccessFile(this.fileName, "rw");
-            if (file.exists() && randomAccessFile.length() != LENGTH) {
+            if (file.exists() && randomAccessFile.length() != 0 &&
+                randomAccessFile.length() != LENGTH) {
                 throw new RuntimeException(String.format("Timer wheel length:%d != expected:%s",
                     randomAccessFile.length(), LENGTH));
             }
             randomAccessFile.setLength(TTL_SECS * 2 * Slot.SIZE);
             fileChannel = randomAccessFile.getChannel();
-            mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, TTL_SECS * 2 * Slot.SIZE);
-            this.writeBuffer = mappedByteBuffer.duplicate();
-            this.readBuffer = mappedByteBuffer.duplicate();
+            mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, LENGTH);
+            assert LENGTH == mappedByteBuffer.remaining();
+            this.byteBuffer = ByteBuffer.allocateDirect(LENGTH);
+            this.byteBuffer.put(mappedByteBuffer);
         } catch (FileNotFoundException e) {
             log.error("create file channel " + this.fileName + " Failed. ", e);
             throw e;
@@ -66,13 +73,23 @@ public class TimerWheel {
     }
 
     public void flush() {
+        ByteBuffer bf = localBuffer.get();
+        bf.position(0);
+        bf.limit(LENGTH);
+        mappedByteBuffer.position(0);
+        mappedByteBuffer.limit(LENGTH);
+        for (int i = 0; i < LENGTH; i++) {
+            if (bf.get(i) != mappedByteBuffer.get(i)) {
+                mappedByteBuffer.put(i, bf.get(i));
+            }
+        }
         this.mappedByteBuffer.force();
     }
 
     public Slot getSlot(long timeSecs) {
         int slotIndex = (int)(timeSecs % (TTL_SECS * 2));
-        readBuffer.position(slotIndex * Slot.SIZE);
-        Slot slot = new Slot(readBuffer.getLong(), readBuffer.getLong(), readBuffer.getLong());
+        localBuffer.get().position(slotIndex * Slot.SIZE);
+        Slot slot = new Slot(localBuffer.get().getLong(), localBuffer.get().getLong(), localBuffer.get().getLong());
         if (slot.TIME_SECS != timeSecs) {
             return new Slot(-1, -1, -1);
         }
@@ -81,28 +98,28 @@ public class TimerWheel {
 
     public void putSlot(long timeSecs, long firstPos, long lastPos){
         int slotIndex = (int)(timeSecs % (TTL_SECS * 2));
-        writeBuffer.position(slotIndex * Slot.SIZE);
-        writeBuffer.putLong(timeSecs);
-        writeBuffer.putLong(firstPos);
-        writeBuffer.putLong(lastPos);
+        localBuffer.get().position(slotIndex * Slot.SIZE);
+        localBuffer.get().putLong(timeSecs);
+        localBuffer.get().putLong(firstPos);
+        localBuffer.get().putLong(lastPos);
     }
 
     public void reviseSlot(long timeSecs, long firstPos, long lastPos, boolean force){
         int slotIndex = (int)(timeSecs % (TTL_SECS * 2));
-        writeBuffer.position(slotIndex * Slot.SIZE);
+        localBuffer.get().position(slotIndex * Slot.SIZE);
 
-        if (timeSecs != writeBuffer.getLong()) {
+        if (timeSecs != localBuffer.get().getLong()) {
             if (force) {
                 putSlot(timeSecs, firstPos != IGNORE ? firstPos : lastPos, lastPos);
             }
         } else  {
             if (IGNORE != firstPos) {
-                writeBuffer.putLong(firstPos);
+                localBuffer.get().putLong(firstPos);
             } else {
-                writeBuffer.getLong();
+                localBuffer.get().getLong();
             }
             if (IGNORE != lastPos) {
-                writeBuffer.putLong(lastPos);
+                localBuffer.get().putLong(lastPos);
             }
         }
     }
@@ -112,12 +129,12 @@ public class TimerWheel {
         int slotIndex = (int)(timeSecs % (TTL_SECS * 2));
         for (int i = 0; i < TTL_SECS * 2; i++) {
             slotIndex = (slotIndex + i) % (TTL_SECS * 2);
-            writeBuffer.position(slotIndex * Slot.SIZE);
-            if ((timeSecs + i) != writeBuffer.getLong()) {
+            localBuffer.get().position(slotIndex * Slot.SIZE);
+            if ((timeSecs + i) != localBuffer.get().getLong()) {
                 continue;
             }
-            long first = writeBuffer.getLong();
-            if (writeBuffer.getLong() > maxOffset) {
+            long first = localBuffer.get().getLong();
+            if (localBuffer.get().getLong() > maxOffset) {
                 if(first < minFirst) {
                     minFirst = first;
                 }
@@ -125,5 +142,4 @@ public class TimerWheel {
         }
         return  minFirst;
     }
-
 }
