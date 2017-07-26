@@ -20,17 +20,19 @@ public class TimerLog {
     public final static int UNIT_SIZE = 40;
     private final MappedFileQueue mappedFileQueue;
 
-    public TimerLog(final MessageStoreConfig storeConfig) {
-        this.mappedFileQueue = new MappedFileQueue(storeConfig.getStorePathRootDir() + File.separator + "timerlog",
-            storeConfig.getMapedFileSizeCommitLog(), null);
+    public TimerLog(final String storePath, final int fileSize) {
+        this.mappedFileQueue = new MappedFileQueue(storePath, fileSize, null);
         //TODO check allocate mapped file service
     }
 
     public boolean load() {
         return this.mappedFileQueue.load();
     }
+    public long append(byte[] data) {
+        return append(data, 0, data.length);
+    }
 
-    public long append(ByteBuffer buffer) {
+    public long append(byte[] data, int pos, int len) {
         MappedFile mappedFile = this.mappedFileQueue.getLastMappedFile();
         if (null == mappedFile || mappedFile.isFull()) {
             mappedFile = this.mappedFileQueue.getLastMappedFile(0);
@@ -39,7 +41,7 @@ public class TimerLog {
             log.error("Create mapped file1 error for timer log");
             return -1;
         }
-        if (buffer.remaining() + MIN_BLANK_LEN > mappedFile.getFileSize() - mappedFile.getWrotePosition()) {
+        if (len + MIN_BLANK_LEN > mappedFile.getFileSize() - mappedFile.getWrotePosition()) {
             ByteBuffer byteBuffer = ByteBuffer.allocate(8);
             byteBuffer.putInt(mappedFile.getFileSize() - mappedFile.getWrotePosition());
             byteBuffer.putInt(BLANK_MAGIC_CODE);
@@ -56,8 +58,8 @@ public class TimerLog {
                 return -1;
             }
         }
-        int currPosition = mappedFile.getWrotePosition();
-        if (!mappedFile.appendMessage(buffer.array())) {
+        long currPosition = mappedFile.getFileFromOffset() + mappedFile.getWrotePosition();
+        if (!mappedFile.appendMessage(data, pos, len)) {
             log.error("Append error for timer log");
             return -1;
         }
