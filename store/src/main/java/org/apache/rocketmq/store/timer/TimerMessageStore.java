@@ -39,6 +39,7 @@ import org.apache.rocketmq.common.message.MessageDecoder;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.store.ConsumeQueue;
 import org.apache.rocketmq.store.MappedFile;
+import org.apache.rocketmq.store.MappedFileQueue;
 import org.apache.rocketmq.store.MessageExtBrokerInner;
 import org.apache.rocketmq.store.MessageStore;
 import org.apache.rocketmq.store.PutMessageResult;
@@ -88,7 +89,8 @@ public class TimerMessageStore {
     public TimerMessageStore(final MessageStore messageStore, final MessageStoreConfig storeConfig) throws IOException {
         this.messageStore = messageStore;
         this.timerWheel = new TimerWheel(storeConfig.getStorePathRootDir() + File.separator + "timerwheel", 2 * DAY_SECS );
-        this.timerLog = new TimerLog(storeConfig);
+        this.timerLog = new TimerLog(storeConfig.getStorePathRootDir() + File.separator + "timerlog",
+            storeConfig.getMapedFileSizeCommitLog());
         this.timerCheckpoint = new TimerCheckpoint(storeConfig.getStorePathRootDir() + File.separator + "timercheck");
         enqueueService = new TimerEnqueueService();
         dequeueService =  new TimerDequeueService();
@@ -338,7 +340,7 @@ public class TimerMessageStore {
         tmpBuffer.putLong(offsetPy);
         tmpBuffer.putInt(sizePy);
         tmpBuffer.flip();
-        long ret = timerLog.append(tmpBuffer);
+        long ret = timerLog.append(tmpBuffer.array(), 0, TimerLog.UNIT_SIZE);
         if (-1 == ret) {
             //TODO
         }
