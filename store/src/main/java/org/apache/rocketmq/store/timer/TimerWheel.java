@@ -35,6 +35,7 @@ public class TimerWheel {
         this.fileName = fileName;
         this.LENGTH = TTL_SECS * 2 * Slot.SIZE;
         File file = new File(fileName);
+        MappedFile.ensureDirOK(file.getParent());
 
         try {
             randomAccessFile = new RandomAccessFile(this.fileName, "rw");

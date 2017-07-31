@@ -22,6 +22,7 @@ public class TimerLogTest {
         TimerLog timerLog = new TimerLog(baseDir, 1024);
         timerLogs.add(timerLog);
         baseDirs.add(baseDir);
+        timerLog.load();
         return timerLog;
     }
 
@@ -56,7 +57,6 @@ public class TimerLogTest {
         first.append(data);
         first.shutdown();
         TimerLog second =  createTimerLog(basedir);
-        second.load();
         assertEquals(2, second.getMappedFileQueue().getMappedFiles().size());
         second.getMappedFileQueue().truncateDirtyFiles(1204 + 1000);
         SelectMappedBufferResult sbr =  second.getTimerMessage(1024 + 510);

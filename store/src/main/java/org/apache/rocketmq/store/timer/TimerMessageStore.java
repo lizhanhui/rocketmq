@@ -43,6 +43,7 @@ import org.apache.rocketmq.store.MappedFileQueue;
 import org.apache.rocketmq.store.MessageExtBrokerInner;
 import org.apache.rocketmq.store.MessageStore;
 import org.apache.rocketmq.store.PutMessageResult;
+import org.apache.rocketmq.store.PutMessageStatus;
 import org.apache.rocketmq.store.SelectMappedBufferResult;
 import org.apache.rocketmq.store.config.MessageStoreConfig;
 import org.slf4j.Logger;
@@ -86,12 +87,11 @@ public class TimerMessageStore {
     private volatile long currWriteTimeMs;
 
 
-    public TimerMessageStore(final MessageStore messageStore, final MessageStoreConfig storeConfig) throws IOException {
+    public TimerMessageStore(final MessageStore messageStore, final String rootDir, final int fileSize) throws IOException {
         this.messageStore = messageStore;
-        this.timerWheel = new TimerWheel(storeConfig.getStorePathRootDir() + File.separator + "timerwheel", 2 * DAY_SECS );
-        this.timerLog = new TimerLog(storeConfig.getStorePathRootDir() + File.separator + "timerlog",
-            storeConfig.getMapedFileSizeCommitLog());
-        this.timerCheckpoint = new TimerCheckpoint(storeConfig.getStorePathRootDir() + File.separator + "timercheck");
+        this.timerWheel = new TimerWheel(rootDir + File.separator + "timerwheel", 2 * DAY_SECS );
+        this.timerLog = new TimerLog(rootDir + File.separator + "timerlog", fileSize);
+        this.timerCheckpoint = new TimerCheckpoint(rootDir + File.separator + "timercheck");
         enqueueService = new TimerEnqueueService();
         dequeueService =  new TimerDequeueService();
         timerFlushService = new TimerFlushService();
@@ -112,7 +112,8 @@ public class TimerMessageStore {
         }
         long processOffset = recoverAndRevise(lastFlushPos, true);
         //revise queue offset
-        reviseQueueOffset(processOffset);
+        long queueOffset = reviseQueueOffset(processOffset);
+        offsetTable.put(0, queueOffset + 1);
         prepareTimerLogFlushPos();
 
         //check timer wheel
@@ -121,6 +122,7 @@ public class TimerMessageStore {
         if (minFirst < processOffset) {
             recoverAndRevise(processOffset, false);
         }
+        log.info("Timer recover ok currReadTimerMs:{} queueOffset:{}", currReadTimeMs, getQueueOffset(0));
         //TODO dequeue old messages  only master do
         /*
         maybeMoveWriteTime();
@@ -131,21 +133,20 @@ public class TimerMessageStore {
 
     }
 
-    public void reviseQueueOffset(long processOffset) {
+    public long reviseQueueOffset(long processOffset) {
         SelectMappedBufferResult selectRes = timerLog.getTimerMessage(processOffset - 12);
         if (null == selectRes) {
             //TODO
-            return;
+            return -1;
         }
         long offsetPy = selectRes.getByteBuffer().getLong();
         int sizePy = selectRes.getByteBuffer().getInt();
         MessageExt messageExt = getMessageByCommitOffset(offsetPy, sizePy);
         if (null == messageExt) {
             //TODO
-            return;
+            return -1;
         }
-        offsetTable.put(0, messageExt.getQueueOffset());
-
+        return messageExt.getQueueOffset();
     }
 
     //recover timerlog and revise timerwheel
@@ -218,11 +219,16 @@ public class TimerMessageStore {
             }
         }, 30 * 1000, 30, TimeUnit.SECONDS);
         state = RUNNING;
+        log.info("Timer start ok currReadTimerMs:{} queueOffset:{}", currReadTimeMs, offsetTable.get(0));
     }
     public void shutdown() {
+        if (SHUTDOWN == state) {
+            return;
+        }
         state = SHUTDOWN;
         enqueueService.shutdown();
         dequeueService.shutdown(); //TODO if not start, will it throw exception
+        timerFlushService.shutdown();
         timerWheel.shutdown();
         timerLog.shutdown();
         prepareReadTimeMs();
@@ -307,8 +313,10 @@ public class TimerMessageStore {
 
 
     public void doEnqueue(long offsetPy, int sizePy, long delayedTime, MessageExt messageExt) {
+        log.debug("Do enqueue [{}]", messageExt);
         if (delayedTime < currWriteTimeMs) {
             //TODO
+            doReput(messageExt, System.currentTimeMillis(), false);
         }
         int size = 4  //size
             +  8 //prev pos
@@ -359,7 +367,6 @@ public class TimerMessageStore {
             moveReadTime();
             return 0;
         }
-
         long currOffsetPy = slot.LAST_POS;
         Set<String>  deleteUniqKeys = new HashSet<>();
         LinkedList<SelectMappedBufferResult> stack =  new LinkedList<>();
@@ -388,11 +395,10 @@ public class TimerMessageStore {
                 selectRes.getByteBuffer().reset();
                 stack.push(selectRes);
                 currOffsetPy = prevPos;
-                if (slot.FIRST_POS != -1 && currOffsetPy <= slot.FIRST_POS) {
+                if (slot.FIRST_POS != -1 && currOffsetPy < slot.FIRST_POS) {
                     break;
                 }
             }
-
         }
         int pollNum = 0;
         SelectMappedBufferResult sbr = stack.pollFirst();
@@ -415,7 +421,7 @@ public class TimerMessageStore {
                     //TODO
                 }
                 if (!deleteUniqKeys.contains(MessageClientIDSetter.getUniqID(msgExt))) {
-                    doReput(msgExt, enqueueTime, magic > 0);
+                    doReput(msgExt, enqueueTime, (magic & MAGIC_ROLL) != 0);
                 }
             } catch (Exception e) {
                 //TODO
@@ -432,6 +438,7 @@ public class TimerMessageStore {
             }
             sbr =  stack.pollFirst();
         }
+        log.debug("Do dequeue currReadTimeMs:{} pollNum:{}", getCurrReadTimeMs(), pollNum);
         moveReadTime();
         return 1;
     }
@@ -461,6 +468,11 @@ public class TimerMessageStore {
         }
         MessageAccessor.putProperty(messageExt, TIMER_DEQUEUE_MS, System.currentTimeMillis() + "");
         PutMessageResult putMessageResult = messageStore.putMessage(convertMessage(messageExt, needRoll));
+        log.debug("Timer do reput [{}]", putMessageResult);
+        if (null == putMessageResult
+            ||PutMessageStatus.PUT_OK != putMessageResult.getPutMessageStatus()) {
+            log.warn("Timer do reput error [{}]", putMessageResult);
+        }
         //TODO handle putMessageResult
     }
 
@@ -509,7 +521,7 @@ public class TimerMessageStore {
                         waitForRunning(50);
                     }
                 } catch (Exception e) {
-                    TimerMessageStore.log.info("Error occurred in " + getServiceName(), e);
+                    TimerMessageStore.log.error("Error occurred in " + getServiceName(), e);
                 }
             }
             TimerMessageStore.log.info(this.getServiceName() + " service end");
@@ -528,11 +540,11 @@ public class TimerMessageStore {
             TimerMessageStore.log.info(this.getServiceName() + " service start");
             while (!this.isStopped()) {
                 try {
-                    if( -1 != TimerMessageStore.this.dequeue()) {
+                    if( -1 == TimerMessageStore.this.dequeue()) {
                         waitForRunning(50);
                     }
                 } catch (Exception e) {
-                    TimerMessageStore.log.info("Error occurred in " + getServiceName(), e);
+                    TimerMessageStore.log.error("Error occurred in " + getServiceName(), e);
                 }
             }
             TimerMessageStore.log.info(this.getServiceName() + " service end");
@@ -560,7 +572,7 @@ public class TimerMessageStore {
                     //TODO wait how long
                     waitForRunning(200);
                 } catch (Exception e) {
-                    TimerMessageStore.log.info("Error occurred in " + getServiceName(), e);
+                    TimerMessageStore.log.error("Error occurred in " + getServiceName(), e);
                 }
             }
             TimerMessageStore.log.info(this.getServiceName() + " service end");
@@ -575,5 +587,16 @@ public class TimerMessageStore {
     }
     public void prepareTimerQueueOffset() {
         timerCheckpoint.setLastTimerQueueOffset(offsetTable.get(0));
+    }
+
+    public long getCurrReadTimeMs() {
+        return this.currReadTimeMs;
+    }
+
+    public long getQueueOffset(int queue) {
+        if (null == offsetTable.get(queue)) {
+            return 0;
+        }
+        return offsetTable.get(queue);
     }
 }
