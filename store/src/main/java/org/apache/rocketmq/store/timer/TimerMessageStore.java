@@ -22,6 +22,7 @@ import java.nio.ByteBuffer;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -39,23 +40,21 @@ import org.apache.rocketmq.common.message.MessageDecoder;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.store.ConsumeQueue;
 import org.apache.rocketmq.store.MappedFile;
-import org.apache.rocketmq.store.MappedFileQueue;
 import org.apache.rocketmq.store.MessageExtBrokerInner;
 import org.apache.rocketmq.store.MessageStore;
 import org.apache.rocketmq.store.PutMessageResult;
 import org.apache.rocketmq.store.PutMessageStatus;
 import org.apache.rocketmq.store.SelectMappedBufferResult;
-import org.apache.rocketmq.store.config.MessageStoreConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class TimerMessageStore {
     public static final String TIMER_TOPIC = "%SYS_TIMER_TOPIC%";
-    public static final String TIMER_DELAY_MS = MessageConst.PROPERTY_TIMER_DELAY_MS;
+    public static final String TIMER_DELAY_MS = MessageConst.PROPERTY_TIMER_IN_MS;
     public static final String TIMER_ENQUEUE_MS = MessageConst.PROPERTY_TIMER_ENQUEUE_MS;
     public static final String TIMER_DEQUEUE_MS = MessageConst.PROPERTY_TIMER_DEQUEUE_MS;
     public static final String TIMER_ROLL_TIMES = MessageConst.PROPERTY_TIMER_ROLL_TIMES;
-    public static final String TIMER_DELETE_UNIQKEY = MessageConst.PROPERTY_TIMER_DELETE_UNIQKEY;
+    public static final String TIMER_DELETE_UNIQKEY = MessageConst.PROPERTY_TIMER_DEL_UNIQKEY;
     public static final int DAY_SECS = 24 * 3600;
     public static final int TIME_BLANK = 60 * 1000;
     public static final int MAGIC_DEFAULT = 1;
@@ -63,6 +62,7 @@ public class TimerMessageStore {
     public static final int MAGIC_DELETE = 1 << 2;
 
     private static final Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
+    private static final PerfCounter.Ticks perfs = new PerfCounter.Ticks(log);
     //currently only use the queue 0
     private final ConcurrentMap<Integer /* queue */, Long/* offset */> offsetTable =
         new ConcurrentHashMap<Integer, Long>(32);
@@ -282,6 +282,7 @@ public class TimerMessageStore {
             int i = 0;
             for ( ; i < bufferCQ.getSize(); i += ConsumeQueue.CQ_STORE_UNIT_SIZE) {
                 if (!isRunning()) break;
+                perfs.startTick("enqueue");
                 try {
                     long offsetPy = bufferCQ.getByteBuffer().getLong();
                     int sizePy = bufferCQ.getByteBuffer().getInt();
@@ -300,6 +301,7 @@ public class TimerMessageStore {
                     //TODO retry
                     e.printStackTrace();
                 }
+                perfs.endTick("enqueue");
             }
             offsetTable.put(queueId, offset + (i / ConsumeQueue.CQ_STORE_UNIT_SIZE));
             return  i > 0;
@@ -373,6 +375,7 @@ public class TimerMessageStore {
         //read the msg one by one
         while (currOffsetPy != -1) {
             if (!isRunning()) break;
+            perfs.startTick("dequeue_1");
             SelectMappedBufferResult selectRes = timerLog.getTimerMessage(currOffsetPy);
             if (null == selectRes) break;
             selectRes.getByteBuffer().mark();
@@ -390,19 +393,23 @@ public class TimerMessageStore {
                 }
                 if (msgExt.getProperty(TIMER_DELETE_UNIQKEY) != null) {
                     deleteUniqKeys.add(msgExt.getProperty(TIMER_DELETE_UNIQKEY));
+                } else {
+                    log.warn("Timer magic is delete, but do not have {} [{}]", TIMER_DELETE_UNIQKEY, msgExt);
                 }
             } else {
                 selectRes.getByteBuffer().reset();
                 stack.push(selectRes);
-                currOffsetPy = prevPos;
                 if (slot.FIRST_POS != -1 && currOffsetPy < slot.FIRST_POS) {
                     break;
                 }
             }
+            perfs.endTick("dequeue_1");
+            currOffsetPy = prevPos;
         }
         int pollNum = 0;
         SelectMappedBufferResult sbr = stack.pollFirst();
         while (sbr != null) {
+            perfs.startTick("dequeue_2");
             try {
                 ByteBuffer bf = sbr.getByteBuffer();
                 bf.getInt(); //size
@@ -436,9 +443,10 @@ public class TimerMessageStore {
                 timerWheel.putSlot(currReadTimeMs/1000, sbr.getStartOffset(), slot.LAST_POS);
                 return 1;
             }
+            perfs.endTick("dequeue_2");
             sbr =  stack.pollFirst();
         }
-        log.debug("Do dequeue currReadTimeMs:{} pollNum:{}", getCurrReadTimeMs(), pollNum);
+        log.debug("Do dequeue currReadTimeMs:{} pollNum:{} deleteKeys:{}", getCurrReadTimeMs(), pollNum, deleteUniqKeys);
         moveReadTime();
         return 1;
     }
@@ -599,4 +607,5 @@ public class TimerMessageStore {
         }
         return offsetTable.get(queue);
     }
+
 }
