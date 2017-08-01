@@ -36,6 +36,7 @@ import org.apache.rocketmq.store.config.BrokerRole;
 import org.apache.rocketmq.store.config.FlushDiskType;
 import org.apache.rocketmq.store.ha.HAService;
 import org.apache.rocketmq.store.schedule.ScheduleMessageService;
+import org.apache.rocketmq.store.timer.TimerMessageStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -565,6 +566,20 @@ public class CommitLog {
 
                 msg.setTopic(topic);
                 msg.setQueueId(queueId);
+            }
+            if (msg.getProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS) != null
+                && null == msg.getProperty(MessageConst.PROPERTY_TIMER_IN_MS)) {
+                Long deliverMs =  Long.valueOf(msg.getProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS));
+                if (deliverMs % 1000 == 0) {
+                    deliverMs = deliverMs -1;
+                }
+                deliverMs = (deliverMs/1000) * 1000;
+                MessageAccessor.putProperty(msg, MessageConst.PROPERTY_TIMER_IN_MS, deliverMs + "");
+                MessageAccessor.putProperty(msg, MessageConst.PROPERTY_REAL_TOPIC, msg.getTopic());
+                MessageAccessor.putProperty(msg, MessageConst.PROPERTY_REAL_QUEUE_ID, String.valueOf(msg.getQueueId()));
+                msg.setPropertiesString(MessageDecoder.messageProperties2String(msg.getProperties()));
+                msg.setTopic(TimerMessageStore.TIMER_TOPIC);
+                msg.setQueueId(0);
             }
         }
 

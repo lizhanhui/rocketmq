@@ -99,7 +99,9 @@ public class TimerMessageStore {
     }
 
     public boolean load() {
-        return timerLog.load();
+        boolean load = timerLog.load();
+        recover();
+        return load;
     }
 
 
@@ -319,6 +321,7 @@ public class TimerMessageStore {
         if (delayedTime < currWriteTimeMs) {
             //TODO
             doReput(messageExt, System.currentTimeMillis(), false);
+            return;
         }
         int size = 4  //size
             +  8 //prev pos

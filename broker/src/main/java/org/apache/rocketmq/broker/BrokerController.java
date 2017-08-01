@@ -85,6 +85,7 @@ import org.apache.rocketmq.store.config.BrokerRole;
 import org.apache.rocketmq.store.config.MessageStoreConfig;
 import org.apache.rocketmq.store.stats.BrokerStats;
 import org.apache.rocketmq.store.stats.BrokerStatsManager;
+import org.apache.rocketmq.store.timer.TimerMessageStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -121,6 +122,7 @@ public class BrokerController {
     private final List<SendMessageHook> sendMessageHookList = new ArrayList<SendMessageHook>();
     private final List<ConsumeMessageHook> consumeMessageHookList = new ArrayList<ConsumeMessageHook>();
     private MessageStore messageStore;
+    private TimerMessageStore timerMessageStore;
     private RemotingServer remotingServer;
     private RemotingServer fastRemotingServer;
     private TopicConfigManager topicConfigManager;
@@ -208,13 +210,15 @@ public class BrokerController {
                 MessageStorePluginContext context = new MessageStorePluginContext(messageStoreConfig, brokerStatsManager, messageArrivingListener, brokerConfig);
                 this.messageStore = MessageStoreFactory.build(context, this.messageStore);
                 this.messageStore.getDispatcherList().addFirst(new CommitLogDispatcherCalcBitMap(this.brokerConfig, this.consumerFilterManager));
+                this.timerMessageStore = new TimerMessageStore(messageStore,
+                    messageStoreConfig.getStorePathRootDir(), messageStoreConfig.getMapedFileSizeCommitLog());
             } catch (IOException e) {
                 result = false;
                 e.printStackTrace();
             }
         }
-
         result = result && this.messageStore.load();
+        result = result && this.timerMessageStore.load();
 
         if (result) {
             this.remotingServer = new NettyRemotingServer(this.nettyServerConfig, this.clientHousekeepingService);
@@ -634,6 +638,9 @@ public class BrokerController {
     public void start() throws Exception {
         if (this.messageStore != null) {
             this.messageStore.start();
+        }
+        if (this.timerMessageStore != null) {
+            this.timerMessageStore.start();
         }
 
         if (this.remotingServer != null) {

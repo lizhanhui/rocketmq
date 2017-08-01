@@ -133,7 +133,6 @@ public class TimerMessageStoreTest {
         String topic = "TimerTest02";
         TimerMessageStore timerMessageStore  = createTimerMessageStore(null);
         timerMessageStore.load();
-        timerMessageStore.recover();
         timerMessageStore.start();
         long curr = (System.currentTimeMillis()/1000) * 1000;
         long delayMs = curr + 1000;
@@ -159,7 +158,6 @@ public class TimerMessageStoreTest {
         String topic = "TimerTest03";
         TimerMessageStore timerMessageStore  = createTimerMessageStore(null);
         timerMessageStore.load();
-        timerMessageStore.recover();
         timerMessageStore.start();
         long delayMs = System.currentTimeMillis() - 2000;
         for (int i = 0; i < 10; i++) {
@@ -179,7 +177,6 @@ public class TimerMessageStoreTest {
         String topic = "TimerTest04";
         TimerMessageStore timerMessageStore  = createTimerMessageStore(null);
         timerMessageStore.load();
-        timerMessageStore.recover();
         timerMessageStore.start();
         long curr = (System.currentTimeMillis()/1000) * 1000;
         long delayMs = curr + 1000;
@@ -212,7 +209,6 @@ public class TimerMessageStoreTest {
         String base = StoreTestUtils.createBaseDir();
         TimerMessageStore first = createTimerMessageStore(base);
         first.load();
-        first.recover();
         first.start();
         long curr = (System.currentTimeMillis()/1000) * 1000;
         long delayMs = curr + 1000;
