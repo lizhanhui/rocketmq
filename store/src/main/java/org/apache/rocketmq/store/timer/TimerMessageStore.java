@@ -284,6 +284,7 @@ public class TimerMessageStore {
             int i = 0;
             for ( ; i < bufferCQ.getSize(); i += ConsumeQueue.CQ_STORE_UNIT_SIZE) {
                 if (!isRunning()) break;
+                maybeMoveWriteTime();
                 perfs.startTick("enqueue");
                 try {
                     long offsetPy = bufferCQ.getByteBuffer().getLong();
@@ -570,6 +571,7 @@ public class TimerMessageStore {
 
         @Override public void run() {
             TimerMessageStore.log.info(this.getServiceName() + " service start");
+            long start = System.currentTimeMillis();
             while (!this.isStopped()) {
                 try {
                     prepareReadTimeMs();
@@ -582,6 +584,12 @@ public class TimerMessageStore {
                     timerCheckpoint.flush();
                     //TODO wait how long
                     waitForRunning(200);
+                    if (System.currentTimeMillis() - start > 3000) {
+                        start =  System.currentTimeMillis();
+                        TimerMessageStore.log.info("Timer progress currRead:%d currWrite:%d readBehind:%d offsetBehind:%d",
+                            currReadTimeMs/1000, currWriteTimeMs/1000, (System.currentTimeMillis() - currReadTimeMs)/1000,
+                            messageStore.getConsumeQueue(TIMER_TOPIC, 0).getMaxOffsetInQueue() - offsetTable.get(0));
+                    }
                 } catch (Exception e) {
                     TimerMessageStore.log.error("Error occurred in " + getServiceName(), e);
                 }
