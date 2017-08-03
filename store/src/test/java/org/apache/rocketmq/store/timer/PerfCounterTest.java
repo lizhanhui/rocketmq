@@ -30,9 +30,9 @@ public class PerfCounterTest {
             Thread.sleep(1);
             pc.endTick();
         }
-        assertEquals(1, pc.getTPValue(0.5f));
-        assertEquals(1, pc.getMin());
-        assertTrue(pc.getMax() < 10);
+        assertTrue(pc.getMin() > 1000);
+        assertTrue(pc.getTPValue(0.5f) < 2000);
+        assertTrue(pc.getTPValue(0.5f) <= pc.getTPValue(0.6f));
     }
 
     @Test
@@ -47,11 +47,15 @@ public class PerfCounterTest {
             Thread.sleep(1);
             ticks.endTick(key);
         }
-        assertEquals(1, ticks.getCounter("key1").getTPValue(0.5f));
-        assertEquals(1,ticks.getCounter("key1").getMin());
-        assertTrue(ticks.getCounter("key1").getMax() < 10);
-        assertEquals(1, ticks.getCounter("key2").getTPValue(0.5f));
-        assertEquals(1,ticks.getCounter("key2").getMin());
-        assertTrue(ticks.getCounter("key2").getMax() < 10);
+        PerfCounter key1 =  ticks.getCounter("key1");
+        PerfCounter key2 =  ticks.getCounter("key2");
+        assertTrue(key1.getMin() > 1000);
+        assertTrue(key2.getMin() > 1000);
+
+        assertTrue(key1.getTPValue(0.5f) < 2000);
+        assertTrue(key2.getTPValue(0.5f) < 2000);
+
+        assertTrue(key1.getTPValue(0.5f) <= key1.getTPValue(0.6f));
+        assertTrue(key2.getTPValue(0.5f) <= key2.getTPValue(0.6f));
     }
 }
