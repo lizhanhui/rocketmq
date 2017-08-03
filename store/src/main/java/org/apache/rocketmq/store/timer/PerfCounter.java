@@ -16,7 +16,7 @@ public class PerfCounter {
     private ThreadLocal<AtomicLong> lastTickMs =  new ThreadLocal<AtomicLong>() {
         @Override
         protected AtomicLong initialValue() {
-            return new AtomicLong(System.currentTimeMillis());
+            return new AtomicLong(System.nanoTime()/1000);
         }
     };
 
@@ -176,10 +176,10 @@ public class PerfCounter {
     }
 
     public void startTick() {
-        lastTickMs.get().set(System.currentTimeMillis());
+        lastTickMs.get().set(System.nanoTime()/1000);
     }
     public void endTick() {
-        flow(System.currentTimeMillis() -  lastTickMs.get().get());
+        flow(System.nanoTime()/1000 -  lastTickMs.get().get());
     }
 
     public static class Ticks {
