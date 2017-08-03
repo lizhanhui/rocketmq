@@ -582,6 +582,9 @@ public class BrokerController {
         if (this.messageStore != null) {
             this.messageStore.shutdown();
         }
+        if (null != this.timerMessageStore) {
+            this.timerMessageStore.shutdown();
+        }
 
         this.scheduledExecutorService.shutdown();
         try {

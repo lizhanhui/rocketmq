@@ -114,7 +114,7 @@ public class TimerMessageStoreTest {
             if (1 == dequeue) break;
             assertFalse(timerMessageStore.enqueue(0));
             if (-1 == dequeue) {
-                Thread.sleep(100);
+                Thread.sleep(200);
             }
         }
         assertTrue(1 == dequeue);
@@ -223,7 +223,6 @@ public class TimerMessageStoreTest {
         first.shutdown();
         TimerMessageStore second = createTimerMessageStore(base);
         second.load();
-        second.recover();
         assertEquals(10, second.getQueueOffset(0));
         assertTrue(second.getCurrReadTimeMs() >= System.currentTimeMillis() - 3000);
         second.start();
