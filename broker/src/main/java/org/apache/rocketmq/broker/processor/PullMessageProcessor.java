@@ -361,7 +361,7 @@ public class PullMessageProcessor implements NettyRequestProcessor {
         }
     }
 
-    public void excuteRequestWhenWakeup(final Channel channel, final RemotingCommand request) throws RemotingCommandException {
+    public void executeRequestWhenWakeup(final Channel channel, final RemotingCommand request) throws RemotingCommandException {
         Runnable run = new Runnable() {
             @Override
             public void run() {
