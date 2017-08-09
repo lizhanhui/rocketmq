@@ -17,8 +17,8 @@
   -->
 
 <assembly>
-    <id>broker</id>
-    <baseDirectory>alibaba-rocketmq</baseDirectory>
+    <id>all</id>
+    <includeBaseDirectory>false</includeBaseDirectory>
     <formats>
         <format>dir</format>
         <format>tar.gz</format>
@@ -27,14 +27,24 @@
         <fileSet>
             <includes>
                 <include>bin/*</include>
-                <include>conf/*</include>
+                <include>conf/**</include>
                 <include>benchmark/*</include>
-                <include>LICENSE</include>
-                <include>NOTICE</include>
+                <include>DISCLAIMER</include>
+                <include>README.md</include>
             </includes>
         </fileSet>
     </fileSets>
 
+    <files>
+        <file>
+            <source>LICENSE-BIN</source>
+            <destName>LICENSE</destName>
+        </file>
+        <file>
+            <source>NOTICE-BIN</source>
+            <destName>NOTICE</destName>
+        </file>
+    </files>
 
     <moduleSets>
         <moduleSet>

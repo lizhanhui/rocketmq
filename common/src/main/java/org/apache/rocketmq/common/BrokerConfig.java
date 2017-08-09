@@ -91,13 +91,16 @@ public class BrokerConfig {
     private boolean slaveReadEnable = false;
 
     private boolean disableConsumeIfConsumerReadSlowly = false;
-    private long consumerFallbehindThreshold = 1024 * 1024 * 1024 * 16;
+    private long consumerFallbehindThreshold = 1024L * 1024 * 1024 * 16;
 
     private long waitTimeMillsInSendQueue = 200;
 
     private long startAcceptSendRequestTimeStamp = 0L;
 
     private boolean traceOn = true;
+
+    //Reject the pull consumer instance to pull messages from broker.
+    private boolean rejectPullConsumerEnable = false;
 
     public static String localHostName() {
         try {
@@ -483,5 +486,13 @@ public class BrokerConfig {
 
     public void setCommercialBaseCount(int commercialBaseCount) {
         this.commercialBaseCount = commercialBaseCount;
+    }
+
+    public boolean isRejectPullConsumerEnable() {
+        return rejectPullConsumerEnable;
+    }
+
+    public void setRejectPullConsumerEnable(final boolean rejectPullConsumerEnable) {
+        this.rejectPullConsumerEnable = rejectPullConsumerEnable;
     }
 }
