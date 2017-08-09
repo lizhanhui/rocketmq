@@ -17,9 +17,17 @@
 
 package org.apache.rocketmq.client.consumer;
 
-public class PullMessageSelector extends MessageSelector {
+import org.apache.rocketmq.common.message.MessageDecoder;
+
+import java.util.HashMap;
+import java.util.Map;
+
+public class PullMessageSelector {
+
+    private String expression;
+
     protected PullMessageSelector(String expression) {
-        super(expression);
+        this.expression = expression;
     }
 
     public static PullMessageSelector byTag(String tag) {
@@ -36,12 +44,44 @@ public class PullMessageSelector extends MessageSelector {
     private boolean blockIfNotFound = false;
 
     /**
+     * self define properties, just an extend point.
+     */
+    private Map<String, String> properties = new HashMap<String, String>(4);
+
+    public void putProperty(String key, String value) {
+        if (key == null || value == null || key.trim() == "" || value.trim() == "") {
+            throw new IllegalArgumentException(
+                "Key and Value can not be null or empty string!"
+            );
+        }
+        this.properties.put(key, value);
+    }
+
+    public void putAllProperties(Map<String, String> puts) {
+        if (puts == null || puts.isEmpty()) {
+            return;
+        }
+        this.properties.putAll(puts);
+    }
+
+    public Map<String, String> getProperties() {
+        return properties;
+    }
+
+    public String getPropertiesStr() {
+        if (this.properties == null || this.properties.isEmpty()) {
+            return null;
+        }
+        return MessageDecoder.messageProperties2String(this.properties);
+    }
+
+    /**
      * from where to pull
      *
      * @param offset
      * @return
      */
-    public MessageSelector from(long offset) {
+    public PullMessageSelector from(long offset) {
         this.offset = offset;
         return this;
     }
@@ -52,7 +92,7 @@ public class PullMessageSelector extends MessageSelector {
      * @param maxNums
      * @return
      */
-    public MessageSelector count(int maxNums) {
+    public PullMessageSelector count(int maxNums) {
         this.maxNums = maxNums;
         return this;
     }
@@ -63,7 +103,7 @@ public class PullMessageSelector extends MessageSelector {
      * @param timeout
      * @return
      */
-    public MessageSelector timeout(long timeout) {
+    public PullMessageSelector timeout(long timeout) {
         this.timeout = timeout;
         return this;
     }
@@ -74,9 +114,13 @@ public class PullMessageSelector extends MessageSelector {
      * @param block
      * @return
      */
-    public MessageSelector blockIfNotFound(boolean block) {
+    public PullMessageSelector blockIfNotFound(boolean block) {
         this.blockIfNotFound = block;
         return this;
+    }
+
+    public String getExpression() {
+        return expression;
     }
 
     public long getOffset() {

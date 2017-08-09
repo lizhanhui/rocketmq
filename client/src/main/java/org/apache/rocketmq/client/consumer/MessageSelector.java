@@ -43,20 +43,19 @@ public class MessageSelector {
     /**
      * self define properties, just an extend point.
      */
-    private Map<String, String> properties;
+    private Map<String, String> properties = new HashMap<String, String>(4);
 
     public void putProperty(String key, String value) {
-        if (this.properties == null) {
-            this.properties = new HashMap<String, String>(4);
+        if (key == null || value == null || key.trim() == "" || value.trim() == "") {
+            throw new IllegalArgumentException(
+                "Key and Value can not be null or empty string!"
+            );
         }
         this.properties.put(key, value);
     }
 
     public void putAllProperties(Map<String, String> puts) {
-        if (this.properties == null) {
-            this.properties = new HashMap<String, String>(4);
-        }
-        if (puts == null) {
+        if (puts == null || puts.isEmpty()) {
             return;
         }
         this.properties.putAll(puts);
