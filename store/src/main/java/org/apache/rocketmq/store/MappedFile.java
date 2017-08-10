@@ -245,6 +245,31 @@ public class MappedFile extends ReferenceResource {
     }
 
     /**
+     * Content of data from offset to offset + length will be wrote to file.
+     *
+     * @param data
+     * @param offset The offset of the subarray to be used.
+     * @param length The length of the subarray to be used.
+     * @return
+     */
+    public boolean appendMessage(final byte[] data, final int offset, final int length) {
+        int currentPos = this.wrotePosition.get();
+
+        if ((currentPos + length) <= this.fileSize) {
+            try {
+                this.fileChannel.position(currentPos);
+                this.fileChannel.write(ByteBuffer.wrap(data, offset, length));
+            } catch (Throwable e) {
+                log.error("Error occurred when append message to mappedFile.", e);
+            }
+            this.wrotePosition.addAndGet(length);
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * @param flushLeastPages
      * @return The current flushed position
      */
@@ -402,7 +427,7 @@ public class MappedFile extends ReferenceResource {
     public boolean cleanup(final long currentRef) {
         if (this.isAvailable()) {
             log.error("this file[REF:" + currentRef + "] " + this.fileName
-                + " have not shutdown, stop unmaping.");
+                + " have not shutdown, stop unmapping.");
             return false;
         }
 
@@ -487,7 +512,7 @@ public class MappedFile extends ReferenceResource {
                 try {
                     Thread.sleep(0);
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    log.error("Interrupted", e);
                 }
             }
         }
