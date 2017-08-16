@@ -1158,4 +1158,8 @@ public class MQClientInstance {
     public NettyClientConfig getNettyClientConfig() {
         return nettyClientConfig;
     }
+
+    public ClientConfig getClientConfig() {
+        return clientConfig;
+    }
 }

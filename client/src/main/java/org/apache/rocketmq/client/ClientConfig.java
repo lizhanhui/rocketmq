@@ -25,6 +25,8 @@ import org.apache.rocketmq.remoting.common.RemotingUtil;
  */
 public class ClientConfig {
     public static final String SEND_MESSAGE_WITH_VIP_CHANNEL_PROPERTY = "com.rocketmq.sendMessageWithVIPChannel";
+    public static final String DECODE_READ_BODY = "com.rocketmq.read.body";
+    public static final String DECODE_DECOMPRESS_BODY = "com.rocketmq.decompress.body";
     private String namesrvAddr = System.getProperty(MixAll.NAMESRV_ADDR_PROPERTY, System.getenv(MixAll.NAMESRV_ADDR_ENV));
     private String clientIP = RemotingUtil.getLocalAddress();
     private String instanceName = System.getProperty("rocketmq.client.name", "DEFAULT");
@@ -44,6 +46,8 @@ public class ClientConfig {
     private boolean unitMode = false;
     private String unitName;
     private boolean vipChannelEnabled = Boolean.parseBoolean(System.getProperty(SEND_MESSAGE_WITH_VIP_CHANNEL_PROPERTY, "true"));
+    private boolean decodeReadBody = Boolean.parseBoolean(System.getProperty(DECODE_READ_BODY, "true"));
+    private boolean decodeDecompressBody = Boolean.parseBoolean(System.getProperty(DECODE_DECOMPRESS_BODY, "true"));
 
     public String buildMQClientId() {
         StringBuilder sb = new StringBuilder();
@@ -92,6 +96,8 @@ public class ClientConfig {
         this.unitMode = cc.unitMode;
         this.unitName = cc.unitName;
         this.vipChannelEnabled = cc.vipChannelEnabled;
+        this.decodeReadBody = cc.decodeReadBody;
+        this.decodeDecompressBody = cc.decodeDecompressBody;
     }
 
     public ClientConfig cloneClientConfig() {
@@ -106,6 +112,8 @@ public class ClientConfig {
         cc.unitMode = unitMode;
         cc.unitName = unitName;
         cc.vipChannelEnabled = vipChannelEnabled;
+        cc.decodeReadBody = decodeReadBody;
+        cc.decodeDecompressBody = decodeDecompressBody;
         return cc;
     }
 
@@ -173,12 +181,28 @@ public class ClientConfig {
         this.vipChannelEnabled = vipChannelEnabled;
     }
 
+    public boolean isDecodeReadBody() {
+        return decodeReadBody;
+    }
+
+    public void setDecodeReadBody(boolean decodeReadBody) {
+        this.decodeReadBody = decodeReadBody;
+    }
+
+    public boolean isDecodeDecompressBody() {
+        return decodeDecompressBody;
+    }
+
+    public void setDecodeDecompressBody(boolean decodeDecompressBody) {
+        this.decodeDecompressBody = decodeDecompressBody;
+    }
+
     @Override
     public String toString() {
         return "ClientConfig [namesrvAddr=" + namesrvAddr + ", clientIP=" + clientIP + ", instanceName=" + instanceName
             + ", clientCallbackExecutorThreads=" + clientCallbackExecutorThreads + ", pollNameServerInteval=" + pollNameServerInteval
             + ", heartbeatBrokerInterval=" + heartbeatBrokerInterval + ", persistConsumerOffsetInterval="
             + persistConsumerOffsetInterval + ", unitMode=" + unitMode + ", unitName=" + unitName + ", vipChannelEnabled="
-            + vipChannelEnabled + "]";
+            + vipChannelEnabled + ", decodeReadBody=" + decodeReadBody + ", decodeDecompressBody=" + decodeDecompressBody + "]";
     }
 }
