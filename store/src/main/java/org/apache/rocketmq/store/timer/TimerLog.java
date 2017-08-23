@@ -1,15 +1,10 @@
 package org.apache.rocketmq.store.timer;
 
-import java.io.File;
 import java.nio.ByteBuffer;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.rocketmq.common.constant.LoggerName;
-import org.apache.rocketmq.store.DefaultMessageStore;
 import org.apache.rocketmq.store.MappedFile;
 import org.apache.rocketmq.store.MappedFileQueue;
-import org.apache.rocketmq.store.MessageStore;
 import org.apache.rocketmq.store.SelectMappedBufferResult;
-import org.apache.rocketmq.store.config.MessageStoreConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,11 +13,14 @@ public class TimerLog {
     private final static int BLANK_MAGIC_CODE = 0xBBCCDDEE ^ 1880681586 + 8;
     private final static int MIN_BLANK_LEN = 4 + 4;
     public final static int UNIT_SIZE = 40;
+    public final static int UNIT_PRE_SIZE = 28;
     private final MappedFileQueue mappedFileQueue;
 
+    private final int fileSize;
+
     public TimerLog(final String storePath, final int fileSize) {
+        this.fileSize = fileSize;
         this.mappedFileQueue = new MappedFileQueue(storePath, fileSize, null);
-        //TODO check allocate mapped file service
     }
 
     public boolean load() {
@@ -72,6 +70,14 @@ public class TimerLog {
         return mappedFile.selectMappedBuffer((int) (offsetPy % mappedFile.getFileSize()));
     }
 
+
+    public SelectMappedBufferResult getWholeBuffer(long offsetPy) {
+        MappedFile mappedFile = mappedFileQueue.findMappedFileByOffset(offsetPy);
+        if (null == mappedFile) return null;
+        return mappedFile.selectMappedBuffer(0);
+    }
+
+
     public MappedFileQueue getMappedFileQueue() {
         return mappedFileQueue;
     }
@@ -81,12 +87,12 @@ public class TimerLog {
         //it seems do not need to call shutdown
     }
 
-    public void cleanExpiredFiles(long reservedTime) {
-        try {
-            this.mappedFileQueue.deleteExpiredFileByTime(reservedTime, 200, 120 * 1000,false);
-        } catch (Exception e) {
-            log.info("Error occurred in deleting expired files", e);
-        }
+    // be careful.
+    // if the format of timerlog changed, this offset has to be changed too
+    // so dose the batch writing
+    public int getOffsetForLastUnit() {
+
+       return fileSize - (fileSize - MIN_BLANK_LEN) % UNIT_SIZE - MIN_BLANK_LEN - UNIT_SIZE;
     }
 
 }

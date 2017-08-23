@@ -1,5 +1,6 @@
 package org.apache.rocketmq.store.timer;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -29,20 +30,31 @@ public class TimerLogTest {
     @Test
     public void testAppendRollSelectDelete() throws Exception {
         TimerLog timerLog =  createTimerLog(null);
-        long ret  = timerLog.append(new byte[512]);
-        assertEquals(0, ret);
-        byte[] data = new byte[510];
-        data[0] = 1;
-        long ret2  = timerLog.append(data);
-        assertEquals(1024, ret2);
-        assertEquals(2, timerLog.getMappedFileQueue().getMappedFiles().size());
-        SelectMappedBufferResult sbr = timerLog.getTimerMessage(ret2);
+        ByteBuffer byteBuffer = ByteBuffer.allocate(TimerLog.UNIT_SIZE);
+        byteBuffer.putInt(40);
+        byteBuffer.putLong(Long.MAX_VALUE);
+        byteBuffer.putInt(0);
+        byteBuffer.putLong(Long.MAX_VALUE);
+        byteBuffer.putInt(0);
+        byteBuffer.putLong(1000);
+        byteBuffer.putInt(10);
+        long ret = -1;
+        for (int i = 0; i < 10; i++) {
+            ret  = timerLog.append(byteBuffer.array());
+            assertEquals(i * TimerLog.UNIT_SIZE, ret);
+        }
+        for (int i = 0; i < 100; i++) {
+            timerLog.append(byteBuffer.array());
+        }
+        assertEquals(5, timerLog.getMappedFileQueue().getMappedFiles().size());
+        SelectMappedBufferResult sbr = timerLog.getTimerMessage(ret);
         assertNotNull(sbr);
-        assertEquals(data.length, sbr.getSize());
-        assertEquals(1, sbr.getByteBuffer().get());
+        assertEquals(TimerLog.UNIT_SIZE, sbr.getByteBuffer().getInt());
         sbr.release();
-        Thread.sleep(2000L);
-        timerLog.cleanExpiredFiles(1000);
+        SelectMappedBufferResult wholeSbr = timerLog.getWholeBuffer(ret);
+        assertEquals(0, wholeSbr.getStartOffset());
+        wholeSbr.release();
+        timerLog.getMappedFileQueue().deleteExpiredFileByOffsetForTimerLog(1024, timerLog.getOffsetForLastUnit(), TimerLog.UNIT_SIZE);
         assertEquals(1, timerLog.getMappedFileQueue().getMappedFiles().size());
     }
 

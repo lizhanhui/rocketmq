@@ -9,8 +9,8 @@ import org.slf4j.Logger;
 
 public class PerfCounter {
 
-    private final int MAX_NUM_PER_COUNT = 100 * 1000;
-    private final int MAX_MS_PER_COUNT = 5 * 1000;
+    private final int MAX_NUM_PER_COUNT = 1000 * 1000;
+    private final int MAX_MS_PER_COUNT = 10 * 1000;
     private long last = System.currentTimeMillis();
 
     private ThreadLocal<AtomicLong> lastTickMs =  new ThreadLocal<AtomicLong>() {

@@ -23,6 +23,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -71,7 +72,7 @@ public class TimerMessageStoreTest {
         storeHost = new InetSocketAddress(InetAddress.getLocalHost(), 8123);
         bornHost = new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0);
         MessageStoreConfig storeConfig = new MessageStoreConfig();
-        storeConfig.setMapedFileSizeCommitLog(1024 * 8);
+        storeConfig.setMapedFileSizeCommitLog(1024 * 1024);
         storeConfig.setMapedFileSizeConsumeQueue(1024 * 4);
         storeConfig.setMaxHashSlotNum(100);
         storeConfig.setMaxIndexNum(100 * 10);
@@ -83,6 +84,7 @@ public class TimerMessageStoreTest {
         assertTrue(load);
         messageStore.start();
     }
+
     public TimerMessageStore createTimerMessageStore(String rootDir) throws IOException {
         if (null == rootDir) {
             rootDir = StoreTestUtils.createBaseDir();
@@ -93,69 +95,41 @@ public class TimerMessageStoreTest {
         return timerMessageStore;
     }
 
-    @Test
-    public void testEnqueueAndDequeue() throws Exception {
-        String topic = "TimerTest01";
-        TimerMessageStore timerMessageStore  = createTimerMessageStore(null);
-        timerMessageStore.setState(TimerMessageStore.RUNNING);
-        long curr = (System.currentTimeMillis()/1000) * 1000;
-        long delayMs = curr + 1000;
-        MessageExtBrokerInner inner = buildMessage(delayMs, topic);
-        PutMessageResult putMessageResult = messageStore.putMessage(inner);
-        assertEquals(PutMessageStatus.PUT_OK, putMessageResult.getPutMessageStatus());
-        assertNotNull(getOneMessage(TimerMessageStore.TIMER_TOPIC, 0, 0, 1000));
-        timerMessageStore.updateOffset(0, 0);
-        timerMessageStore.updateCurrReadTimeMs(curr);
-        assertTrue(timerMessageStore.enqueue(0));
-        int retry = 20;
-        int dequeue = 0;
-        while (retry-- > 0) {
-            dequeue =  timerMessageStore.dequeue();
-            if (1 == dequeue) break;
-            assertFalse(timerMessageStore.enqueue(0));
-            if (-1 == dequeue) {
-                Thread.sleep(200);
-            }
-        }
-        assertTrue(1 == dequeue);
-        ByteBuffer msgBuff = getOneMessage(topic, 0, 0, 1000);
-        assertNotNull(msgBuff);
-        MessageExt msgExt = MessageDecoder.decode(msgBuff);
-        assertNotNull(msgExt);
-        long delayTime = Long.valueOf(msgExt.getProperty(TimerMessageStore.TIMER_DELAY_MS));
-        long dequeueTime = Long.valueOf(msgExt.getProperty(TimerMessageStore.TIMER_ENQUEUE_MS));
-        assertTrue(dequeueTime - delayTime - 1 <= 300);
-    }
-
 
     @Test
     public void testPutTimerMessage() throws Exception {
-        String topic = "TimerTest02";
+        String topic = "TimerTest01_";
         TimerMessageStore timerMessageStore  = createTimerMessageStore(null);
         timerMessageStore.load();
         timerMessageStore.start();
         long curr = (System.currentTimeMillis()/1000) * 1000;
-        long delayMs = curr + 1000;
+        long delayMs = curr + 2000;
         for (int i = 0; i < 10; i++) {
-            MessageExtBrokerInner inner = buildMessage(delayMs, topic);
-            PutMessageResult putMessageResult = messageStore.putMessage(inner);
-            assertEquals(PutMessageStatus.PUT_OK, putMessageResult.getPutMessageStatus());
+            for (int j = 0; j < 5; j++) {
+                MessageExtBrokerInner inner = buildMessage(delayMs, topic + i);
+                PutMessageResult putMessageResult = messageStore.putMessage(inner);
+                assertEquals(PutMessageStatus.PUT_OK, putMessageResult.getPutMessageStatus());
+            }
         }
         int index = 0;
         for (int i = 0; i < 10; i++) {
-            ByteBuffer msgBuff = getOneMessage(topic, 0, i, 3000);
-            assertNotNull(msgBuff);
-            MessageExt msgExt = MessageDecoder.decode(msgBuff);
-            assertNotNull(msgExt);
-            int tagIndex = Integer.valueOf(msgExt.getTags());
-            assertTrue(tagIndex > index);
-            index = tagIndex;
+            for (int j = 0; j < 5; j++) {
+                ByteBuffer msgBuff = getOneMessage(topic + i, 0, j, 3000);
+                assertNotNull(msgBuff);
+                MessageExt msgExt = MessageDecoder.decode(msgBuff);
+                assertNotNull(msgExt);
+                assertEquals(topic + i, msgExt.getTopic());
+                assertTrue( System.currentTimeMillis() - delayMs - 1000 < 200);
+                int tagIndex = Integer.valueOf(msgExt.getTags());
+                assertTrue(tagIndex > index);
+                index = tagIndex;
+            }
         }
     }
 
     @Test
     public void testPutExpiredTimerMessage() throws Exception {
-        String topic = "TimerTest03";
+        String topic = "TimerTest02";
         TimerMessageStore timerMessageStore  = createTimerMessageStore(null);
         timerMessageStore.load();
         timerMessageStore.start();
@@ -165,16 +139,18 @@ public class TimerMessageStoreTest {
             PutMessageResult putMessageResult = messageStore.putMessage(inner);
             assertEquals(PutMessageStatus.PUT_OK, putMessageResult.getPutMessageStatus());
         }
+        long curr = System.currentTimeMillis();
         for (int i = 0; i < 10; i++) {
             ByteBuffer msgBuff = getOneMessage(topic, 0, i, 1000);
             assertNotNull(msgBuff);
+            assertTrue(System.currentTimeMillis() - curr < 200);
         }
     }
 
 
     @Test
     public void testDeleteTimerMessage() throws Exception {
-        String topic = "TimerTest04";
+        String topic = "TimerTest03";
         TimerMessageStore timerMessageStore  = createTimerMessageStore(null);
         timerMessageStore.load();
         timerMessageStore.start();
@@ -204,27 +180,32 @@ public class TimerMessageStoreTest {
 
 
     @Test
-    public void testRecover() throws Exception {
-        String topic = "TimerTest03";
+    public void testStateAndRecover() throws Exception {
+        String topic = "TimerTest04";
         String base = StoreTestUtils.createBaseDir();
         TimerMessageStore first = createTimerMessageStore(base);
         first.load();
         first.start();
         long curr = (System.currentTimeMillis()/1000) * 1000;
-        long delayMs = curr + 1000;
+        long delayMs = curr + 3000;
         for (int i = 0; i < 10; i++) {
             MessageExtBrokerInner inner = buildMessage(delayMs, topic);
             PutMessageResult putMessageResult = messageStore.putMessage(inner);
             assertEquals(PutMessageStatus.PUT_OK, putMessageResult.getPutMessageStatus());
         }
-        Thread.sleep(1000);
-        assertEquals(10, first.getQueueOffset(0));
-        assertTrue(first.getCurrReadTimeMs() >= System.currentTimeMillis() - 1000);
+        Thread.sleep(2000);
+        assertEquals(10, first.getQueueOffset());
+        assertEquals(first.getCommitQueueOffset(), first.getCommitQueueOffset());
+        assertEquals(first.getCurrReadTimeMs(), first.getCommitReadTimeMs());
+        curr = (System.currentTimeMillis()/1000) * 1000;
+        assertTrue(first.getCurrReadTimeMs() == curr || first.getCurrReadTimeMs() == curr + 1000);
         first.shutdown();
         TimerMessageStore second = createTimerMessageStore(base);
-        second.load();
-        assertEquals(10, second.getQueueOffset(0));
-        assertTrue(second.getCurrReadTimeMs() >= System.currentTimeMillis() - 3000);
+        assertTrue(second.load());
+        assertEquals(10, second.getQueueOffset());
+        assertEquals(second.getCommitQueueOffset(), second.getQueueOffset());
+        assertEquals(second.getCurrReadTimeMs(), second.getCommitReadTimeMs());
+        assertEquals(first.getCommitReadTimeMs(), second.getCommitReadTimeMs());
         second.start();
         for (int i = 0; i < 10; i++) {
             ByteBuffer msgBuff = getOneMessage(topic, 0, i, 2000);
