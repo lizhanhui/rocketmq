@@ -56,6 +56,15 @@ public class BrokerStatsManager {
     public static final String GROUP_GET_FALL_TIME = "GROUP_GET_FALL_TIME";
     // Pull Message Latency
     public static final String GROUP_GET_LATENCY = "GROUP_GET_LATENCY";
+    // Consumer Register Time
+    public static final String CONSUMER_REGISTER_TIME = "CONSUMER_REGISTER_TIME";
+    // Producer Register Time
+    public static final String PRODUCER_REGISTER_TIME = "PRODUCER_REGISTER_TIME";
+    public static final String CHANNEL_ACTIVITY = "CHANNEL_ACTIVITY";
+    public static final String CHANNEL_ACTIVITY_CONNECT = "CONNECT";
+    public static final String CHANNEL_ACTIVITY_IDLE = "IDLE";
+    public static final String CHANNEL_ACTIVITY_EXCEPTION = "EXCEPTION";
+    public static final String CHANNEL_ACTIVITY_CLOSE = "CLOSE";
 
     /**
      * read disk follow stats
@@ -94,6 +103,11 @@ public class BrokerStatsManager {
         this.statsTable.put(COMMERCIAL_RCV_EPOLLS, new StatsItemSet(COMMERCIAL_RCV_EPOLLS, this.commercialExecutor, COMMERCIAL_LOG));
         this.statsTable.put(COMMERCIAL_SNDBCK_TIMES, new StatsItemSet(COMMERCIAL_SNDBCK_TIMES, this.commercialExecutor, COMMERCIAL_LOG));
         this.statsTable.put(COMMERCIAL_PERM_FAILURES, new StatsItemSet(COMMERCIAL_PERM_FAILURES, this.commercialExecutor, COMMERCIAL_LOG));
+
+        this.statsTable.put(CONSUMER_REGISTER_TIME, new StatsItemSet(CONSUMER_REGISTER_TIME, this.scheduledExecutorService, log));
+        this.statsTable.put(PRODUCER_REGISTER_TIME, new StatsItemSet(PRODUCER_REGISTER_TIME, this.scheduledExecutorService, log));
+
+        this.statsTable.put(CHANNEL_ACTIVITY, new StatsItemSet(CHANNEL_ACTIVITY, this.scheduledExecutorService, log));
     }
 
     public MomentStatsItemSet getMomentStatsItemSetFallSize() {
@@ -120,10 +134,36 @@ public class BrokerStatsManager {
         return null;
     }
 
+    public void incConsumerRegisterTime(final int incValue) {
+        this.statsTable.get(CONSUMER_REGISTER_TIME).addValue(this.clusterName, incValue, 1);
+    }
+
+    public void incProducerRegisterTime(final int incValue) {
+        this.statsTable.get(PRODUCER_REGISTER_TIME).addValue(this.clusterName, incValue, 1);
+    }
+
+    public void incChannelConnectNum() {
+        this.statsTable.get(CHANNEL_ACTIVITY).addValue(CHANNEL_ACTIVITY_CONNECT, 1, 1);
+    }
+
+    public void incChannelCloseNum() {
+        this.statsTable.get(CHANNEL_ACTIVITY).addValue(CHANNEL_ACTIVITY_CLOSE, 1, 1);
+    }
+
+    public void incChannelExceptionNum() {
+        this.statsTable.get(CHANNEL_ACTIVITY).addValue(CHANNEL_ACTIVITY_EXCEPTION, 1, 1);
+    }
+
+    public void incChannelIdleNum() {
+        this.statsTable.get(CHANNEL_ACTIVITY).addValue(CHANNEL_ACTIVITY_IDLE, 1, 1);
+    }
+
     public void incTopicPutNums(final String topic) {
         this.statsTable.get(TOPIC_PUT_NUMS).addValue(topic, 1, 1);
     }
-
+    public void incTopicPutNums(final String topic, int num, int times) {
+        this.statsTable.get(TOPIC_PUT_NUMS).addValue(topic, num, times);
+    }
     public void incTopicPutSize(final String topic, final int size) {
         this.statsTable.get(TOPIC_PUT_SIZE).addValue(topic, size, 1);
     }
@@ -154,7 +194,9 @@ public class BrokerStatsManager {
     public void incBrokerPutNums() {
         this.statsTable.get(BROKER_PUT_NUMS).getAndCreateStatsItem(this.clusterName).getValue().incrementAndGet();
     }
-
+    public void incBrokerPutNums(final int incValue) {
+        this.statsTable.get(BROKER_PUT_NUMS).getAndCreateStatsItem(this.clusterName).getValue().addAndGet(incValue);
+    }
     public void incBrokerGetNums(final int incValue) {
         this.statsTable.get(BROKER_GET_NUMS).getAndCreateStatsItem(this.clusterName).getValue().addAndGet(incValue);
     }

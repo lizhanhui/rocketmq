@@ -17,24 +17,29 @@
 
 package org.apache.rocketmq.client.consumer;
 
+import org.apache.rocketmq.common.filter.ExpressionType;
 import org.apache.rocketmq.common.message.MessageDecoder;
 
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ *
+ * Message selector: select message at server.
+ * <p>
+ *     Now, support:
+ *     <li>Tag: {@link org.apache.rocketmq.common.filter.ExpressionType#TAG}
+ *     </li>
+ *     <li>SQL92: {@link org.apache.rocketmq.common.filter.ExpressionType#SQL92}
+ *     </li>
+ * </p>
+ */
 public class MessageSelector {
 
-    protected MessageSelector(String expression) {
-        this.expression = expression;
-    }
-
-    public static MessageSelector byTag(String tag) {
-        return new MessageSelector(tag);
-    }
-
-    public static MessageSelector all() {
-        return new MessageSelector("*");
-    }
+    /**
+     * @see org.apache.rocketmq.common.filter.ExpressionType
+     */
+    private String type;
 
     /**
      * expression content.
@@ -44,6 +49,39 @@ public class MessageSelector {
      * self define properties, just an extend point.
      */
     private Map<String, String> properties = new HashMap<String, String>(4);
+
+    private MessageSelector(String type, String expression) {
+        this.type = type;
+        this.expression = expression;
+    }
+
+    /**
+     * Use SLQ92 to select message.
+     *
+     * @param sql if null or empty, will be treated as select all message.
+     * @return
+     */
+    public static MessageSelector bySql(String sql) {
+        return new MessageSelector(ExpressionType.SQL92, sql);
+    }
+
+    /**
+     * Use tag to select message.
+     *
+     * @param tag if null or empty or "*", will be treated as select all message.
+     * @return
+     */
+    public static MessageSelector byTag(String tag) {
+        return new MessageSelector(ExpressionType.TAG, tag);
+    }
+
+    public String getExpressionType() {
+        return type;
+    }
+
+    public String getExpression() {
+        return expression;
+    }
 
     public void putProperty(String key, String value) {
         if (key == null || value == null || key.trim() == "" || value.trim() == "") {
@@ -63,10 +101,6 @@ public class MessageSelector {
 
     public Map<String, String> getProperties() {
         return properties;
-    }
-
-    public String getExpression() {
-        return expression;
     }
 
     public String getPropertiesStr() {

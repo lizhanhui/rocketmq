@@ -66,6 +66,24 @@ public class FilterAPI {
         return subscriptionData;
     }
 
+    public static SubscriptionData build(final String topic, final String subString,
+                                         final String type) throws Exception {
+        if (ExpressionType.TAG.equals(type) || type == null) {
+            return buildSubscriptionData(null, topic, subString);
+        }
+
+        if (subString == null || subString.length() < 1) {
+            throw new IllegalArgumentException("Expression can't be null! " + type);
+        }
+
+        SubscriptionData subscriptionData = new SubscriptionData();
+        subscriptionData.setTopic(topic);
+        subscriptionData.setSubString(subString);
+        subscriptionData.setExpressionType(type);
+
+        return subscriptionData;
+    }
+
     public static SubscriptionData buildSubscriptionData(
         final String consumerGroup, String topic,
         String subString, String properties) throws Exception {
