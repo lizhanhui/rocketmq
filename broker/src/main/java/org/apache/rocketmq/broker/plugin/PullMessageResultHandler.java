@@ -23,6 +23,7 @@ import org.apache.rocketmq.common.protocol.heartbeat.SubscriptionData;
 import org.apache.rocketmq.common.subscription.SubscriptionGroupConfig;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 import org.apache.rocketmq.store.GetMessageResult;
+import org.apache.rocketmq.store.MessageFilter;
 
 public interface PullMessageResultHandler {
 
@@ -36,6 +37,7 @@ public interface PullMessageResultHandler {
      * @param subscriptionData sub data
      * @param subscriptionGroupConfig sub config
      * @param brokerAllowSuspend brokerAllowSuspend
+     * @param messageFilter store message filter
      * @param response response
      * @return response or null
      */
@@ -46,5 +48,6 @@ public interface PullMessageResultHandler {
                            final SubscriptionData subscriptionData,
                            final SubscriptionGroupConfig subscriptionGroupConfig,
                            final boolean brokerAllowSuspend,
+                           final MessageFilter messageFilter,
                            final RemotingCommand response);
 }

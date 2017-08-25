@@ -553,15 +553,6 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
         this.defaultMQPushConsumerImpl.subscribe(topic, messageSelector);
     }
 
-    /**
-     * Un-subscribe the specified topic from subscription.
-     * @param topic message topic
-     */
-    @Override
-    public void subscribe(final String topic, final MessageSelector messageSelector) throws MQClientException {
-        this.defaultMQPushConsumerImpl.subscribe(topic, messageSelector);
-    }
-
     @Override
     public void unsubscribe(String topic) {
         this.defaultMQPushConsumerImpl.unsubscribe(topic);

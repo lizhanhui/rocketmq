@@ -848,31 +848,9 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                 return;
             }
 
-            SubscriptionData subscriptionData = FilterAPI.buildSubscriptionData(
-                this.defaultMQPushConsumer.getConsumerGroup(),
-                topic,
-                messageSelector.getExpression()
-            );
-            subscriptionData.setProperties(messageSelector.getProperties());
-
-            this.rebalanceImpl.getSubscriptionInner().put(topic, subscriptionData);
-            if (this.mQClientFactory != null) {
-                this.mQClientFactory.sendHeartbeatToAllBrokerWithLock();
-            }
-        } catch (Exception e) {
-            throw new MQClientException("subscription exception", e);
-        }
-    }
-
-    public void subscribe(final String topic, final MessageSelector messageSelector) throws MQClientException {
-        try {
-            if (messageSelector == null) {
-                subscribe(topic, SubscriptionData.SUB_ALL);
-                return;
-            }
-
             SubscriptionData subscriptionData = FilterAPI.build(topic,
-                messageSelector.getExpression(), messageSelector.getExpressionType());
+                messageSelector.getExpression(), messageSelector.getExpressionType(), null);
+            subscriptionData.setProperties(messageSelector.getProperties());
 
             this.rebalanceImpl.getSubscriptionInner().put(topic, subscriptionData);
             if (this.mQClientFactory != null) {

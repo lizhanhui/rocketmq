@@ -223,7 +223,8 @@ public class PullAPIWrapper {
         final long brokerSuspendMaxTimeMillis,
         final long timeoutMillis,
         final CommunicationMode communicationMode,
-        final PullCallback pullCallback
+        final PullCallback pullCallback,
+        final String subProperties
     ) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
         return pullKernelImpl(
             mq,
@@ -237,7 +238,7 @@ public class PullAPIWrapper {
             timeoutMillis,
             communicationMode,
             pullCallback,
-            null
+            subProperties
         );
     }
 

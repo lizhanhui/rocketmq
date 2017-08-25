@@ -27,7 +27,6 @@ import org.apache.rocketmq.broker.filter.ConsumerFilterData;
 import org.apache.rocketmq.broker.filter.ConsumerFilterManager;
 import org.apache.rocketmq.broker.filter.ExpressionForRetryMessageFilter;
 import org.apache.rocketmq.broker.filter.ExpressionMessageFilter;
-import org.apache.rocketmq.broker.longpolling.PullRequest;
 import org.apache.rocketmq.broker.mqtrace.ConsumeMessageContext;
 import org.apache.rocketmq.broker.mqtrace.ConsumeMessageHook;
 import org.apache.rocketmq.broker.plugin.PullMessageResultHandler;
@@ -52,9 +51,7 @@ import org.apache.rocketmq.remoting.netty.NettyRequestProcessor;
 import org.apache.rocketmq.remoting.netty.RequestTask;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 import org.apache.rocketmq.store.GetMessageResult;
-import org.apache.rocketmq.store.MessageExtBrokerInner;
 import org.apache.rocketmq.store.MessageFilter;
-import org.apache.rocketmq.store.PutMessageResult;
 import org.apache.rocketmq.store.config.BrokerRole;
 import org.apache.rocketmq.store.stats.BrokerStatsManager;
 import org.slf4j.Logger;
@@ -143,7 +140,7 @@ public class PullMessageProcessor implements NettyRequestProcessor {
         if (hasSubscriptionFlag) {
             try {
                 subscriptionData = FilterAPI.build(
-                    requestHeader.getTopic(), requestHeader.getSubscription(), requestHeader.getExpressionType()
+                    requestHeader.getTopic(), requestHeader.getSubscription(), requestHeader.getExpressionType(), requestHeader.getSubProperties()
                 );
                 if (!ExpressionType.isTagType(subscriptionData.getExpressionType())) {
                     consumerFilterData = ConsumerFilterManager.build(
@@ -152,8 +149,6 @@ public class PullMessageProcessor implements NettyRequestProcessor {
                     );
                     assert consumerFilterData != null;
                 }
-                subscriptionData = FilterAPI.buildSubscriptionData(requestHeader.getConsumerGroup(), requestHeader.getTopic(),
-                    requestHeader.getSubscription(), requestHeader.getSubProperties());
             } catch (Exception e) {
                 log.warn("Parse the consumer's subscription[{}] failed, group: {}", requestHeader.getSubscription(), //
                     requestHeader.getConsumerGroup());
@@ -379,6 +374,7 @@ public class PullMessageProcessor implements NettyRequestProcessor {
                     subscriptionData,
                     subscriptionGroupConfig,
                     brokerAllowSuspend,
+                    messageFilter,
                     response
             );
         } else {

@@ -67,27 +67,21 @@ public class FilterAPI {
     }
 
     public static SubscriptionData build(final String topic, final String subString,
-                                         final String type) throws Exception {
+                                         final String type, final String properties) throws Exception {
+        SubscriptionData subscriptionData;
+
         if (ExpressionType.TAG.equals(type) || type == null) {
-            return buildSubscriptionData(null, topic, subString);
+            subscriptionData = buildSubscriptionData(null, topic, subString);
+        } else {
+            if (subString == null || subString.length() < 1) {
+                throw new IllegalArgumentException("Expression can't be null! " + type);
+            }
+
+            subscriptionData = new SubscriptionData();
+            subscriptionData.setTopic(topic);
+            subscriptionData.setSubString(subString);
+            subscriptionData.setExpressionType(type);
         }
-
-        if (subString == null || subString.length() < 1) {
-            throw new IllegalArgumentException("Expression can't be null! " + type);
-        }
-
-        SubscriptionData subscriptionData = new SubscriptionData();
-        subscriptionData.setTopic(topic);
-        subscriptionData.setSubString(subString);
-        subscriptionData.setExpressionType(type);
-
-        return subscriptionData;
-    }
-
-    public static SubscriptionData buildSubscriptionData(
-        final String consumerGroup, String topic,
-        String subString, String properties) throws Exception {
-        SubscriptionData subscriptionData = buildSubscriptionData(consumerGroup, topic, subString);
 
         if (properties != null) {
             subscriptionData.setProperties(MessageDecoder.string2messageProperties(properties));

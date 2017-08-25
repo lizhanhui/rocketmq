@@ -41,6 +41,7 @@ import org.apache.rocketmq.remoting.common.RemotingUtil;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 import org.apache.rocketmq.store.GetMessageResult;
 import org.apache.rocketmq.store.MessageExtBrokerInner;
+import org.apache.rocketmq.store.MessageFilter;
 import org.apache.rocketmq.store.config.BrokerRole;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,7 +51,7 @@ import java.util.List;
 
 public class DefaultPullMessageResultHandler implements PullMessageResultHandler {
 
-    protected static final Logger LOG = LoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
+    protected static final Logger log = LoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
     protected final BrokerController brokerController;
 
     public DefaultPullMessageResultHandler(final BrokerController brokerController) {
@@ -65,6 +66,7 @@ public class DefaultPullMessageResultHandler implements PullMessageResultHandler
                                   final SubscriptionData subscriptionData,
                                   final SubscriptionGroupConfig subscriptionGroupConfig,
                                   final boolean brokerAllowSuspend,
+                                  final MessageFilter messageFilter,
                                   RemotingCommand response) {
 
         final PullMessageResponseHeader responseHeader = (PullMessageResponseHeader) response.readCustomHeader();
@@ -96,12 +98,12 @@ public class DefaultPullMessageResultHandler implements PullMessageResultHandler
                             public void operationComplete(ChannelFuture future) throws Exception {
                                 getMessageResult.release();
                                 if (!future.isSuccess()) {
-                                    LOG.error("Fail to transfer messages from page cache to {}", channel.remoteAddress(), future.cause());
+                                    log.error("Fail to transfer messages from page cache to {}", channel.remoteAddress(), future.cause());
                                 }
                             }
                         });
                     } catch (Throwable e) {
-                        LOG.error("Error occurred when transferring messages from page cache", e);
+                        log.error("Error occurred when transferring messages from page cache", e);
                         getMessageResult.release();
                     }
                     return null;
@@ -120,7 +122,7 @@ public class DefaultPullMessageResultHandler implements PullMessageResultHandler
                     long offset = requestHeader.getQueueOffset();
                     int queueId = requestHeader.getQueueId();
                     PullRequest pullRequest = new PullRequest(request, channel, pollingTimeMills,
-                            this.brokerController.getMessageStore().now(), offset, subscriptionData);
+                            this.brokerController.getMessageStore().now(), offset, subscriptionData, messageFilter);
                     this.brokerController.getPullRequestHoldService().suspendPullRequest(topic, queueId, pullRequest);
                     return null;
                 }
@@ -140,21 +142,21 @@ public class DefaultPullMessageResultHandler implements PullMessageResultHandler
                     event.setOffsetRequest(requestHeader.getQueueOffset());
                     event.setOffsetNew(getMessageResult.getNextBeginOffset());
                     this.generateOffsetMovedEvent(event);
-                    LOG.warn(
+                    log.warn(
                             "PULL_OFFSET_MOVED:correction offset. topic={}, groupId={}, requestOffset={}, newOffset={}, suggestBrokerId={}",
                             requestHeader.getTopic(), requestHeader.getConsumerGroup(), event.getOffsetRequest(), event.getOffsetNew(),
                             responseHeader.getSuggestWhichBrokerId());
                 } else {
                     responseHeader.setSuggestWhichBrokerId(subscriptionGroupConfig.getBrokerId());
                     response.setCode(ResponseCode.PULL_RETRY_IMMEDIATELY);
-                    LOG.warn("PULL_OFFSET_MOVED:none correction. topic={}, groupId={}, requestOffset={}, suggestBrokerId={}",
+                    log.warn("PULL_OFFSET_MOVED:none correction. topic={}, groupId={}, requestOffset={}, suggestBrokerId={}",
                             requestHeader.getTopic(), requestHeader.getConsumerGroup(), requestHeader.getQueueOffset(),
                             responseHeader.getSuggestWhichBrokerId());
                 }
 
                 break;
             default:
-                LOG.warn("[BUG] impossible result code of get message: {}", response.getCode());
+                log.warn("[BUG] impossible result code of get message: {}", response.getCode());
                 assert false;
         }
 
@@ -203,7 +205,7 @@ public class DefaultPullMessageResultHandler implements PullMessageResultHandler
 
             this.brokerController.getMessageStore().putMessage(msgInner);
         } catch (Exception e) {
-            LOG.warn(String.format("GenerateOffsetMovedEvent Exception, %s", event.toString()), e);
+            log.warn(String.format("GenerateOffsetMovedEvent Exception, %s", event.toString()), e);
         }
     }
 }
