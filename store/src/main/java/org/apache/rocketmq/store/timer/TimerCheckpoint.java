@@ -16,26 +16,35 @@
  */
 package org.apache.rocketmq.store.timer;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.nio.MappedByteBuffer;
-import java.nio.channels.FileChannel;
-import java.nio.channels.FileChannel.MapMode;
 import org.apache.rocketmq.common.UtilAll;
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.store.MappedFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileChannel.MapMode;
+
 public class TimerCheckpoint {
     private static final Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
     private final RandomAccessFile randomAccessFile;
     private final FileChannel fileChannel;
     private final MappedByteBuffer mappedByteBuffer;
-    private volatile long lastReadTimeMs = 0;
+    private volatile long lastReadTimeMs = 0; //if it is slave, need to read from master
     private volatile long lastTimerLogFlushPos = 0;
     private volatile long lastTimerQueueOffset = 0;
+    private volatile long masterTimerQueueOffset = 0; // read from master
+
+    public TimerCheckpoint() {
+        this.randomAccessFile = null;
+        this.fileChannel = null;
+        this.mappedByteBuffer = null;
+    }
 
     public TimerCheckpoint(final String scpPath) throws IOException {
         File file = new File(scpPath);
@@ -51,17 +60,23 @@ public class TimerCheckpoint {
             this.lastReadTimeMs = this.mappedByteBuffer.getLong(0);
             this.lastTimerLogFlushPos = this.mappedByteBuffer.getLong(8);
             this.lastTimerQueueOffset = this.mappedByteBuffer.getLong(16);
+            this.masterTimerQueueOffset = this.mappedByteBuffer.getLong(24);
 
             log.info("timer checkpoint file lastReadTimeMs " + this.lastReadTimeMs + ", "
                 + UtilAll.timeMillisToHumanString(this.lastReadTimeMs));
             log.info("timer checkpoint file lastTimerLogFlushPos " + this.lastTimerLogFlushPos);
             log.info("timer checkpoint file lastTimerQueueOffset " + this.lastTimerQueueOffset);
+            log.info("timer checkpoint file masterTimerQueueOffset " + this.masterTimerQueueOffset);
         } else {
             log.info("timer checkpoint file not exists, " + scpPath);
         }
     }
 
     public void shutdown() {
+        if (null == this.mappedByteBuffer) {
+            return;
+        }
+
         this.flush();
 
         // unmap mappedByteBuffer
@@ -75,15 +90,41 @@ public class TimerCheckpoint {
     }
 
     public void flush() {
+        if (null == this.mappedByteBuffer) {
+            return;
+        }
         this.mappedByteBuffer.putLong(0, this.lastReadTimeMs);
         this.mappedByteBuffer.putLong(8, this.lastTimerLogFlushPos);
         this.mappedByteBuffer.putLong(16, this.lastTimerQueueOffset);
+        this.mappedByteBuffer.putLong(24, this.masterTimerQueueOffset);
         this.mappedByteBuffer.force();
     }
 
     public long getLastReadTimeMs() {
         return lastReadTimeMs;
     }
+
+    public static byte[] encode(TimerCheckpoint another) {
+        ByteBuffer byteBuffer =  ByteBuffer.allocate(32);
+        byteBuffer.putLong(another.getLastReadTimeMs());
+        byteBuffer.putLong(another.getLastTimerLogFlushPos());
+        byteBuffer.putLong(another.getLastTimerQueueOffset());
+        byteBuffer.putLong(another.getMasterTimerQueueOffset());
+        return byteBuffer.array();
+    }
+
+    public static TimerCheckpoint decode(byte[]  data) {
+        ByteBuffer byteBuffer =  ByteBuffer.wrap(data);
+        TimerCheckpoint tmp = new TimerCheckpoint();
+        tmp.setLastReadTimeMs(byteBuffer.getLong());
+        tmp.setLastTimerLogFlushPos(byteBuffer.getLong());
+        tmp.setLastTimerQueueOffset(byteBuffer.getLong());
+        tmp.setMasterTimerQueueOffset(byteBuffer.getLong());
+        return tmp;
+    }
+
+
+
 
     public void setLastReadTimeMs(long lastReadTimeMs) {
         this.lastReadTimeMs = lastReadTimeMs;
@@ -103,5 +144,13 @@ public class TimerCheckpoint {
 
     public void setLastTimerQueueOffset(long lastTimerQueueOffset) {
         this.lastTimerQueueOffset = lastTimerQueueOffset;
+    }
+
+    public long getMasterTimerQueueOffset() {
+        return masterTimerQueueOffset;
+    }
+
+    public void setMasterTimerQueueOffset(final long masterTimerQueueOffset) {
+        this.masterTimerQueueOffset = masterTimerQueueOffset;
     }
 }

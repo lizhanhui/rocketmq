@@ -25,6 +25,7 @@ import org.apache.rocketmq.common.protocol.body.ConsumerOffsetSerializeWrapper;
 import org.apache.rocketmq.common.protocol.body.SubscriptionGroupWrapper;
 import org.apache.rocketmq.common.protocol.body.TopicConfigSerializeWrapper;
 import org.apache.rocketmq.store.config.StorePathConfigHelper;
+import org.apache.rocketmq.store.timer.TimerCheckpoint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,6 +51,7 @@ public class SlaveSynchronize {
         this.syncConsumerOffset();
         this.syncDelayOffset();
         this.syncSubscriptionGroupConfig();
+        this.syncTimerCheckPoint();
     }
 
     private void syncTopicConfig() {
@@ -135,6 +137,22 @@ public class SlaveSynchronize {
                         subscriptionWrapper.getSubscriptionGroupTable());
                     subscriptionGroupManager.persist();
                     log.info("Update slave Subscription Group from master, {}", masterAddrBak);
+                }
+            } catch (Exception e) {
+                log.error("SyncSubscriptionGroup Exception, {}", masterAddrBak, e);
+            }
+        }
+    }
+
+
+    private void syncTimerCheckPoint() {
+        String masterAddrBak = this.masterAddr;
+        if (masterAddrBak != null) {
+            try {
+                TimerCheckpoint checkpoint = this.brokerController.getBrokerOuterAPI().getTimerCheckPoint(masterAddrBak);
+                if (null != this.brokerController.getTimerCheckpoint()) {
+                    this.brokerController.getTimerCheckpoint().setLastReadTimeMs(checkpoint.getLastReadTimeMs());
+                    this.brokerController.getTimerCheckpoint().setMasterTimerQueueOffset(checkpoint.getMasterTimerQueueOffset());
                 }
             } catch (Exception e) {
                 log.error("SyncSubscriptionGroup Exception, {}", masterAddrBak, e);
