@@ -23,14 +23,33 @@ public class TimerCheckPointTest {
         assertEquals(0, first.getLastReadTimeMs());
         assertEquals(0, first.getLastTimerLogFlushPos());
         assertEquals(0, first.getLastTimerQueueOffset());
+        assertEquals(0, first.getMasterTimerQueueOffset());
         first.setLastReadTimeMs(1000);
         first.setLastTimerLogFlushPos(1100);
         first.setLastTimerQueueOffset(1200);
+        first.setMasterTimerQueueOffset(1300);
         first.shutdown();
         TimerCheckpoint second =  new TimerCheckpoint(baseSrc);
         assertEquals(1000, second.getLastReadTimeMs());
         assertEquals(1100, second.getLastTimerLogFlushPos());
         assertEquals(1200, second.getLastTimerQueueOffset());
+        assertEquals(1300, second.getMasterTimerQueueOffset());
+    }
+
+
+    @Test
+    public void testEncodeDecode() throws IOException {
+        TimerCheckpoint first = new TimerCheckpoint();
+        first.setLastReadTimeMs(1000);
+        first.setLastTimerLogFlushPos(1100);
+        first.setLastTimerQueueOffset(1200);
+        first.setMasterTimerQueueOffset(1300);
+
+        TimerCheckpoint second = TimerCheckpoint.decode(TimerCheckpoint.encode(first));
+        assertEquals(first.getLastReadTimeMs(), second.getLastReadTimeMs());
+        assertEquals(first.getLastTimerLogFlushPos(), second.getLastTimerLogFlushPos());
+        assertEquals(first.getLastTimerQueueOffset(), second.getLastTimerQueueOffset());
+        assertEquals(first.getMasterTimerQueueOffset(), second.getMasterTimerQueueOffset());
     }
 
     @After
