@@ -55,7 +55,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class TimerMessageStoreTest {
-    private final String StoreMessage = "Once, there was a chance for me!";
+    private final byte[] msgBody =  new byte[1024];
     private MessageStore messageStore;
     private SocketAddress bornHost;
     private SocketAddress storeHost;
@@ -64,6 +64,8 @@ public class TimerMessageStoreTest {
     private List<TimerMessageStore> timerStores = new ArrayList<>();
     private AtomicInteger counter = new AtomicInteger(0);
 
+    private MessageStoreConfig storeConfig;
+
 
     @Before
     public void init() throws Exception {
@@ -71,14 +73,15 @@ public class TimerMessageStoreTest {
         baseDirs.add(baseDir);
         storeHost = new InetSocketAddress(InetAddress.getLocalHost(), 8123);
         bornHost = new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0);
-        MessageStoreConfig storeConfig = new MessageStoreConfig();
-        storeConfig.setMapedFileSizeCommitLog(1024 * 1024);
-        storeConfig.setMapedFileSizeConsumeQueue(1024 * 4);
+        storeConfig = new MessageStoreConfig();
+        storeConfig.setMapedFileSizeCommitLog(1024 * 20);
+        storeConfig.setMapedFileSizeTimerLog(1024);
+        storeConfig.setMapedFileSizeConsumeQueue(1024);
         storeConfig.setMaxHashSlotNum(100);
         storeConfig.setMaxIndexNum(100 * 10);
         storeConfig.setStorePathRootDir(baseDir);
         storeConfig.setStorePathCommitLog(baseDir + File.separator + "commitlog");
-        storeConfig.setFlushDiskType(FlushDiskType.SYNC_FLUSH);
+        storeConfig.setFlushDiskType(FlushDiskType.ASYNC_FLUSH);
         messageStore = new DefaultMessageStore(storeConfig, new BrokerStatsManager("TimerTest"), new MyMessageArrivingListener(), new BrokerConfig());
         boolean load = messageStore.load();
         assertTrue(load);
@@ -89,7 +92,8 @@ public class TimerMessageStoreTest {
         if (null == rootDir) {
             rootDir = StoreTestUtils.createBaseDir();
         }
-        TimerMessageStore timerMessageStore = new TimerMessageStore(messageStore, rootDir, 8 * 1024);
+        TimerCheckpoint timerCheckpoint =  new TimerCheckpoint(TimerMessageStore.getTimerCheckPath(rootDir));
+        TimerMessageStore timerMessageStore = new TimerMessageStore(messageStore, storeConfig, timerCheckpoint);
         baseDirs.add(rootDir);
         timerStores.add(timerMessageStore);
         return timerMessageStore;
@@ -186,15 +190,16 @@ public class TimerMessageStoreTest {
         TimerMessageStore first = createTimerMessageStore(base);
         first.load();
         first.start();
+        int msgNum =  500;
         long curr = (System.currentTimeMillis()/1000) * 1000;
         long delayMs = curr + 3000;
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < msgNum; i++) {
             MessageExtBrokerInner inner = buildMessage(delayMs, topic);
             PutMessageResult putMessageResult = messageStore.putMessage(inner);
             assertEquals(PutMessageStatus.PUT_OK, putMessageResult.getPutMessageStatus());
         }
         Thread.sleep(2000);
-        assertEquals(10, first.getQueueOffset());
+        assertEquals(msgNum, first.getQueueOffset());
         assertEquals(first.getCommitQueueOffset(), first.getCommitQueueOffset());
         assertEquals(first.getCurrReadTimeMs(), first.getCommitReadTimeMs());
         curr = (System.currentTimeMillis()/1000) * 1000;
@@ -202,12 +207,12 @@ public class TimerMessageStoreTest {
         first.shutdown();
         TimerMessageStore second = createTimerMessageStore(base);
         assertTrue(second.load());
-        assertEquals(10, second.getQueueOffset());
+        assertEquals(msgNum, second.getQueueOffset());
         assertEquals(second.getCommitQueueOffset(), second.getQueueOffset());
         assertEquals(second.getCurrReadTimeMs(), second.getCommitReadTimeMs());
         assertEquals(first.getCommitReadTimeMs(), second.getCommitReadTimeMs());
         second.start();
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < msgNum; i++) {
             ByteBuffer msgBuff = getOneMessage(topic, 0, i, 2000);
             assertNotNull(msgBuff);
         }
@@ -236,7 +241,7 @@ public class TimerMessageStoreTest {
         msg.setTags(counter.incrementAndGet() + "");
         msg.setKeys("timer");
         MessageAccessor.putProperty(msg, TimerMessageStore.TIMER_DELAY_MS, delayedMs + "");
-        msg.setBody(StoreMessage.getBytes());
+        msg.setBody(msgBody);
         msg.setKeys(String.valueOf(System.currentTimeMillis()));
         msg.setQueueId(0);
         msg.setBornTimestamp(System.currentTimeMillis());

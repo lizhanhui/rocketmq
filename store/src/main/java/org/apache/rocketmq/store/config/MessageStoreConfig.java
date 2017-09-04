@@ -144,6 +144,9 @@ public class MessageStoreConfig {
     private boolean fastFailIfNoBufferInStorePool = false;
 
 
+    private int mapedFileSizeTimerLog = 100 * 1024 * 1024;
+
+
     public boolean isDebugLockEnable() {
         return debugLockEnable;
     }
@@ -666,4 +669,11 @@ public class MessageStoreConfig {
         this.commitCommitLogThoroughInterval = commitCommitLogThoroughInterval;
     }
 
+    public int getMapedFileSizeTimerLog() {
+        return mapedFileSizeTimerLog;
+    }
+
+    public void setMapedFileSizeTimerLog(final int mapedFileSizeTimerLog) {
+        this.mapedFileSizeTimerLog = mapedFileSizeTimerLog;
+    }
 }
