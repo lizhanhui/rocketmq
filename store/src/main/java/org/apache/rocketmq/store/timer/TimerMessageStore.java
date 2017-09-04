@@ -161,7 +161,8 @@ public class TimerMessageStore {
             log.warn("Timer recheck because of minFirst:{} processOffset:{}", minFirst, processOffset);
             recoverAndRevise(processOffset, false);
         }
-        log.info("Timer recover ok currReadTimerMs:{} currQueueOffset:{} checkQueueOffset:{}", currReadTimeMs, currQueueOffset, timerCheckpoint.getLastTimerQueueOffset());
+        log.info("Timer recover ok currReadTimerMs:{} currQueueOffset:{} checkQueueOffset:{} processOffset:{}",
+                currReadTimeMs, currQueueOffset, timerCheckpoint.getLastTimerQueueOffset(), processOffset);
 
         commitReadTimeMs = currReadTimeMs;
         commitQueueOffset = currQueueOffset;
@@ -185,6 +186,7 @@ public class TimerMessageStore {
     //recover timerlog and revise timerwheel
     //return process offset
     private long recoverAndRevise(long beginOffset, boolean checkTimerLog) {
+        log.info("Begin to recover timerlog offset:{} check:{}", beginOffset, checkTimerLog);
         MappedFile lastFile = timerLog.getMappedFileQueue().getLastMappedFile();
         if (null == lastFile) return 0;
 
@@ -286,11 +288,6 @@ public class TimerMessageStore {
     }
     private void moveReadTime() {
         currReadTimeMs = currReadTimeMs + 1000;
-    }
-
-    //testable
-    public void setState(int state) {
-        this.state = state;
     }
 
     private boolean isRunning() {
@@ -874,5 +871,15 @@ public class TimerMessageStore {
     }
 
 
+    public MessageStore getMessageStore() {
+        return messageStore;
+    }
 
+    public TimerWheel getTimerWheel() {
+        return timerWheel;
+    }
+
+    public TimerLog getTimerLog() {
+        return timerLog;
+    }
 }
