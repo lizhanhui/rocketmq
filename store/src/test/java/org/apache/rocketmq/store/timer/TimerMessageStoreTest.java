@@ -74,8 +74,8 @@ public class TimerMessageStoreTest {
         storeHost = new InetSocketAddress(InetAddress.getLocalHost(), 8123);
         bornHost = new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0);
         storeConfig = new MessageStoreConfig();
-        storeConfig.setMapedFileSizeCommitLog(1024 * 20);
-        storeConfig.setMapedFileSizeTimerLog(1024);
+        storeConfig.setMapedFileSizeCommitLog(1024 * 100);
+        storeConfig.setMapedFileSizeTimerLog(1024 * 10);
         storeConfig.setMapedFileSizeConsumeQueue(1024);
         storeConfig.setMaxHashSlotNum(100);
         storeConfig.setMaxIndexNum(100 * 10);
@@ -199,6 +199,7 @@ public class TimerMessageStoreTest {
             assertEquals(PutMessageStatus.PUT_OK, putMessageResult.getPutMessageStatus());
         }
         Thread.sleep(2000);
+        assertEquals(2, first.getTimerLog().getMappedFileQueue().getMappedFiles().size());
         assertEquals(msgNum, first.getQueueOffset());
         assertEquals(first.getCommitQueueOffset(), first.getCommitQueueOffset());
         assertEquals(first.getCurrReadTimeMs(), first.getCommitReadTimeMs());
