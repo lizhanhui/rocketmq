@@ -28,6 +28,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.rocketmq.client.ClientConfig;
+import org.apache.rocketmq.client.consumer.PopResult;
+import org.apache.rocketmq.client.consumer.PopStatus;
 import org.apache.rocketmq.client.consumer.PullCallback;
 import org.apache.rocketmq.client.consumer.PullResult;
 import org.apache.rocketmq.client.consumer.PullStatus;
@@ -80,6 +82,8 @@ import org.apache.rocketmq.common.protocol.body.SubscriptionGroupWrapper;
 import org.apache.rocketmq.common.protocol.body.TopicConfigSerializeWrapper;
 import org.apache.rocketmq.common.protocol.body.TopicList;
 import org.apache.rocketmq.common.protocol.body.UnlockBatchRequestBody;
+import org.apache.rocketmq.common.protocol.header.AckMessageRequestHeader;
+import org.apache.rocketmq.common.protocol.header.ChangeInvisibleTimeRequestHeader;
 import org.apache.rocketmq.common.protocol.header.CloneGroupOffsetRequestHeader;
 import org.apache.rocketmq.common.protocol.header.ConsumeMessageDirectlyResultRequestHeader;
 import org.apache.rocketmq.common.protocol.header.ConsumerSendMsgBackRequestHeader;
@@ -103,6 +107,9 @@ import org.apache.rocketmq.common.protocol.header.GetMinOffsetResponseHeader;
 import org.apache.rocketmq.common.protocol.header.GetProducerConnectionListRequestHeader;
 import org.apache.rocketmq.common.protocol.header.GetTopicStatsInfoRequestHeader;
 import org.apache.rocketmq.common.protocol.header.GetTopicsByClusterRequestHeader;
+import org.apache.rocketmq.common.protocol.header.PeekMessageRequestHeader;
+import org.apache.rocketmq.common.protocol.header.PopMessageRequestHeader;
+import org.apache.rocketmq.common.protocol.header.PopMessageResponseHeader;
 import org.apache.rocketmq.common.protocol.header.PullMessageRequestHeader;
 import org.apache.rocketmq.common.protocol.header.PullMessageResponseHeader;
 import org.apache.rocketmq.common.protocol.header.QueryConsumeQueueRequestHeader;
@@ -577,6 +584,42 @@ public class MQClientAPIImpl {
         return null;
     }
 
+	public PopResult popMessage(//
+			final String addr, //
+			final PopMessageRequestHeader requestHeader, //
+			final long timeoutMillis //
+	) throws RemotingException, MQBrokerException, InterruptedException {
+		RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.POP_MESSAGE, requestHeader);
+		RemotingCommand response = this.remotingClient.invokeSync(addr, request, timeoutMillis);
+		assert response != null;
+		return this.processPopResponse(response);
+	}
+  
+	public PopResult peekMessage(//
+			final String addr, //
+			final PeekMessageRequestHeader requestHeader, //
+			final long timeoutMillis //
+	) throws RemotingException, MQBrokerException, InterruptedException {
+		RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.PEEK_MESSAGE, requestHeader);
+		RemotingCommand response = this.remotingClient.invokeSync(addr, request, timeoutMillis);
+		assert response != null;
+		return this.processPopResponse(response);
+	}
+	public void ackMessage(//
+			final String addr, //
+			final AckMessageRequestHeader requestHeader //
+	) throws RemotingException, MQBrokerException, InterruptedException {
+		RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.ACK_MESSAGE, requestHeader);
+		this.remotingClient.invokeOneway(addr, request, 1000L);
+	}
+	
+	public void changeInvisibleTime(//
+			final String addr, //
+			final ChangeInvisibleTimeRequestHeader requestHeader //
+	) throws RemotingException, MQBrokerException, InterruptedException {
+		RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.CHANGE_MESSAGE_INVISIBLETIME, requestHeader);
+		this.remotingClient.invokeOneway(addr, request, 1000L);
+	}
     private void pullMessageAsync(//
         final String addr, // 1
         final RemotingCommand request, //
@@ -645,7 +688,24 @@ public class MQClientAPIImpl {
         return new PullResultExt(pullStatus, responseHeader.getNextBeginOffset(), responseHeader.getMinOffset(),
             responseHeader.getMaxOffset(), null, responseHeader.getSuggestWhichBrokerId(), response.getBody());
     }
-
+    
+    private PopResult processPopResponse(final RemotingCommand response) throws MQBrokerException, RemotingCommandException {
+    	PopStatus popStatus = PopStatus.NO_NEW_MSG;
+        List<MessageExt> msgFoundList=null;
+        switch (response.getCode()) {
+            case ResponseCode.SUCCESS:
+            	popStatus = PopStatus.FOUND;
+            	ByteBuffer byteBuffer = ByteBuffer.wrap(response.getBody());
+            	msgFoundList = MessageDecoder.decodes(byteBuffer);
+                break;
+            case ResponseCode.PULL_NOT_FOUND:
+            	popStatus = PopStatus.NO_NEW_MSG;
+                break;
+            default:
+                throw new MQBrokerException(response.getCode(), response.getRemark());
+        }
+		return new PopResult(popStatus, msgFoundList);
+    }
     public MessageExt viewMessage(final String addr, final long phyoffset, final long timeoutMillis)
         throws RemotingException, MQBrokerException, InterruptedException {
         ViewMessageRequestHeader requestHeader = new ViewMessageRequestHeader();
