@@ -43,7 +43,7 @@ public class DefaultMQPullConsumer extends ClientConfig implements MQPullConsume
      * Do the same thing for the same Group, the application must be set,and
      * guarantee Globally unique
      */
-    private String consumerGroup;
+    protected String consumerGroup;
     /**
      * Long polling mode, the Consumer connection max suspend time, it is not
      * recommended to modify
@@ -313,6 +313,9 @@ public class DefaultMQPullConsumer extends ClientConfig implements MQPullConsume
         this.defaultMQPullConsumerImpl.sendMessageBack(msg, delayLevel, brokerName, consumerGroup);
     }
 
+	public PopResult peekMessage(MessageQueue mq, int maxNums, long timeout) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+		return this.defaultMQPullConsumerImpl.peek(mq, maxNums, timeout);
+	}
     public OffsetStore getOffsetStore() {
         return offsetStore;
     }

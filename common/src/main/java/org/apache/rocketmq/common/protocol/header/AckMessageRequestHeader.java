@@ -77,13 +77,4 @@ public class AckMessageRequestHeader implements CommandCustomHeader {
         this.queueId = queueId;
     }
 
-
-    public Integer getMaxMsgNums() {
-        return maxMsgNums;
-    }
-
-    public void setMaxMsgNums(Integer maxMsgNums) {
-        this.maxMsgNums = maxMsgNums;
-    }
-
 }
