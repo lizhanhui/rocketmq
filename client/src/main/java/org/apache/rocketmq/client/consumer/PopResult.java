@@ -22,11 +22,36 @@ import org.apache.rocketmq.common.message.MessageExt;
 public class PopResult {
     private List<MessageExt> msgFoundList;
     private PopStatus popStatus;
+	private long popTime;
+    private long invisibleTime;
     public PopResult(PopStatus popStatus,List<MessageExt> msgFoundList) {
         this.popStatus=popStatus;
         this.msgFoundList = msgFoundList;
     }
+    
+    public long getPopTime() {
+		return popTime;
+	}
 
+
+	public void setPopTime(long popTime) {
+		this.popTime = popTime;
+	}
+
+
+	public long getInvisibleTime() {
+		return invisibleTime;
+	}
+
+
+	public void setInvisibleTime(long invisibleTime) {
+		this.invisibleTime = invisibleTime;
+	}
+
+
+	public void setPopStatus(PopStatus popStatus) {
+		this.popStatus = popStatus;
+	}
     public PopStatus getPopStatus() {
 		return popStatus;
 	}

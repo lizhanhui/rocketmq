@@ -33,11 +33,18 @@ public class PopMessageRequestHeader implements CommandCustomHeader {
     private Integer queueId;
     @CFNotNull
     private Integer maxMsgNums;
-
+    @CFNotNull
+    private Long invisibleTime;   
+    
     @Override
     public void checkFields() throws RemotingCommandException {
     }
-
+    public Long getInvisibleTime() {
+		return invisibleTime;
+	}
+    public void setInvisibleTime(Long invisibleTime) {
+		this.invisibleTime = invisibleTime;
+	}
     public String getConsumerGroup() {
         return consumerGroup;
     }

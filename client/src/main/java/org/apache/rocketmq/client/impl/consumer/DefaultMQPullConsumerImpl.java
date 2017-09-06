@@ -691,9 +691,9 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner ,MQPopConsumer
 			requestHeader.setTopic(mq.getTopic());
 			requestHeader.setQueueId(mq.getQueueId());
 			requestHeader.setMaxMsgNums(maxNums);
+			requestHeader.setInvisibleTime(invisibleTime);
 			String brokerAddr = findBrokerResult.getBrokerAddr();
 			PopResult popResult = this.mQClientFactory.getMQClientAPIImpl().popMessage(brokerAddr, requestHeader, timeout);
-
 			return popResult;
 		}
 		throw new MQClientException("The broker[" + mq.getBrokerName() + "] not exist", null);

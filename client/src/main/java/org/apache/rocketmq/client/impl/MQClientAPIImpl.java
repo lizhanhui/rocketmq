@@ -109,6 +109,7 @@ import org.apache.rocketmq.common.protocol.header.GetTopicStatsInfoRequestHeader
 import org.apache.rocketmq.common.protocol.header.GetTopicsByClusterRequestHeader;
 import org.apache.rocketmq.common.protocol.header.PeekMessageRequestHeader;
 import org.apache.rocketmq.common.protocol.header.PopMessageRequestHeader;
+import org.apache.rocketmq.common.protocol.header.PopMessageResponseHeader;
 import org.apache.rocketmq.common.protocol.header.PullMessageRequestHeader;
 import org.apache.rocketmq.common.protocol.header.PullMessageResponseHeader;
 import org.apache.rocketmq.common.protocol.header.QueryConsumeQueueRequestHeader;
@@ -688,23 +689,41 @@ public class MQClientAPIImpl {
             responseHeader.getMaxOffset(), null, responseHeader.getSuggestWhichBrokerId(), response.getBody());
     }
     
-    private PopResult processPopResponse(final RemotingCommand response) throws MQBrokerException, RemotingCommandException {
-    	PopStatus popStatus = PopStatus.NO_NEW_MSG;
-        List<MessageExt> msgFoundList=null;
-        switch (response.getCode()) {
-            case ResponseCode.SUCCESS:
-            	popStatus = PopStatus.FOUND;
-            	ByteBuffer byteBuffer = ByteBuffer.wrap(response.getBody());
-            	msgFoundList = MessageDecoder.decodes(byteBuffer);
-                break;
-            case ResponseCode.PULL_NOT_FOUND:
-            	popStatus = PopStatus.NO_NEW_MSG;
-                break;
-            default:
-                throw new MQBrokerException(response.getCode(), response.getRemark());
-        }
-		return new PopResult(popStatus, msgFoundList);
-    }
+	private PopResult processPopResponse(final RemotingCommand response) throws MQBrokerException, RemotingCommandException {
+		PopStatus popStatus = PopStatus.NO_NEW_MSG;
+		List<MessageExt> msgFoundList = null;
+		switch (response.getCode()) {
+		case ResponseCode.SUCCESS:
+			popStatus = PopStatus.FOUND;
+			ByteBuffer byteBuffer = ByteBuffer.wrap(response.getBody());
+			msgFoundList = MessageDecoder.decodes(byteBuffer);
+			break;
+		case ResponseCode.PULL_NOT_FOUND:
+			popStatus = PopStatus.NO_NEW_MSG;
+			break;
+		default:
+			throw new MQBrokerException(response.getCode(), response.getRemark());
+		}
+		PopResult popResult = new PopResult(popStatus, msgFoundList);
+		PopMessageResponseHeader responseHeader = (PopMessageResponseHeader) response.decodeCommandCustomHeader(PopMessageResponseHeader.class);
+
+		if (responseHeader.getPopTime() > 0) {
+			popResult.setInvisibleTime(responseHeader.getInvisibleTime());
+			popResult.setPopTime(responseHeader.getPopTime());
+			Map<String, String> map = new HashMap<String, String>(5);
+			for (MessageExt messageExt : msgFoundList) {
+				// find pop ck offset
+				String key = messageExt.getTopic() + messageExt.getQueueId();
+				if (!map.containsKey(messageExt.getTopic() + messageExt.getQueueId())) {
+					map.put(key,
+							String.valueOf(messageExt.getQueueOffset() + MessageConst.KEY_SEPARATOR + responseHeader.getPopTime() + MessageConst.KEY_SEPARATOR + responseHeader.getInvisibleTime()));
+				}
+				messageExt.getProperties().put(MessageConst.PROPERTY_POP_CK, map.get(key));
+			}
+		}
+		return popResult;
+	}
+	
     public MessageExt viewMessage(final String addr, final long phyoffset, final long timeoutMillis)
         throws RemotingException, MQBrokerException, InterruptedException {
         ViewMessageRequestHeader requestHeader = new ViewMessageRequestHeader();
