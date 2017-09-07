@@ -31,8 +31,12 @@ public class PopMessageResponseHeader implements CommandCustomHeader {
     private Long popTime;
     @CFNotNull
     private Long invisibleTime;
+    
+    @CFNotNull
+    private int reviveQid;   
 
-    @Override
+
+	@Override
     public void checkFields() throws RemotingCommandException {
     }
     public Long getPopTime() {
@@ -49,5 +53,11 @@ public class PopMessageResponseHeader implements CommandCustomHeader {
 
 	public void setInvisibleTime(Long invisibleTime) {
 		this.invisibleTime = invisibleTime;
+	}
+    public int getReviveQid() {
+		return reviveQid;
+	}
+	public void setReviveQid(int reviveQid) {
+		this.reviveQid = reviveQid;
 	}
 }

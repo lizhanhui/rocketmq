@@ -22,15 +22,18 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.FileRegion;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Random;
 
 import org.apache.rocketmq.broker.BrokerController;
 import org.apache.rocketmq.broker.pagecache.ManyMessageTransfer;
+import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.common.TopicConfig;
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.common.constant.PermName;
 import org.apache.rocketmq.common.help.FAQUrl;
+import org.apache.rocketmq.common.message.MessageConst;
 import org.apache.rocketmq.common.message.MessageDecoder;
 import org.apache.rocketmq.common.protocol.ResponseCode;
 import org.apache.rocketmq.common.protocol.header.PopMessageRequestHeader;
@@ -39,18 +42,29 @@ import org.apache.rocketmq.remoting.common.RemotingHelper;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 import org.apache.rocketmq.remoting.netty.NettyRequestProcessor;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
+import org.apache.rocketmq.store.AppendMessageStatus;
 import org.apache.rocketmq.store.GetMessageResult;
 import org.apache.rocketmq.store.GetMessageStatus;
+import org.apache.rocketmq.store.MessageExtBrokerInner;
+import org.apache.rocketmq.store.PutMessageResult;
 import org.apache.rocketmq.store.SelectMappedBufferResult;
+import org.apache.rocketmq.store.pop.PopAckConstants;
+import org.apache.rocketmq.store.pop.PopCheckPoint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.alibaba.fastjson.JSON;
 
 public class PopMessageProcessor implements NettyRequestProcessor {
     private static final Logger LOG = LoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
     private final BrokerController brokerController;
     private Random random=new Random(System.currentTimeMillis());
+	private Charset charset=Charset.forName("UTF-8");
+	private String reviveTopic;
     public PopMessageProcessor(final BrokerController brokerController) {
         this.brokerController = brokerController;
+        this.reviveTopic=PopAckConstants.REVIVE_TOPIC + this.brokerController.getBrokerConfig().getBrokerClusterName();
+        
     }
 
     @Override
@@ -104,11 +118,11 @@ public class PopMessageProcessor implements NettyRequestProcessor {
             response.setRemark(errorInfo);
             return response;
         }
-        
+		int randomQ=random.nextInt(100);
+		int reviveQid=randomQ % PopAckConstants.REVIVE_QUEUE_NUM;
 		GetMessageResult getMessageResult=new GetMessageResult();
 		if (requestHeader.getQueueId() < 0) {
 			//read all queue
-			int randomQ=random.nextInt(100);
 			for (int i = 0; i < topicConfig.getReadQueueNums(); i++) {
 				int queueId = (randomQ + i) % topicConfig.getReadQueueNums();
 				long offset = this.brokerController.getConsumerOffsetManager().queryOffset(requestHeader.getConsumerGroup(), requestHeader.getTopic(), queueId);
@@ -120,6 +134,9 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 				for (SelectMappedBufferResult mapedBuffer : getMessageTmpResult.getMessageMapedList()) {
 					getMessageResult.addMessage(mapedBuffer);
 				}
+				if (!getMessageTmpResult.getMessageMapedList().isEmpty()) {
+					appendCheckPoint(channel, requestHeader, reviveQid, queueId, offset, getMessageTmpResult);
+				}
 				if (getMessageResult.getMessageMapedList().size()>=requestHeader.getMaxMsgNums()) {
 					break;
 				}
@@ -129,6 +146,10 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 			long offset = this.brokerController.getConsumerOffsetManager().queryOffset(requestHeader.getConsumerGroup(), requestHeader.getTopic(), requestHeader.getQueueId());
 			getMessageResult = this.brokerController.getMessageStore().getMessage(requestHeader.getConsumerGroup(), requestHeader.getTopic(), requestHeader.getQueueId(), offset,
 					requestHeader.getMaxMsgNums(), null);
+			if (!getMessageResult.getMessageMapedList().isEmpty()) {
+				// add check point msg to revive log
+				appendCheckPoint(channel, requestHeader, reviveQid, requestHeader.getQueueId(), offset, getMessageResult);
+			}
 		}
 		if (!getMessageResult.getMessageBufferList().isEmpty()) {
             response.setCode(ResponseCode.SUCCESS);
@@ -140,6 +161,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 		}
 		responseHeader.setInvisibleTime(requestHeader.getInvisibleTime());
 		responseHeader.setPopTime(System.currentTimeMillis());
+		responseHeader.setReviveQid(reviveQid);
         response.setRemark(getMessageResult.getStatus().name());
         switch (response.getCode()) {
             case ResponseCode.SUCCESS:
@@ -185,6 +207,33 @@ public class PopMessageProcessor implements NettyRequestProcessor {
         }
         return response;
 }
+
+	private void appendCheckPoint(final Channel channel, final PopMessageRequestHeader requestHeader, int reviveQid, int queueId, long offset,
+			final GetMessageResult getMessageTmpResult) {
+		// add check point msg to revive log
+		MessageExtBrokerInner msgInner = new MessageExtBrokerInner();
+		msgInner.setTopic(reviveTopic);
+		PopCheckPoint ck=new PopCheckPoint();
+		ck.setBitMap(0);
+		ck.setNum((byte) getMessageTmpResult.getMessageMapedList().size());
+		ck.setReviveTime(System.currentTimeMillis()+requestHeader.getInvisibleTime());
+		ck.setStartOffset(offset);
+		ck.setCid(requestHeader.getConsumerGroup());
+		ck.setTopic(requestHeader.getTopic());
+		ck.setQueueId((byte) queueId);
+		msgInner.setBody(JSON.toJSONString(ck).getBytes(charset));
+		msgInner.setQueueId(reviveQid);
+		msgInner.setTags(PopAckConstants.CK_TAG);
+		msgInner.setBornTimestamp(System.currentTimeMillis());
+		msgInner.setBornHost(this.brokerController.getStoreHost());
+		msgInner.setStoreHost(this.brokerController.getStoreHost());
+		msgInner.putUserProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS, String.valueOf(System.currentTimeMillis()+requestHeader.getInvisibleTime()-PopAckConstants.ackTimeInterval));
+		PutMessageResult putMessageResult = this.brokerController.getMessageStore().putMessage(msgInner);
+		if (putMessageResult.getAppendMessageResult().getStatus() == AppendMessageStatus.PUT_OK) {
+			this.brokerController.getConsumerOffsetManager().commitOffset(channel.remoteAddress().toString(), requestHeader.getConsumerGroup(), requestHeader.getTopic(),
+					queueId, offset + getMessageTmpResult.getMessageMapedList().size());
+		}
+	}
 
     private byte[] readGetMessageResult(final GetMessageResult getMessageResult, final String group, final String topic, final int queueId) {
         final ByteBuffer byteBuffer = ByteBuffer.allocate(getMessageResult.getBufferTotalSize());

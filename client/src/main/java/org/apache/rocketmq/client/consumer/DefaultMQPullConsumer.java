@@ -312,16 +312,19 @@ public class DefaultMQPullConsumer extends ClientConfig implements MQPullConsume
         throws RemotingException, MQBrokerException, InterruptedException, MQClientException {
         this.defaultMQPullConsumerImpl.sendMessageBack(msg, delayLevel, brokerName, consumerGroup);
     }
-
+    @Override
 	public PopResult peekMessage(MessageQueue mq, int maxNums, long timeout) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
 		return this.defaultMQPullConsumerImpl.peek(mq, maxNums, timeout);
 	}
+    @Override
 	public PopResult pop(MessageQueue mq, long invisibleTime, int maxNums, String consumerGroup, long timeout) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
 		return this.defaultMQPullConsumerImpl.pop(mq, invisibleTime, maxNums, consumerGroup, timeout);
 	}
+    @Override
 	public void ackMessage(MessageQueue mq, long offset, String consumerGroup, String extraInfo) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
 		 this.defaultMQPullConsumerImpl.ack(mq, offset, consumerGroup, extraInfo);
 	}
+    @Override
 	public void  changeInvisibleTime(MessageQueue mq, long offset, String consumerGroup, String extraInfo, long invisibleTime) throws MQClientException, RemotingException, MQBrokerException, InterruptedException{
 		 this.defaultMQPullConsumerImpl.changeInvisibleTime(mq, offset, consumerGroup, extraInfo, invisibleTime);
 	}	

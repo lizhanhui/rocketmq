@@ -707,7 +707,7 @@ public class MQClientAPIImpl {
 		PopResult popResult = new PopResult(popStatus, msgFoundList);
 		PopMessageResponseHeader responseHeader = (PopMessageResponseHeader) response.decodeCommandCustomHeader(PopMessageResponseHeader.class);
 
-		if (responseHeader.getPopTime() > 0) {
+		if (responseHeader.getPopTime() > 0 && popStatus == PopStatus.FOUND) {
 			popResult.setInvisibleTime(responseHeader.getInvisibleTime());
 			popResult.setPopTime(responseHeader.getPopTime());
 			Map<String, String> map = new HashMap<String, String>(5);
@@ -716,7 +716,7 @@ public class MQClientAPIImpl {
 				String key = messageExt.getTopic() + messageExt.getQueueId();
 				if (!map.containsKey(messageExt.getTopic() + messageExt.getQueueId())) {
 					map.put(key,
-							String.valueOf(messageExt.getQueueOffset() + MessageConst.KEY_SEPARATOR + responseHeader.getPopTime() + MessageConst.KEY_SEPARATOR + responseHeader.getInvisibleTime()));
+							String.valueOf(messageExt.getQueueOffset() + MessageConst.KEY_SEPARATOR + responseHeader.getPopTime() + MessageConst.KEY_SEPARATOR + responseHeader.getInvisibleTime() + MessageConst.KEY_SEPARATOR +responseHeader.getReviveQid()));
 				}
 				messageExt.getProperties().put(MessageConst.PROPERTY_POP_CK, map.get(key));
 			}

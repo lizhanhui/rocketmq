@@ -192,4 +192,13 @@ public interface MQPullConsumer extends MQConsumer {
      */
     void sendMessageBack(MessageExt msg, int delayLevel, String brokerName, String consumerGroup)
         throws RemotingException, MQBrokerException, InterruptedException, MQClientException;
+
+	PopResult pop(MessageQueue mq, long invisibleTime, int maxNums, String consumerGroup, long timeout) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+
+	PopResult peekMessage(MessageQueue mq, int maxNums, long timeout) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+
+	void ackMessage(MessageQueue mq, long offset, String consumerGroup, String extraInfo) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+
+	void changeInvisibleTime(MessageQueue mq, long offset, String consumerGroup, String extraInfo, long invisibleTime)
+			throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 }

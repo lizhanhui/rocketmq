@@ -14,11 +14,11 @@ public class Producer {
         producer.setNamesrvAddr("127.0.0.1:9876");
         producer.start();
         String topic="longji1";
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 4; i++) {
         	Message msg=new Message(topic, new byte[]{1,1});
     		SendResult result=producer.send(msg);
     		System.out.println(result);
-		}
+		} 
 		
 	}
 }
