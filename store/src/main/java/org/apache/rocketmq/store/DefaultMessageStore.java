@@ -1387,7 +1387,6 @@ public class DefaultMessageStore implements MessageStore {
 
         @Override
         public void dispatch(DispatchRequest request) {
-            ticks.startTick("build_cq");
             final int tranType = MessageSysFlag.getTransactionValue(request.getSysFlag());
             switch (tranType) {
                 case MessageSysFlag.TRANSACTION_NOT_TYPE:
@@ -1398,7 +1397,6 @@ public class DefaultMessageStore implements MessageStore {
                 case MessageSysFlag.TRANSACTION_ROLLBACK_TYPE:
                     break;
             }
-            ticks.endTick("build_cq");
         }
     }
 
@@ -1406,11 +1404,9 @@ public class DefaultMessageStore implements MessageStore {
 
         @Override
         public void dispatch(DispatchRequest request) {
-            ticks.startTick("build_index");
             if (DefaultMessageStore.this.messageStoreConfig.isMessageIndexEnable()) {
                 DefaultMessageStore.this.indexService.buildIndex(request);
             }
-            ticks.endTick("build_index");
         }
     }
 
