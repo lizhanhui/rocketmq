@@ -85,5 +85,8 @@ public interface MQPopConsumer {
 	 * @throws InterruptedException
 	 */
 	void changeInvisibleTime(final MessageQueue mq, final long offset, 
-			String consumerGroup , String extraInfo , final long invisibleTime) throws MQClientException, RemotingException, MQBrokerException, InterruptedException; 
+			String consumerGroup , String extraInfo , final long invisibleTime) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+
+	void popAsync(MessageQueue mq, long invisibleTime, int maxNums, String consumerGroup, long timeout, PopCallback popCallback)
+			throws MQClientException, RemotingException, MQBrokerException, InterruptedException; 
 }

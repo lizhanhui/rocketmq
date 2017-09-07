@@ -201,4 +201,7 @@ public interface MQPullConsumer extends MQConsumer {
 
 	void changeInvisibleTime(MessageQueue mq, long offset, String consumerGroup, String extraInfo, long invisibleTime)
 			throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+
+	void popAsync(MessageQueue mq, long invisibleTime, int maxNums, String consumerGroup, long timeout, PopCallback popCallback)
+			throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 }

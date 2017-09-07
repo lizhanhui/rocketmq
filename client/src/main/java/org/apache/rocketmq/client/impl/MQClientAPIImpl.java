@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.rocketmq.client.ClientConfig;
+import org.apache.rocketmq.client.consumer.PopCallback;
 import org.apache.rocketmq.client.consumer.PopResult;
 import org.apache.rocketmq.client.consumer.PopStatus;
 import org.apache.rocketmq.client.consumer.PullCallback;
@@ -594,7 +595,38 @@ public class MQClientAPIImpl {
 		assert response != null;
 		return this.processPopResponse(response);
 	}
-  
+	public void popMessageAsync(//
+			final String addr, //
+			final PopMessageRequestHeader requestHeader, //
+			final long timeoutMillis ,//
+            final PopCallback popCallback//
+        ) throws RemotingException, InterruptedException {
+			final RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.POP_MESSAGE, requestHeader);
+            this.remotingClient.invokeAsync(addr, request, timeoutMillis, new InvokeCallback() {
+                @Override
+                public void operationComplete(ResponseFuture responseFuture) {
+                    RemotingCommand response = responseFuture.getResponseCommand();
+                    if (response != null) {
+                        try {
+                            PopResult popResult = MQClientAPIImpl.this.processPopResponse(response);
+                            assert popResult != null;
+                            popCallback.onSuccess(popResult);
+                        } catch (Exception e) {
+                        	popCallback.onException(e);
+                        }
+                    } else {
+                        if (!responseFuture.isSendRequestOK()) {
+                        	popCallback.onException(new MQClientException("send request failed to " + addr + ". Request: " + request, responseFuture.getCause()));
+                        } else if (responseFuture.isTimeout()) {
+                        	popCallback.onException(new MQClientException("wait response from " + addr + " timeout :" + responseFuture.getTimeoutMillis() + "ms" + ". Request: " + request,
+                                responseFuture.getCause()));
+                        } else {
+                        	popCallback.onException(new MQClientException("unknown reason. addr: " + addr + ", timeoutMillis: " + timeoutMillis + ". Request: " + request, responseFuture.getCause()));
+                        }
+                    }
+                }
+            });
+        }
 	public PopResult peekMessage(//
 			final String addr, //
 			final PeekMessageRequestHeader requestHeader, //

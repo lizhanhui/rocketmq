@@ -27,6 +27,7 @@ import org.apache.rocketmq.client.QueryResult;
 import org.apache.rocketmq.client.Validators;
 import org.apache.rocketmq.client.consumer.DefaultMQPullConsumer;
 import org.apache.rocketmq.client.consumer.MQPopConsumer;
+import org.apache.rocketmq.client.consumer.PopCallback;
 import org.apache.rocketmq.client.consumer.PopResult;
 import org.apache.rocketmq.client.consumer.PullCallback;
 import org.apache.rocketmq.client.consumer.PullResult;
@@ -698,7 +699,27 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner ,MQPopConsumer
 		}
 		throw new MQClientException("The broker[" + mq.getBrokerName() + "] not exist", null);
 	}
-
+	@Override
+	public void popAsync(MessageQueue mq, long invisibleTime, int maxNums, String consumerGroup, long timeout, PopCallback popCallback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+		FindBrokerResult findBrokerResult = this.mQClientFactory.findBrokerAddressInSubscribe(mq.getBrokerName(), MixAll.MASTER_ID, true);
+		if (null == findBrokerResult) {
+			this.mQClientFactory.updateTopicRouteInfoFromNameServer(mq.getTopic());
+			findBrokerResult = this.mQClientFactory.findBrokerAddressInSubscribe(mq.getBrokerName(), MixAll.MASTER_ID, true);
+		}
+		if (findBrokerResult != null) {
+			PopMessageRequestHeader requestHeader = new PopMessageRequestHeader();
+			requestHeader.setConsumerGroup(consumerGroup);
+			requestHeader.setTopic(mq.getTopic());
+			requestHeader.setQueueId(mq.getQueueId());
+			requestHeader.setMaxMsgNums(maxNums);
+			requestHeader.setInvisibleTime(invisibleTime);
+			String brokerAddr = findBrokerResult.getBrokerAddr();
+			this.mQClientFactory.getMQClientAPIImpl().popMessageAsync(brokerAddr, requestHeader, timeout,popCallback);
+			return ;
+		}
+		throw new MQClientException("The broker[" + mq.getBrokerName() + "] not exist", null);
+	}
+	
 	@Override
 	public PopResult peek(MessageQueue mq, int maxNums, long timeout) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
 		FindBrokerResult findBrokerResult = this.mQClientFactory.findBrokerAddressInSubscribe(mq.getBrokerName(), MixAll.MASTER_ID, true);

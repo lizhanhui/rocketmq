@@ -18,7 +18,7 @@ public class Producer {
         	Message msg=new Message(topic, new byte[]{1,1});
     		SendResult result=producer.send(msg);
     		System.out.println(result);
-		} 
+		}  
 		
 	}
 }
