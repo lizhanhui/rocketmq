@@ -270,18 +270,20 @@ public class TimerMessageStore {
             return;
         }
         state = SHUTDOWN;
+        //first save checkpoint
+        timerFlushService.shutdown();
+        timerLog.shutdown();
+        timerCheckpoint.shutdown();
+
+        enqueueQueue.clear(); //avoid blocking
+        dequeueQueue.clear(); //avoid blocking
 
         enqueueGetService.shutdown();
         enqueuePutService.shutdown();
         dequeueWarmService.shutdown();
         dequeueGetService.shutdown();
         dequeuePutService.shutdown();
-        timerFlushService.shutdown();
-
-        timerWheel.shutdown();
-        timerLog.shutdown();
-        prepareTimerCheckPoint();
-        timerCheckpoint.shutdown(); //TODO if the previous shutdown failed
+        timerWheel.shutdown(false);
 
     }
 
@@ -343,7 +345,6 @@ public class TimerMessageStore {
         try {
             int i = 0;
             for ( ; i < bufferCQ.getSize(); i += ConsumeQueue.CQ_STORE_UNIT_SIZE) {
-                if (!isRunningEnqueue()) break;
                 perfs.startTick("enqueue_get");
                 try {
                     long offsetPy = bufferCQ.getByteBuffer().getLong();
@@ -362,6 +363,7 @@ public class TimerMessageStore {
                     perfs.endTick("enqueue_get");
                 }
                 currQueueOffset = offset + (i / ConsumeQueue.CQ_STORE_UNIT_SIZE);
+                if (!isRunningEnqueue()) break;
             }
             currQueueOffset = offset + (i / ConsumeQueue.CQ_STORE_UNIT_SIZE);
             return  i > 0;
@@ -595,6 +597,10 @@ public class TimerMessageStore {
         return message;
     }
     private int doPut(MessageExtBrokerInner message) {
+        if (lastBrokerRole == BrokerRole.SLAVE) {
+            log.warn("Retrying do put timer msg in slave, [{}]",message);
+            return 2;
+        }
         PutMessageResult putMessageResult = messageStore.putMessage(message);
         int retryNum = 0;
         while (retryNum < 3) {
@@ -699,7 +705,7 @@ public class TimerMessageStore {
                         maybeMoveWriteTime();
                     } else {
                         perfs.startTick("enqueue_put");
-                        if (req.getDelayTime() < currWriteTimeMs) {
+                        if (lastBrokerRole == BrokerRole.SLAVE && req.getDelayTime() < currWriteTimeMs) {
                             MessageExtBrokerInner msg = convert(req.getMsg(), System.currentTimeMillis(), false);
                             int putRes =  doPut(msg);
                             while (putRes == 1 && !isStopped()) {
@@ -709,8 +715,9 @@ public class TimerMessageStore {
                             if (isStopped()) {
                                 break;
                             }
+                        } else {
+                            doEnqueue(req.getOffsetPy(), req.getSizePy(), req.getDelayTime(), req.getMsg());
                         }
-                        doEnqueue(req.getOffsetPy(), req.getSizePy(), req.getDelayTime(), req.getMsg());
                         if (enqueueQueue.size() == 0) {
                             commitQueueOffset = tmpCommitQueueOffset;
                         } else {
@@ -835,16 +842,17 @@ public class TimerMessageStore {
                     timerLog.getMappedFileQueue().flush(0);
                     timerWheel.flush();
                     timerCheckpoint.flush();
-                    waitForRunning(storeConfig.getTimerFlushIntervalMs());
+                    timerLog.getMappedFileQueue().flush(0);
                     if (System.currentTimeMillis() - start > storeConfig.getTimerProgressLogIntervalMs()) {
                         start =  System.currentTimeMillis();
                         ConsumeQueue cq = messageStore.getConsumeQueue(TIMER_TOPIC, 0);
                         long maxOffsetInQueue = cq == null ? 0 : cq.getMaxOffsetInQueue();
-                        TimerMessageStore.log.info("Timer progress-time commitRead:[{}] currRead:[{}] preRead:[{}] currWrite:[{}] readBehind:{} enqSize:{} deqSize:{}",
-                                format(commitReadTimeMs), (currReadTimeMs - commitReadTimeMs)/1000, (preReadTimeMs - currReadTimeMs)/1000, format(currWriteTimeMs), (System.currentTimeMillis() - currReadTimeMs)/1000, enqueueQueue.size(), dequeueQueue.size());
-                        TimerMessageStore.log.info("Timer progress-offset commitOffset:{} currReadOffset:{} offsetBehind:{} behindMaster:{}",
-                                commitQueueOffset, currQueueOffset - commitQueueOffset, maxOffsetInQueue - currQueueOffset, timerCheckpoint.getMasterTimerQueueOffset() - currQueueOffset);
+                        TimerMessageStore.log.info("[{}]Timer progress-time commitRead:[{}] currRead:[{}] preRead:[{}] currWrite:[{}] readBehind:{} enqSize:{} deqSize:{}",
+                                storeConfig.getBrokerRole(), format(commitReadTimeMs), (currReadTimeMs - commitReadTimeMs)/1000, (preReadTimeMs - currReadTimeMs)/1000, format(currWriteTimeMs), (System.currentTimeMillis() - currReadTimeMs)/1000, enqueueQueue.size(), dequeueQueue.size());
+                        TimerMessageStore.log.info("[{}]Timer progress-offset commitOffset:{} currReadOffset:{} offsetBehind:{} behindMaster:{}",
+                                storeConfig.getBrokerRole(), commitQueueOffset, currQueueOffset - commitQueueOffset, maxOffsetInQueue - currQueueOffset, timerCheckpoint.getMasterTimerQueueOffset() - currQueueOffset);
                     }
+                    waitForRunning(storeConfig.getTimerFlushIntervalMs());
                 } catch (Throwable e) {
                     TimerMessageStore.log.error("Error occurred in " + getServiceName(), e);
                 }

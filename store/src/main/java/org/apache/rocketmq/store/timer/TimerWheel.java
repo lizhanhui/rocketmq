@@ -61,7 +61,11 @@ public class TimerWheel {
 
 
     public void shutdown() {
-        this.flush();
+        shutdown(true);
+    }
+
+    public void shutdown(boolean flush) {
+        if (flush) this.flush();
 
         // unmap mappedByteBuffer
         MappedFile.clean(this.mappedByteBuffer);
