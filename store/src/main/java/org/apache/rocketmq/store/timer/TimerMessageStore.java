@@ -596,9 +596,15 @@ public class TimerMessageStore {
         MessageExtBrokerInner message = convertMessage(messageExt, needRoll);
         return message;
     }
+
+    //0 succ; 1 fail, need retry; 2 fail, do not retry;
     private int doPut(MessageExtBrokerInner message) {
         if (lastBrokerRole == BrokerRole.SLAVE) {
-            log.warn("Retrying do put timer msg in slave, [{}]",message);
+            log.warn("Trying do put timer msg in slave, [{}]",message);
+            return 2;
+        }
+        if (null != message.getProperty(MessageConst.PROPERTY_TIMER_DEL_UNIQKEY)) {
+            log.warn("Trying do put delete timer msg [{}]",message);
             return 2;
         }
         PutMessageResult putMessageResult = messageStore.putMessage(message);
@@ -705,7 +711,7 @@ public class TimerMessageStore {
                         maybeMoveWriteTime();
                     } else {
                         perfs.startTick("enqueue_put");
-                        if (lastBrokerRole == BrokerRole.SLAVE && req.getDelayTime() < currWriteTimeMs) {
+                        if (lastBrokerRole != BrokerRole.SLAVE && req.getDelayTime() < currWriteTimeMs) {
                             MessageExtBrokerInner msg = convert(req.getMsg(), System.currentTimeMillis(), false);
                             int putRes =  doPut(msg);
                             while (putRes == 1 && !isStopped()) {
