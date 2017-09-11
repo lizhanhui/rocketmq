@@ -23,7 +23,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -75,7 +74,7 @@ public class TimerMessageStoreTest {
         bornHost = new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0);
         storeConfig = new MessageStoreConfig();
         storeConfig.setMapedFileSizeCommitLog(1024 * 100);
-        storeConfig.setMapedFileSizeTimerLog(1024 * 10);
+        storeConfig.setMappedFileSizeTimerLog(1024 * 10);
         storeConfig.setMapedFileSizeConsumeQueue(1024);
         storeConfig.setMaxHashSlotNum(100);
         storeConfig.setMaxIndexNum(100 * 10);
@@ -110,7 +109,7 @@ public class TimerMessageStoreTest {
         long delayMs = curr + 2000;
         for (int i = 0; i < 10; i++) {
             for (int j = 0; j < 5; j++) {
-                MessageExtBrokerInner inner = buildMessage(delayMs, topic + i);
+                MessageExtBrokerInner inner = buildMessage((i % 2 == 0) ? 1000 : delayMs, topic + i, i % 2 == 0);
                 PutMessageResult putMessageResult = messageStore.putMessage(inner);
                 assertEquals(PutMessageStatus.PUT_OK, putMessageResult.getPutMessageStatus());
             }
@@ -139,7 +138,7 @@ public class TimerMessageStoreTest {
         timerMessageStore.start();
         long delayMs = System.currentTimeMillis() - 2000;
         for (int i = 0; i < 10; i++) {
-            MessageExtBrokerInner inner = buildMessage(delayMs, topic);
+            MessageExtBrokerInner inner = buildMessage(delayMs, topic, false);
             PutMessageResult putMessageResult = messageStore.putMessage(inner);
             assertEquals(PutMessageStatus.PUT_OK, putMessageResult.getPutMessageStatus());
         }
@@ -162,13 +161,13 @@ public class TimerMessageStoreTest {
         long delayMs = curr + 1000;
         String uniqKey = null;
         for (int i = 0; i < 5; i++) {
-            MessageExtBrokerInner inner = buildMessage(delayMs, topic);
+            MessageExtBrokerInner inner = buildMessage(delayMs, topic, false);
             if (null == uniqKey) {
                 uniqKey = MessageClientIDSetter.getUniqID(inner);
             }
             assertEquals(PutMessageStatus.PUT_OK, messageStore.putMessage(inner).getPutMessageStatus());
         }
-        MessageExtBrokerInner delMsg = buildMessage(delayMs, topic);
+        MessageExtBrokerInner delMsg = buildMessage(delayMs, topic, false);
         MessageAccessor.putProperty(delMsg, TimerMessageStore.TIMER_DELETE_UNIQKEY, uniqKey);
         delMsg.setPropertiesString(MessageDecoder.messageProperties2String(delMsg.getProperties()));
         assertEquals(PutMessageStatus.PUT_OK, messageStore.putMessage(delMsg).getPutMessageStatus());
@@ -194,7 +193,7 @@ public class TimerMessageStoreTest {
         long curr = (System.currentTimeMillis()/1000) * 1000;
         long delayMs = curr + 3000;
         for (int i = 0; i < msgNum; i++) {
-            MessageExtBrokerInner inner = buildMessage(delayMs, topic);
+            MessageExtBrokerInner inner = buildMessage((i % 2 == 0) ? 3000 : delayMs, topic, i % 2 == 0);
             PutMessageResult putMessageResult = messageStore.putMessage(inner);
             assertEquals(PutMessageStatus.PUT_OK, putMessageResult.getPutMessageStatus());
         }
@@ -234,14 +233,20 @@ public class TimerMessageStoreTest {
         return null;
     }
 
-    public MessageExtBrokerInner buildMessage(long delayedMs, String topic) {
+    public MessageExtBrokerInner buildMessage(long delayedMs, String topic, boolean relative) {
         MessageExtBrokerInner msg = new MessageExtBrokerInner();
-        msg.setTopic(TimerMessageStore.TIMER_TOPIC);
-        MessageAccessor.putProperty(msg, MessageConst.PROPERTY_REAL_TOPIC, topic);
-        MessageAccessor.putProperty(msg, MessageConst.PROPERTY_REAL_QUEUE_ID, "0");
+        msg.setTopic(topic);
+        msg.setQueueId(0);
+        //msg.setTopic(TimerMessageStore.TIMER_TOPIC);
+        //MessageAccessor.putProperty(msg, MessageConst.PROPERTY_REAL_TOPIC, topic);
+        //MessageAccessor.putProperty(msg, MessageConst.PROPERTY_REAL_QUEUE_ID, "0");
         msg.setTags(counter.incrementAndGet() + "");
         msg.setKeys("timer");
-        MessageAccessor.putProperty(msg, TimerMessageStore.TIMER_DELAY_MS, delayedMs + "");
+        if (relative) {
+            MessageAccessor.putProperty(msg, MessageConst.PROPERTY_TIMER_DELAY_SEC, delayedMs/1000 + "");
+        } else {
+            MessageAccessor.putProperty(msg, MessageConst.PROPERTY_TIMER_DELIVER_MS, delayedMs + "");
+        }
         msg.setBody(msgBody);
         msg.setKeys(String.valueOf(System.currentTimeMillis()));
         msg.setQueueId(0);

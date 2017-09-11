@@ -86,7 +86,7 @@ public class TimerMessageStore {
 
     private final int commitLogFileSize;
     private final int timerLogFileSize;
-    private final int timerRollWindow;
+    private final int timerRollWindowSec;
     private final int ttlSecs;
     private final MessageStoreConfig storeConfig;
     private volatile BrokerRole lastBrokerRole = BrokerRole.SLAVE;
@@ -97,13 +97,17 @@ public class TimerMessageStore {
         this.messageStore = messageStore;
         this.storeConfig = storeConfig;
         this.commitLogFileSize = storeConfig.getMapedFileSizeCommitLog();
-        this.timerLogFileSize =  storeConfig.getMapedFileSizeTimerLog();
+        this.timerLogFileSize =  storeConfig.getMappedFileSizeTimerLog();
         this.ttlSecs = 2 * DAY_SECS;
         this.timerWheel = new TimerWheel(getTimerWheelPath(storeConfig.getStorePathRootDir()), 2 * DAY_SECS );
         this.timerLog = new TimerLog(getTimerLogPath(storeConfig.getStorePathRootDir()), timerLogFileSize);
         this.timerCheckpoint =  timerCheckpoint;
         this.lastBrokerRole = storeConfig.getBrokerRole();
-        this.timerRollWindow = ttlSecs - TIME_BLANK;
+        if (storeConfig.getTimerRollWindowSec() > ttlSecs - TIME_BLANK || storeConfig.getTimerRollWindowSec() < 3600) {
+            this.timerRollWindowSec = ttlSecs - TIME_BLANK;
+        } else {
+            this.timerRollWindowSec = storeConfig.getTimerRollWindowSec();
+        }
         enqueueGetService = new TimerEnqueueGetService();
         enqueuePutService = new TimerEnqueuePutService();
         dequeueWarmService = new TimerDequeueWarmService();
@@ -380,11 +384,11 @@ public class TimerMessageStore {
             +  8 //offsetPy
             +  4 //sizePy
             ;
-        boolean needRoll =  delayedTime - currWriteTimeMs + TIME_BLANK >= timerWheel.TTL_SECS * 1000;
+        boolean needRoll =  delayedTime - currWriteTimeMs >= timerRollWindowSec * 1000;
         int magic = MAGIC_DEFAULT;
         if (needRoll) {
             magic = magic | MAGIC_ROLL;
-            delayedTime =  currWriteTimeMs +  timerWheel.TTL_SECS * 1000 - TIME_BLANK;
+            delayedTime =  currWriteTimeMs +  timerRollWindowSec * 1000;
         }
         boolean isDelete = messageExt.getProperty(TIMER_DELETE_UNIQKEY) != null;
         if (isDelete) {
@@ -410,6 +414,7 @@ public class TimerMessageStore {
 
     public int warmDequeue() {
         if (!isRunningDequeue()) return -1;
+        if (!storeConfig.isTimerWarmEnable()) return -1;
         if (preReadTimeMs <= currReadTimeMs) {
             preReadTimeMs = currReadTimeMs + 1000;
         }
@@ -830,9 +835,8 @@ public class TimerMessageStore {
                     timerLog.getMappedFileQueue().flush(0);
                     timerWheel.flush();
                     timerCheckpoint.flush();
-                    //TODO wait how long
-                    waitForRunning(1000);
-                    if (System.currentTimeMillis() - start > 10000) {
+                    waitForRunning(storeConfig.getTimerFlushIntervalMs());
+                    if (System.currentTimeMillis() - start > storeConfig.getTimerProgressLogIntervalMs()) {
                         start =  System.currentTimeMillis();
                         ConsumeQueue cq = messageStore.getConsumeQueue(TIMER_TOPIC, 0);
                         long maxOffsetInQueue = cq == null ? 0 : cq.getMaxOffsetInQueue();

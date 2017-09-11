@@ -553,19 +553,30 @@ public class CommitLog {
                 msg.setTopic(topic);
                 msg.setQueueId(queueId);
             }
-            if (msg.getProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS) != null
+            if ((null != msg.getProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS) || null != msg.getProperty(MessageConst.PROPERTY_TIMER_DELAY_SEC))
                 && null == msg.getProperty(MessageConst.PROPERTY_TIMER_IN_MS)) {
-                Long deliverMs =  Long.valueOf(msg.getProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS));
-                if (deliverMs % 1000 == 0) {
-                    deliverMs = deliverMs - 1;
+                long deliverMs = 0L;
+                if (msg.getProperty(MessageConst.PROPERTY_TIMER_DELAY_SEC) != null) {
+                    deliverMs = System.currentTimeMillis() + Integer.valueOf(msg.getProperty(MessageConst.PROPERTY_TIMER_DELAY_SEC)) * 1000;
+                } else {
+                    deliverMs = Long.valueOf(msg.getProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS));
                 }
-                deliverMs = (deliverMs/1000) * 1000;
-                MessageAccessor.putProperty(msg, MessageConst.PROPERTY_TIMER_IN_MS, deliverMs + "");
-                MessageAccessor.putProperty(msg, MessageConst.PROPERTY_REAL_TOPIC, msg.getTopic());
-                MessageAccessor.putProperty(msg, MessageConst.PROPERTY_REAL_QUEUE_ID, String.valueOf(msg.getQueueId()));
-                msg.setPropertiesString(MessageDecoder.messageProperties2String(msg.getProperties()));
-                msg.setTopic(TimerMessageStore.TIMER_TOPIC);
-                msg.setQueueId(0);
+                if (deliverMs > System.currentTimeMillis()) {
+                    if (deliverMs - System.currentTimeMillis() > this.defaultMessageStore.getMessageStoreConfig().getTimerMaxDelaySec() * 1000) {
+                        return new PutMessageResult(PutMessageStatus.MESSAGE_ILLEGAL, null);
+                    }
+                    if (deliverMs % 1000 == 0) {
+                        deliverMs = deliverMs - 1000;
+                    } else {
+                        deliverMs = (deliverMs/1000) * 1000;
+                    }
+                    MessageAccessor.putProperty(msg, MessageConst.PROPERTY_TIMER_IN_MS, deliverMs + "");
+                    MessageAccessor.putProperty(msg, MessageConst.PROPERTY_REAL_TOPIC, msg.getTopic());
+                    MessageAccessor.putProperty(msg, MessageConst.PROPERTY_REAL_QUEUE_ID, String.valueOf(msg.getQueueId()));
+                    msg.setPropertiesString(MessageDecoder.messageProperties2String(msg.getProperties()));
+                    msg.setTopic(TimerMessageStore.TIMER_TOPIC);
+                    msg.setQueueId(0);
+                }
             }
         }
 

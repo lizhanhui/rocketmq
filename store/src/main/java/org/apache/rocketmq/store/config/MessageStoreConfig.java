@@ -144,7 +144,12 @@ public class MessageStoreConfig {
     private boolean fastFailIfNoBufferInStorePool = false;
 
 
-    private int mapedFileSizeTimerLog = 100 * 1024 * 1024;
+    private int mappedFileSizeTimerLog = 100 * 1024 * 1024;
+    private int timerRollWindowSec = Integer.MAX_VALUE;
+    private int timerMaxDelaySec = 3600 * 24 * 3;
+    private int timerFlushIntervalMs = 1000;
+    private int timerProgressLogIntervalMs = 10 * 1000;
+    private boolean timerWarmEnable = true;
 
 
     public boolean isDebugLockEnable() {
@@ -670,11 +675,51 @@ public class MessageStoreConfig {
         this.commitCommitLogThoroughInterval = commitCommitLogThoroughInterval;
     }
 
-    public int getMapedFileSizeTimerLog() {
-        return mapedFileSizeTimerLog;
+    public int getMappedFileSizeTimerLog() {
+        return mappedFileSizeTimerLog;
     }
 
-    public void setMapedFileSizeTimerLog(final int mapedFileSizeTimerLog) {
-        this.mapedFileSizeTimerLog = mapedFileSizeTimerLog;
+    public void setMappedFileSizeTimerLog(final int mappedFileSizeTimerLog) {
+        this.mappedFileSizeTimerLog = mappedFileSizeTimerLog;
+    }
+
+    public int getTimerRollWindowSec() {
+        return timerRollWindowSec;
+    }
+
+    public void setTimerRollWindowSec(final int timerRollWindowSec) {
+        this.timerRollWindowSec = timerRollWindowSec;
+    }
+
+    public int getTimerMaxDelaySec() {
+        return timerMaxDelaySec;
+    }
+
+    public void setTimerMaxDelaySec(final int timerMaxDelaySec) {
+        this.timerMaxDelaySec = timerMaxDelaySec;
+    }
+
+    public int getTimerFlushIntervalMs() {
+        return timerFlushIntervalMs;
+    }
+
+    public void setTimerFlushIntervalMs(final int timerFlushIntervalMs) {
+        this.timerFlushIntervalMs = timerFlushIntervalMs;
+    }
+
+    public int getTimerProgressLogIntervalMs() {
+        return timerProgressLogIntervalMs;
+    }
+
+    public void setTimerProgressLogIntervalMs(final int timerProgressLogIntervalMs) {
+        this.timerProgressLogIntervalMs = timerProgressLogIntervalMs;
+    }
+
+    public boolean isTimerWarmEnable() {
+        return timerWarmEnable;
+    }
+
+    public void setTimerWarmEnable(final boolean timerWarmEnable) {
+        this.timerWarmEnable = timerWarmEnable;
     }
 }
