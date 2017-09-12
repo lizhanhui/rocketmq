@@ -634,9 +634,9 @@ public class TimerMessageStore {
                 }
                 Thread.sleep(50);
                 putMessageResult = messageStore.putMessage(message);
-                log.warn("Retrying do put timer msg retryNum:{} putRes:{} msg:{}", retryNum, putMessageResult, message);
+                log.warn("Retrying to do put timer msg retryNum:{} putRes:{} msg:{}", retryNum, putMessageResult, message);
             } catch (Exception e) {
-                log.warn("Unknown error in retrying do put timer msg:{}", message, e);
+                log.warn("Unknown error in retrying to do put timer msg:{}", message, e);
             }
         }
         return 2;

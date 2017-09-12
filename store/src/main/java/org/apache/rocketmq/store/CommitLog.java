@@ -552,8 +552,7 @@ public class CommitLog {
 
                 msg.setTopic(topic);
                 msg.setQueueId(queueId);
-            }
-            if ((null != msg.getProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS) || null != msg.getProperty(MessageConst.PROPERTY_TIMER_DELAY_SEC))
+            } else if ((null != msg.getProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS) || null != msg.getProperty(MessageConst.PROPERTY_TIMER_DELAY_SEC))
                 && null == msg.getProperty(MessageConst.PROPERTY_TIMER_IN_MS)) {
                 long deliverMs = 0L;
                 if (msg.getProperty(MessageConst.PROPERTY_TIMER_DELAY_SEC) != null) {
