@@ -681,6 +681,7 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner ,MQPopConsumer
     }
 	@Override
 	public PopResult pop(MessageQueue mq, long invisibleTime, int maxNums, String consumerGroup, long timeout) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+        this.subscriptionAutomatically(mq.getTopic());
 		FindBrokerResult findBrokerResult = this.mQClientFactory.findBrokerAddressInSubscribe(mq.getBrokerName(), MixAll.MASTER_ID, true);
 		if (null == findBrokerResult) {
 			this.mQClientFactory.updateTopicRouteInfoFromNameServer(mq.getTopic());
@@ -701,6 +702,7 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner ,MQPopConsumer
 	}
 	@Override
 	public void popAsync(MessageQueue mq, long invisibleTime, int maxNums, String consumerGroup, long timeout, PopCallback popCallback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+        this.subscriptionAutomatically(mq.getTopic());
 		FindBrokerResult findBrokerResult = this.mQClientFactory.findBrokerAddressInSubscribe(mq.getBrokerName(), MixAll.MASTER_ID, true);
 		if (null == findBrokerResult) {
 			this.mQClientFactory.updateTopicRouteInfoFromNameServer(mq.getTopic());

@@ -12,5 +12,6 @@ public class PopAckConstants {
     public static final int REVIVE_QUEUE_NUM = 2;
     public static final String CK_TAG = "ck";
     public static final String ACK_TAG = "ack";
+    public static final String SPLIT = "@";
 
 }
