@@ -17,71 +17,36 @@
 
 package org.apache.rocketmq.client.consumer;
 
-import org.apache.rocketmq.common.filter.ExpressionType;
 import org.apache.rocketmq.common.message.MessageDecoder;
 
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- *
- * Message selector: select message at server.
- * <p>
- *     Now, support:
- *     <li>Tag: {@link org.apache.rocketmq.common.filter.ExpressionType#TAG}
- *     </li>
- *     <li>SQL92: {@link org.apache.rocketmq.common.filter.ExpressionType#SQL92}
- *     </li>
- * </p>
- */
-public class MessageSelector {
+public class PullMessageSelector {
 
-    /**
-     * @see org.apache.rocketmq.common.filter.ExpressionType
-     */
-    private String type;
-
-    /**
-     * expression content.
-     */
     private String expression;
+
+    protected PullMessageSelector(String expression) {
+        this.expression = expression;
+    }
+
+    public static PullMessageSelector byTag(String tag) {
+        return new PullMessageSelector(tag);
+    }
+
+    public static PullMessageSelector all() {
+        return new PullMessageSelector("*");
+    }
+
+    private long offset = -1;
+    private int maxNums = 0;
+    private long timeout = 0;
+    private boolean blockIfNotFound = false;
+
     /**
      * self define properties, just an extend point.
      */
     private Map<String, String> properties = new HashMap<String, String>(4);
-
-    private MessageSelector(String type, String expression) {
-        this.type = type;
-        this.expression = expression;
-    }
-
-    /**
-     * Use SLQ92 to select message.
-     *
-     * @param sql if null or empty, will be treated as select all message.
-     * @return
-     */
-    public static MessageSelector bySql(String sql) {
-        return new MessageSelector(ExpressionType.SQL92, sql);
-    }
-
-    /**
-     * Use tag to select message.
-     *
-     * @param tag if null or empty or "*", will be treated as select all message.
-     * @return
-     */
-    public static MessageSelector byTag(String tag) {
-        return new MessageSelector(ExpressionType.TAG, tag);
-    }
-
-    public String getExpressionType() {
-        return type;
-    }
-
-    public String getExpression() {
-        return expression;
-    }
 
     public void putProperty(String key, String value) {
         if (key == null || value == null || key.trim() == "" || value.trim() == "") {
@@ -108,5 +73,69 @@ public class MessageSelector {
             return null;
         }
         return MessageDecoder.messageProperties2String(this.properties);
+    }
+
+    /**
+     * from where to pull
+     *
+     * @param offset
+     * @return
+     */
+    public PullMessageSelector from(long offset) {
+        this.offset = offset;
+        return this;
+    }
+
+    /**
+     * max pulling numbers
+     *
+     * @param maxNums
+     * @return
+     */
+    public PullMessageSelector count(int maxNums) {
+        this.maxNums = maxNums;
+        return this;
+    }
+
+    /**
+     * timeout
+     *
+     * @param timeout
+     * @return
+     */
+    public PullMessageSelector timeout(long timeout) {
+        this.timeout = timeout;
+        return this;
+    }
+
+    /**
+     * if no message arrival,whether blocking.
+     *
+     * @param block
+     * @return
+     */
+    public PullMessageSelector blockIfNotFound(boolean block) {
+        this.blockIfNotFound = block;
+        return this;
+    }
+
+    public String getExpression() {
+        return expression;
+    }
+
+    public long getOffset() {
+        return offset;
+    }
+
+    public int getMaxNums() {
+        return maxNums;
+    }
+
+    public long getTimeout() {
+        return timeout;
+    }
+
+    public boolean isBlockIfNotFound() {
+        return blockIfNotFound;
     }
 }

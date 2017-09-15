@@ -21,7 +21,10 @@
 package org.apache.rocketmq.common.protocol.heartbeat;
 
 import com.alibaba.fastjson.annotation.JSONField;
+import org.apache.rocketmq.common.message.MessageDecoder;
+
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 public class SubscriptionData implements Comparable<SubscriptionData> {
@@ -33,6 +36,10 @@ public class SubscriptionData implements Comparable<SubscriptionData> {
     private Set<Integer> codeSet = new HashSet<Integer>();
     private long subVersion = System.currentTimeMillis();
     private String expressionType;
+    /**
+     * self define properties.
+     */
+    private Map<String, String> properties;
 
     @JSONField(serialize = false)
     private String filterClassSource;
@@ -111,6 +118,21 @@ public class SubscriptionData implements Comparable<SubscriptionData> {
         this.expressionType = expressionType;
     }
 
+    public Map<String, String> getProperties() {
+        return properties;
+    }
+
+    public void setProperties(Map<String, String> properties) {
+        this.properties = properties;
+    }
+
+    public String getPropertiesStr() {
+        if (this.properties == null || this.properties.isEmpty()) {
+            return null;
+        }
+        return MessageDecoder.messageProperties2String(this.properties);
+    }
+
     @Override
     public int hashCode() {
         final int prime = 31;
@@ -169,7 +191,7 @@ public class SubscriptionData implements Comparable<SubscriptionData> {
     public String toString() {
         return "SubscriptionData [classFilterMode=" + classFilterMode + ", topic=" + topic + ", subString="
             + subString + ", tagsSet=" + tagsSet + ", codeSet=" + codeSet + ", subVersion=" + subVersion
-            + ", expressionType=" + expressionType + "]";
+            + ", properties=" + properties + ", expressionType=" + expressionType + "]";
     }
 
     @Override
