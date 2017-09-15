@@ -98,7 +98,7 @@ public class ConsumeQueueExt {
      * @param address
      * @return
      */
-    public boolean isExtAddr(final long address) {
+    public static boolean isExtAddr(final long address) {
         return address <= MAX_ADDR;
     }
 
