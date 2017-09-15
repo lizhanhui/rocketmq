@@ -172,6 +172,17 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
             }
         }, 1000 * 3, 1000);
 
+        this.timer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                try {
+                    NettyRemotingClient.this.scanChannelTablesOfNameServer();
+                } catch (Exception e) {
+                    log.error("scanChannelTablesOfNameServer exception", e);
+                }
+            }
+        }, 1000 * 3, 10 * 1000);
+
         if (this.channelEventListener != null) {
             this.nettyEventExecutor.start();
         }
@@ -341,6 +352,7 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
                 if (this.rpcHook != null) {
                     this.rpcHook.doAfterResponse(RemotingHelper.parseChannelRemoteAddr(channel), request, response);
                 }
+                this.updateChannelLastResponseTime(addr);
                 return response;
             } catch (RemotingSendRequestException e) {
                 log.warn("invokeSync: send request exception, so close the channel[{}]", addr);
@@ -357,6 +369,21 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
         } else {
             this.closeChannel(addr, channel);
             throw new RemotingConnectException(addr);
+        }
+    }
+
+    private void updateChannelLastResponseTime(final String addr) {
+        String address = addr;
+        if (address == null) {
+            address = this.namesrvAddrChoosed.get();
+        }
+        if (address == null) {
+            log.warn("[updateChannelLastResponseTime] could not find address!!");
+            return;
+        }
+        ChannelWrapper channelWrapper = this.channelTables.get(address);
+        if (channelWrapper != null && channelWrapper.isOK()) {
+            channelWrapper.updateLastResponseTime();
         }
     }
 
@@ -485,7 +512,7 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
                 if (this.rpcHook != null) {
                     this.rpcHook.doBeforeRequest(addr, request);
                 }
-                this.invokeAsyncImpl(channel, request, timeoutMillis, invokeCallback);
+                this.invokeAsyncImpl(channel, request, timeoutMillis, new InvokeCallbackWrapper(invokeCallback, addr));
             } catch (RemotingSendRequestException e) {
                 log.warn("invokeAsync: send request exception, so close the channel[{}]", addr);
                 this.closeChannel(addr, channel);
@@ -558,11 +585,34 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
         return this.publicExecutor;
     }
 
+    protected void scanChannelTablesOfNameServer() {
+        List<String> nameServerAddresses = this.namesrvAddrList.get();
+        if (nameServerAddresses == null || nameServerAddresses.isEmpty()) {
+            log.warn("[SCAN] Addresses of name server is empty!");
+            return;
+        }
+        for (String address : nameServerAddresses) {
+            ChannelWrapper channelWrapper = this.channelTables.get(address);
+            if (channelWrapper == null) {
+                continue;
+            }
+
+            if ((System.currentTimeMillis() - channelWrapper.getLastResponseTime()) > this.nettyClientConfig.getChannelNotActiveInterval()) {
+                log.warn("[SCAN] No response after {} from name server {}, so close it!", channelWrapper.getLastResponseTime(),
+                    address);
+                closeChannel(address, channelWrapper.getChannel());
+            }
+        }
+    }
+
     static class ChannelWrapper {
         private final ChannelFuture channelFuture;
+        // only affected by sync or async request, oneway is not included.
+        private long lastResponseTime;
 
         public ChannelWrapper(ChannelFuture channelFuture) {
             this.channelFuture = channelFuture;
+            this.lastResponseTime = System.currentTimeMillis();
         }
 
         public boolean isOK() {
@@ -579,6 +629,33 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
 
         public ChannelFuture getChannelFuture() {
             return channelFuture;
+        }
+
+        public long getLastResponseTime() {
+            return this.lastResponseTime;
+        }
+
+        public void updateLastResponseTime() {
+            this.lastResponseTime = System.currentTimeMillis();
+        }
+    }
+
+    class InvokeCallbackWrapper implements InvokeCallback {
+
+        private final InvokeCallback invokeCallback;
+        private final String addr;
+
+        public InvokeCallbackWrapper(InvokeCallback invokeCallback, String addr) {
+            this.invokeCallback = invokeCallback;
+            this.addr = addr;
+        }
+
+        @Override
+        public void operationComplete(ResponseFuture responseFuture) {
+            if (responseFuture != null && responseFuture.isSendRequestOK() && responseFuture.getResponseCommand() != null) {
+                NettyRemotingClient.this.updateChannelLastResponseTime(addr);
+            }
+            this.invokeCallback.operationComplete(responseFuture);
         }
     }
 
