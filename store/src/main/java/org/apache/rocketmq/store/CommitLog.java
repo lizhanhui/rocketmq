@@ -666,7 +666,9 @@ public class CommitLog {
             if (!this.defaultMessageStore.getMessageStoreConfig().isTransientStorePoolEnable()) {
                 flushCommitLogService.wakeup();
             } else {
-                commitLogService.wakeup();
+                if (this.defaultMessageStore.getMessageStoreConfig().isWakeCommitWhenPutMessage()) {
+                    commitLogService.wakeup();
+                }
             }
         }
     }
