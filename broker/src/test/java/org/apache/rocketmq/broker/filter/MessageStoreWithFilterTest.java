@@ -96,7 +96,6 @@ public class MessageStoreWithFilterTest {
     public void destroy() {
         master.shutdown();
         master.destroy();
-        UtilAll.deleteFile(new File(storePath));
     }
 
     public MessageExtBrokerInner buildMessage() {

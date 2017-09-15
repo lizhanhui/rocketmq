@@ -89,4 +89,9 @@ public class FilterAPI {
 
         return subscriptionData;
     }
+
+    public static SubscriptionData build(final String topic, final String subString,
+                                         final String type) throws Exception {
+        return build(topic, subString, type, null);
+    }
 }
