@@ -385,12 +385,13 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
             }
         }
 
-        String subExpression = null;
+        String subExpression = null, subProperties = null;
         boolean classFilter = false;
         SubscriptionData sd = this.rebalanceImpl.getSubscriptionInner().get(pullRequest.getMessageQueue().getTopic());
         if (sd != null) {
             if (this.defaultMQPushConsumer.isPostSubscriptionWhenPull() && !sd.isClassFilterMode()) {
                 subExpression = sd.getSubString();
+                subProperties = sd.getPropertiesStr();
             }
 
             classFilter = sd.isClassFilterMode();
@@ -415,7 +416,8 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                 BROKER_SUSPEND_MAX_TIME_MILLIS, // 9
                 CONSUMER_TIMEOUT_MILLIS_WHEN_SUSPEND, // 10
                 CommunicationMode.ASYNC, // 11
-                pullCallback // 12
+                pullCallback, // 12
+                subProperties // 13
             );
         } catch (Exception e) {
             log.error("pullKernelImpl exception", e);
@@ -847,7 +849,8 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
             }
 
             SubscriptionData subscriptionData = FilterAPI.build(topic,
-                messageSelector.getExpression(), messageSelector.getExpressionType());
+                messageSelector.getExpression(), messageSelector.getExpressionType(), null);
+            subscriptionData.setProperties(messageSelector.getProperties());
 
             this.rebalanceImpl.getSubscriptionInner().put(topic, subscriptionData);
             if (this.mQClientFactory != null) {
