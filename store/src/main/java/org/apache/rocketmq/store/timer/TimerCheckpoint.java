@@ -16,12 +16,6 @@
  */
 package org.apache.rocketmq.store.timer;
 
-import org.apache.rocketmq.common.UtilAll;
-import org.apache.rocketmq.common.constant.LoggerName;
-import org.apache.rocketmq.store.MappedFile;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -29,6 +23,11 @@ import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
+import org.apache.rocketmq.common.UtilAll;
+import org.apache.rocketmq.common.constant.LoggerName;
+import org.apache.rocketmq.store.MappedFile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TimerCheckpoint {
     private static final Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
@@ -105,7 +104,7 @@ public class TimerCheckpoint {
     }
 
     public static byte[] encode(TimerCheckpoint another) {
-        ByteBuffer byteBuffer =  ByteBuffer.allocate(32);
+        ByteBuffer byteBuffer = ByteBuffer.allocate(32);
         byteBuffer.putLong(another.getLastReadTimeMs());
         byteBuffer.putLong(another.getLastTimerLogFlushPos());
         byteBuffer.putLong(another.getLastTimerQueueOffset());
@@ -113,8 +112,8 @@ public class TimerCheckpoint {
         return byteBuffer.array();
     }
 
-    public static TimerCheckpoint decode(byte[]  data) {
-        ByteBuffer byteBuffer =  ByteBuffer.wrap(data);
+    public static TimerCheckpoint decode(byte[] data) {
+        ByteBuffer byteBuffer = ByteBuffer.wrap(data);
         TimerCheckpoint tmp = new TimerCheckpoint();
         tmp.setLastReadTimeMs(byteBuffer.getLong());
         tmp.setLastTimerLogFlushPos(byteBuffer.getLong());
@@ -122,9 +121,6 @@ public class TimerCheckpoint {
         tmp.setMasterTimerQueueOffset(byteBuffer.getLong());
         return tmp;
     }
-
-
-
 
     public void setLastReadTimeMs(long lastReadTimeMs) {
         this.lastReadTimeMs = lastReadTimeMs;

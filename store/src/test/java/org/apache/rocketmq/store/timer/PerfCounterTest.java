@@ -9,7 +9,7 @@ public class PerfCounterTest {
 
     @Test
     public void testCount() {
-        PerfCounter pc =  new PerfCounter();
+        PerfCounter pc = new PerfCounter();
         int num = 10000;
         for (int i = 0; i < num; i++) {
             pc.flow(i);
@@ -24,7 +24,7 @@ public class PerfCounterTest {
 
     @Test
     public void testTick() throws Exception {
-        PerfCounter pc =  new PerfCounter();
+        PerfCounter pc = new PerfCounter();
         for (int i = 0; i < 100; i++) {
             pc.startTick();
             Thread.sleep(1);
@@ -47,8 +47,8 @@ public class PerfCounterTest {
             Thread.sleep(1);
             ticks.endTick(key);
         }
-        PerfCounter key1 =  ticks.getCounter("key1");
-        PerfCounter key2 =  ticks.getCounter("key2");
+        PerfCounter key1 = ticks.getCounter("key1");
+        PerfCounter key2 = ticks.getCounter("key2");
         assertTrue(key1.getMin() > 1000);
         assertTrue(key2.getMin() > 1000);
 

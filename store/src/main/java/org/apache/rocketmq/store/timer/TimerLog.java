@@ -1,3 +1,19 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.rocketmq.store.timer;
 
 import java.nio.ByteBuffer;
@@ -26,6 +42,7 @@ public class TimerLog {
     public boolean load() {
         return this.mappedFileQueue.load();
     }
+
     public long append(byte[] data) {
         return append(data, 0, data.length);
     }
@@ -66,17 +83,17 @@ public class TimerLog {
 
     public SelectMappedBufferResult getTimerMessage(long offsetPy) {
         MappedFile mappedFile = mappedFileQueue.findMappedFileByOffset(offsetPy);
-        if (null == mappedFile) return null;
+        if (null == mappedFile)
+            return null;
         return mappedFile.selectMappedBuffer((int) (offsetPy % mappedFile.getFileSize()));
     }
 
-
     public SelectMappedBufferResult getWholeBuffer(long offsetPy) {
         MappedFile mappedFile = mappedFileQueue.findMappedFileByOffset(offsetPy);
-        if (null == mappedFile) return null;
+        if (null == mappedFile)
+            return null;
         return mappedFile.selectMappedBuffer(0);
     }
-
 
     public MappedFileQueue getMappedFileQueue() {
         return mappedFileQueue;
@@ -92,7 +109,7 @@ public class TimerLog {
     // so dose the batch writing
     public int getOffsetForLastUnit() {
 
-       return fileSize - (fileSize - MIN_BLANK_LEN) % UNIT_SIZE - MIN_BLANK_LEN - UNIT_SIZE;
+        return fileSize - (fileSize - MIN_BLANK_LEN) % UNIT_SIZE - MIN_BLANK_LEN - UNIT_SIZE;
     }
 
 }

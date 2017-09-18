@@ -1,3 +1,19 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.rocketmq.store.timer;
 
 import java.io.File;
@@ -15,8 +31,8 @@ import org.slf4j.LoggerFactory;
 public class TimerWheel {
 
     private static final Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
-    public static int BLANK = -1, IGNORE = -2;
-    public final int TTL_SECS;
+    public static final int BLANK = -1, IGNORE = -2;
+    public final int ttlSecs;
     private String fileName;
     private final RandomAccessFile randomAccessFile;
     private final FileChannel fileChannel;
@@ -28,27 +44,27 @@ public class TimerWheel {
             return byteBuffer.duplicate();
         }
     };
-    private final int LENGTH;
+    private final int wheelLength;
 
     public TimerWheel(String fileName, int ttlSecs) throws IOException {
-        this.TTL_SECS = ttlSecs;
+        this.ttlSecs = ttlSecs;
         this.fileName = fileName;
-        this.LENGTH = TTL_SECS * 2 * Slot.SIZE;
+        this.wheelLength = this.ttlSecs * 2 * Slot.SIZE;
         File file = new File(fileName);
         MappedFile.ensureDirOK(file.getParent());
 
         try {
             randomAccessFile = new RandomAccessFile(this.fileName, "rw");
             if (file.exists() && randomAccessFile.length() != 0 &&
-                randomAccessFile.length() != LENGTH) {
+                randomAccessFile.length() != wheelLength) {
                 throw new RuntimeException(String.format("Timer wheel length:%d != expected:%s",
-                    randomAccessFile.length(), LENGTH));
+                    randomAccessFile.length(), wheelLength));
             }
-            randomAccessFile.setLength(TTL_SECS * 2 * Slot.SIZE);
+            randomAccessFile.setLength(this.ttlSecs * 2 * Slot.SIZE);
             fileChannel = randomAccessFile.getChannel();
-            mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, LENGTH);
-            assert LENGTH == mappedByteBuffer.remaining();
-            this.byteBuffer = ByteBuffer.allocateDirect(LENGTH);
+            mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, wheelLength);
+            assert wheelLength == mappedByteBuffer.remaining();
+            this.byteBuffer = ByteBuffer.allocateDirect(wheelLength);
             this.byteBuffer.put(mappedByteBuffer);
         } catch (FileNotFoundException e) {
             log.error("create file channel " + this.fileName + " Failed. ", e);
@@ -59,13 +75,13 @@ public class TimerWheel {
         }
     }
 
-
     public void shutdown() {
         shutdown(true);
     }
 
     public void shutdown(boolean flush) {
-        if (flush) this.flush();
+        if (flush)
+            this.flush();
 
         // unmap mappedByteBuffer
         MappedFile.clean(this.mappedByteBuffer);
@@ -80,10 +96,10 @@ public class TimerWheel {
     public void flush() {
         ByteBuffer bf = localBuffer.get();
         bf.position(0);
-        bf.limit(LENGTH);
+        bf.limit(wheelLength);
         mappedByteBuffer.position(0);
-        mappedByteBuffer.limit(LENGTH);
-        for (int i = 0; i < LENGTH; i++) {
+        mappedByteBuffer.limit(wheelLength);
+        for (int i = 0; i < wheelLength; i++) {
             if (bf.get(i) != mappedByteBuffer.get(i)) {
                 mappedByteBuffer.put(i, bf.get(i));
             }
@@ -93,35 +109,36 @@ public class TimerWheel {
 
     public Slot getSlot(long timeSecs) {
         Slot slot = getRawSlot(timeSecs);
-        if (slot.TIME_SECS != timeSecs) {
+        if (slot.timeSecs != timeSecs) {
             return new Slot(-1, -1, -1);
         }
         return slot;
     }
+
     //testable
     public Slot getRawSlot(long timeSecs) {
-        int slotIndex = (int)(timeSecs % (TTL_SECS * 2));
+        int slotIndex = (int) (timeSecs % (ttlSecs * 2));
         localBuffer.get().position(slotIndex * Slot.SIZE);
-        return  new Slot(localBuffer.get().getLong(), localBuffer.get().getLong(), localBuffer.get().getLong());
+        return new Slot(localBuffer.get().getLong(), localBuffer.get().getLong(), localBuffer.get().getLong());
     }
 
-    public void putSlot(long timeSecs, long firstPos, long lastPos){
-        int slotIndex = (int)(timeSecs % (TTL_SECS * 2));
+    public void putSlot(long timeSecs, long firstPos, long lastPos) {
+        int slotIndex = (int) (timeSecs % (ttlSecs * 2));
         localBuffer.get().position(slotIndex * Slot.SIZE);
         localBuffer.get().putLong(timeSecs);
         localBuffer.get().putLong(firstPos);
         localBuffer.get().putLong(lastPos);
     }
 
-    public void reviseSlot(long timeSecs, long firstPos, long lastPos, boolean force){
-        int slotIndex = (int)(timeSecs % (TTL_SECS * 2));
+    public void reviseSlot(long timeSecs, long firstPos, long lastPos, boolean force) {
+        int slotIndex = (int) (timeSecs % (ttlSecs * 2));
         localBuffer.get().position(slotIndex * Slot.SIZE);
 
         if (timeSecs != localBuffer.get().getLong()) {
             if (force) {
                 putSlot(timeSecs, firstPos != IGNORE ? firstPos : lastPos, lastPos);
             }
-        } else  {
+        } else {
             if (IGNORE != firstPos) {
                 localBuffer.get().putLong(firstPos);
             } else {
@@ -135,20 +152,20 @@ public class TimerWheel {
 
     public long checkPhyPos(long timeSecs, long maxOffset) {
         long minFirst = Long.MAX_VALUE;
-        int slotIndex = (int)(timeSecs % (TTL_SECS * 2));
-        for (int i = 0; i < TTL_SECS * 2; i++) {
-            slotIndex = (slotIndex + i) % (TTL_SECS * 2);
+        int slotIndex = (int) (timeSecs % (ttlSecs * 2));
+        for (int i = 0; i < ttlSecs * 2; i++) {
+            slotIndex = (slotIndex + i) % (ttlSecs * 2);
             localBuffer.get().position(slotIndex * Slot.SIZE);
             if ((timeSecs + i) != localBuffer.get().getLong()) {
                 continue;
             }
             long first = localBuffer.get().getLong();
             if (localBuffer.get().getLong() > maxOffset) {
-                if(first < minFirst) {
+                if (first < minFirst) {
                     minFirst = first;
                 }
             }
         }
-        return  minFirst;
+        return minFirst;
     }
 }
