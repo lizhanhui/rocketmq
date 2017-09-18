@@ -144,6 +144,7 @@ public class MessageStoreConfig {
     private boolean fastFailIfNoBufferInStorePool = false;
 
 
+    private boolean timerWheelEnable = true;
     private int mappedFileSizeTimerLog = 100 * 1024 * 1024;
     private int timerRollWindowSec = Integer.MAX_VALUE;
     private int timerMaxDelaySec = 3600 * 24 * 3;
@@ -721,5 +722,13 @@ public class MessageStoreConfig {
 
     public void setTimerWarmEnable(final boolean timerWarmEnable) {
         this.timerWarmEnable = timerWarmEnable;
+    }
+
+    public boolean isTimerWheelEnable() {
+        return timerWheelEnable;
+    }
+
+    public void setTimerWheelEnable(boolean timerWheelEnable) {
+        this.timerWheelEnable = timerWheelEnable;
     }
 }

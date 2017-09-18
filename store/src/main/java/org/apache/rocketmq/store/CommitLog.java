@@ -519,6 +519,20 @@ public class CommitLog {
         return beginTimeInLock;
     }
 
+
+    private boolean checkIfTimerMessage(MessageExtBrokerInner msg) {
+        if (!this.defaultMessageStore.getMessageStoreConfig().isTimerWheelEnable()) {
+            return false;
+        }
+        if (TimerMessageStore.TIMER_TOPIC.equals(msg.getTopic())) {
+            return false;
+        }
+        if (msg.getDelayTimeLevel() > 0 || null != msg.getProperty(MessageConst.PROPERTY_TIMER_IN_MS)) {
+            return false;
+        }
+
+        return null != msg.getProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS) || null != msg.getProperty(MessageConst.PROPERTY_TIMER_DELAY_SEC);
+    }
     public PutMessageResult putMessage(final MessageExtBrokerInner msg) {
         // Set the storage time
         msg.setStoreTimestamp(System.currentTimeMillis());
@@ -552,8 +566,7 @@ public class CommitLog {
 
                 msg.setTopic(topic);
                 msg.setQueueId(queueId);
-            } else if ((null != msg.getProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS) || null != msg.getProperty(MessageConst.PROPERTY_TIMER_DELAY_SEC))
-                && null == msg.getProperty(MessageConst.PROPERTY_TIMER_IN_MS) && !TimerMessageStore.TIMER_TOPIC.equals(msg.getTopic())) {
+            } else if (checkIfTimerMessage(msg)) {
                 long deliverMs = 0L;
                 try {
                     if (msg.getProperty(MessageConst.PROPERTY_TIMER_DELAY_SEC) != null) {

@@ -213,15 +213,20 @@ public class BrokerController {
                 MessageStorePluginContext context = new MessageStorePluginContext(messageStoreConfig, brokerStatsManager, messageArrivingListener, brokerConfig);
                 this.messageStore = MessageStoreFactory.build(context, this.messageStore);
                 this.messageStore.getDispatcherList().addFirst(new CommitLogDispatcherCalcBitMap(this.brokerConfig, this.consumerFilterManager));
-                this.timerCheckpoint =  new TimerCheckpoint(TimerMessageStore.getTimerCheckPath(messageStoreConfig.getStorePathRootDir()));
-                this.timerMessageStore = new TimerMessageStore(messageStore, messageStoreConfig, timerCheckpoint);
+                if (messageStoreConfig.isTimerWheelEnable()) {
+                    this.timerCheckpoint =  new TimerCheckpoint(TimerMessageStore.getTimerCheckPath(messageStoreConfig.getStorePathRootDir()));
+                    this.timerMessageStore = new TimerMessageStore(messageStore, messageStoreConfig, timerCheckpoint);
+                }
             } catch (IOException e) {
                 result = false;
                 log.error("Failed to initialize", e);
             }
         }
         result = result && this.messageStore.load();
-        result = result && this.timerMessageStore.load();
+
+        if (messageStoreConfig.isTimerWheelEnable()) {
+            result = result && this.timerMessageStore.load();
+        }
 
         if (result) {
             this.remotingServer = new NettyRemotingServer(this.nettyServerConfig, this.clientHousekeepingService);

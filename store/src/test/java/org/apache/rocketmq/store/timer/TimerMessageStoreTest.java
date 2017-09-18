@@ -233,6 +233,23 @@ public class TimerMessageStoreTest {
         assertEquals(PutMessageStatus.MESSAGE_ILLEGAL, messageStore.putMessage(relative).getPutMessageStatus());
     }
 
+    @Test
+    public void testDisableTimer() throws Exception {
+        storeConfig.setTimerWheelEnable(false);
+        String topic = "TimerTest06";
+        TimerMessageStore first = createTimerMessageStore(null);
+        first.load();
+        first.start();
+        long start = System.currentTimeMillis();
+        long delaySec = storeConfig.getTimerMaxDelaySec() + 2;
+        MessageExtBrokerInner relative = buildMessage(delaySec  * 1000, topic, true);
+        assertEquals(PutMessageStatus.PUT_OK, messageStore.putMessage(relative).getPutMessageStatus());
+        ByteBuffer msgBuff = getOneMessage(topic, 0, 0, 1000);
+        assertNotNull(msgBuff);
+        assertTrue(System.currentTimeMillis() - start < 1000);
+        storeConfig.setTimerWheelEnable(true);
+    }
+
     public ByteBuffer getOneMessage(String topic, int queue, long offset, int timeout) throws Exception {
         int retry = timeout / 100;
         while (retry-- > 0) {
