@@ -305,6 +305,7 @@ public class TimerMessageStore {
         }
         state = SHUTDOWN;
         //first save checkpoint
+        prepareTimerCheckPoint();
         timerFlushService.shutdown();
         timerLog.shutdown();
         timerCheckpoint.shutdown();
@@ -1011,4 +1012,6 @@ public class TimerMessageStore {
     public TimerLog getTimerLog() {
         return timerLog;
     }
+
+
 }
