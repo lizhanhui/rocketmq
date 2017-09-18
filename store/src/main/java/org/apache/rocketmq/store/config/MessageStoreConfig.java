@@ -150,6 +150,7 @@ public class MessageStoreConfig {
     private int timerMaxDelaySec = 3600 * 24 * 3;
     private int timerFlushIntervalMs = 1000;
     private int timerProgressLogIntervalMs = 10 * 1000;
+    private int timerGetMessageThreadNum = 1;
     private boolean timerWarmEnable = false;
 
 
@@ -730,5 +731,13 @@ public class MessageStoreConfig {
 
     public void setTimerWheelEnable(boolean timerWheelEnable) {
         this.timerWheelEnable = timerWheelEnable;
+    }
+
+    public int getTimerGetMessageThreadNum() {
+        return timerGetMessageThreadNum;
+    }
+
+    public void setTimerGetMessageThreadNum(int timerGetMessageThreadNum) {
+        this.timerGetMessageThreadNum = timerGetMessageThreadNum;
     }
 }

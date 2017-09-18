@@ -16,6 +16,8 @@
  */
 package org.apache.rocketmq.store.timer;
 
+import java.util.Set;
+import java.util.concurrent.Semaphore;
 import org.apache.rocketmq.common.message.MessageExt;
 
 public class TimerRequest {
@@ -27,6 +29,10 @@ public class TimerRequest {
     private final long enqueueTime;
     private final int magic;
     private MessageExt msg;
+
+    private Semaphore semaphore;
+
+    private Set<String> deleteList;
 
     public TimerRequest(long offsetPy, int sizePy, long delayTime, long enqueueTime, int magic) {
         this(offsetPy, sizePy, delayTime, enqueueTime, magic, null);
@@ -67,5 +73,21 @@ public class TimerRequest {
 
     public int getMagic() {
         return magic;
+    }
+
+    public Semaphore getSemaphore() {
+        return semaphore;
+    }
+
+    public void setSemaphore(Semaphore semaphore) {
+        this.semaphore = semaphore;
+    }
+
+    public Set<String> getDeleteList() {
+        return deleteList;
+    }
+
+    public void setDeleteList(Set<String> deleteList) {
+        this.deleteList = deleteList;
     }
 }
