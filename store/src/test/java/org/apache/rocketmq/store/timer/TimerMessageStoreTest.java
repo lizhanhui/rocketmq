@@ -250,6 +250,26 @@ public class TimerMessageStoreTest {
         storeConfig.setTimerWheelEnable(true);
     }
 
+    @Test
+    public void testRollMessage() throws Exception {
+        storeConfig.setTimerRollWindowSec(2);
+        String topic = "TimerTest07";
+        TimerMessageStore timerMessageStore = createTimerMessageStore(null);
+        timerMessageStore.load();
+        timerMessageStore.start();
+        long curr = (System.currentTimeMillis() / 1000) * 1000;
+        long delayMs = curr + 4000;
+        MessageExtBrokerInner inner = buildMessage(delayMs, topic, false);
+        assertEquals(PutMessageStatus.PUT_OK, messageStore.putMessage(inner).getPutMessageStatus());
+        //the first one should have been deleted
+        ByteBuffer msgBuff = getOneMessage(topic, 0, 0, 5000);
+        assertNotNull(msgBuff);
+        MessageExt msgExt = MessageDecoder.decode(msgBuff);
+        assertNotNull(msgExt);
+        assertEquals(1, Integer.valueOf(msgExt.getProperty(MessageConst.PROPERTY_TIMER_ROLL_TIMES)).intValue());
+        storeConfig.setTimerRollWindowSec(Integer.MAX_VALUE);
+    }
+
     public ByteBuffer getOneMessage(String topic, int queue, long offset, int timeout) throws Exception {
         int retry = timeout / 100;
         while (retry-- > 0) {

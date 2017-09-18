@@ -117,7 +117,7 @@ public class TimerMessageStore {
         this.timerLog = new TimerLog(getTimerLogPath(storeConfig.getStorePathRootDir()), timerLogFileSize);
         this.timerCheckpoint = timerCheckpoint;
         this.lastBrokerRole = storeConfig.getBrokerRole();
-        if (storeConfig.getTimerRollWindowSec() > ttlSecs - TIME_BLANK || storeConfig.getTimerRollWindowSec() < 3600) {
+        if (storeConfig.getTimerRollWindowSec() > ttlSecs - TIME_BLANK || storeConfig.getTimerRollWindowSec() < 2) {
             this.timerRollWindowSec = ttlSecs - TIME_BLANK;
         } else {
             this.timerRollWindowSec = storeConfig.getTimerRollWindowSec();
