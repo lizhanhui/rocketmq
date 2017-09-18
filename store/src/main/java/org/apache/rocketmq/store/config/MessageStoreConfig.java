@@ -149,7 +149,7 @@ public class MessageStoreConfig {
     private int timerMaxDelaySec = 3600 * 24 * 3;
     private int timerFlushIntervalMs = 1000;
     private int timerProgressLogIntervalMs = 10 * 1000;
-    private boolean timerWarmEnable = true;
+    private boolean timerWarmEnable = false;
 
 
     public boolean isDebugLockEnable() {

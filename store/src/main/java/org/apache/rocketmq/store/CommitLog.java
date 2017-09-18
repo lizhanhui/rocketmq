@@ -553,12 +553,16 @@ public class CommitLog {
                 msg.setTopic(topic);
                 msg.setQueueId(queueId);
             } else if ((null != msg.getProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS) || null != msg.getProperty(MessageConst.PROPERTY_TIMER_DELAY_SEC))
-                && null == msg.getProperty(MessageConst.PROPERTY_TIMER_IN_MS)) {
+                && null == msg.getProperty(MessageConst.PROPERTY_TIMER_IN_MS) && !TimerMessageStore.TIMER_TOPIC.equals(msg.getTopic())) {
                 long deliverMs = 0L;
-                if (msg.getProperty(MessageConst.PROPERTY_TIMER_DELAY_SEC) != null) {
-                    deliverMs = System.currentTimeMillis() + Integer.valueOf(msg.getProperty(MessageConst.PROPERTY_TIMER_DELAY_SEC)) * 1000;
-                } else {
-                    deliverMs = Long.valueOf(msg.getProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS));
+                try {
+                    if (msg.getProperty(MessageConst.PROPERTY_TIMER_DELAY_SEC) != null) {
+                        deliverMs = System.currentTimeMillis() + Integer.valueOf(msg.getProperty(MessageConst.PROPERTY_TIMER_DELAY_SEC)) * 1000;
+                    } else {
+                        deliverMs = Long.valueOf(msg.getProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS));
+                    }
+                } catch (Exception e) {
+                    return new PutMessageResult(PutMessageStatus.MESSAGE_ILLEGAL, null);
                 }
                 if (deliverMs > System.currentTimeMillis()) {
                     if (deliverMs - System.currentTimeMillis() > this.defaultMessageStore.getMessageStoreConfig().getTimerMaxDelaySec() * 1000) {
@@ -576,6 +580,7 @@ public class CommitLog {
                     msg.setTopic(TimerMessageStore.TIMER_TOPIC);
                     msg.setQueueId(0);
                 }
+
             }
         }
 

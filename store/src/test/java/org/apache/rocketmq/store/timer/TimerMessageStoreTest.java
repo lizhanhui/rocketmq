@@ -219,6 +219,20 @@ public class TimerMessageStoreTest {
         second.shutdown();
     }
 
+    @Test
+    public void testMaxDelaySec() throws Exception {
+        String topic = "TimerTest05";
+        TimerMessageStore first = createTimerMessageStore(null);
+        first.load();
+        first.start();
+        long curr = (System.currentTimeMillis() / 1000) * 1000;
+        long delaySec = storeConfig.getTimerMaxDelaySec() + 2;
+        MessageExtBrokerInner absolute = buildMessage(curr + delaySec  * 1000, topic, false);
+        assertEquals(PutMessageStatus.MESSAGE_ILLEGAL, messageStore.putMessage(absolute).getPutMessageStatus());
+        MessageExtBrokerInner relative = buildMessage(delaySec  * 1000, topic, true);
+        assertEquals(PutMessageStatus.MESSAGE_ILLEGAL, messageStore.putMessage(relative).getPutMessageStatus());
+    }
+
     public ByteBuffer getOneMessage(String topic, int queue, long offset, int timeout) throws Exception {
         int retry = timeout / 100;
         while (retry-- > 0) {
