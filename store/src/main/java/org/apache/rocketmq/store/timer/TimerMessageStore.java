@@ -339,28 +339,36 @@ public class TimerMessageStore {
         return RUNNING == state;
     }
 
-    private boolean isRunningEnqueue() {
+    private void checkBrokerRole() {
         BrokerRole currRole = storeConfig.getBrokerRole();
         if (lastBrokerRole != currRole) {
-            log.info("Broker role change from {} to {}", lastBrokerRole, currRole);
-            if (BrokerRole.SLAVE != currRole) {
-                currQueueOffset = Math.min(currQueueOffset, timerCheckpoint.getMasterTimerQueueOffset());
-                commitQueueOffset = currQueueOffset;
-                prepareTimerCheckPoint();
-                timerCheckpoint.flush();
-                currReadTimeMs = timerCheckpoint.getLastReadTimeMs();
-                commitReadTimeMs = currReadTimeMs;
+            synchronized (lastBrokerRole) {
+                log.info("Broker role change from {} to {}", lastBrokerRole, currRole);
+                //if change to master, do something
+                if (BrokerRole.SLAVE != currRole) {
+                    currQueueOffset = Math.min(currQueueOffset, timerCheckpoint.getMasterTimerQueueOffset());
+                    commitQueueOffset = currQueueOffset;
+                    prepareTimerCheckPoint();
+                    timerCheckpoint.flush();
+                    currReadTimeMs = timerCheckpoint.getLastReadTimeMs();
+                    commitReadTimeMs = currReadTimeMs;
+                }
+                //if change to slave, just let it go
+                lastBrokerRole = currRole;
             }
-            lastBrokerRole = currRole;
         }
-        if (BrokerRole.SLAVE == lastBrokerRole && currQueueOffset >= timerCheckpoint.getMasterTimerQueueOffset()) {
+    }
+
+    private boolean isRunningEnqueue() {
+        checkBrokerRole();
+        if (!isMaster() && currQueueOffset >= timerCheckpoint.getMasterTimerQueueOffset()) {
             return false;
         }
         return isRunning();
     }
 
     private boolean isRunningDequeue() {
-        if (BrokerRole.SLAVE == lastBrokerRole) {
+        if (!isMaster()) {
             currReadTimeMs = timerCheckpoint.getLastReadTimeMs();
             commitReadTimeMs = currReadTimeMs;
             return false;
@@ -394,16 +402,31 @@ public class TimerMessageStore {
                         perfs.getCounter("enqueue_get_miss");
                     } else {
                         long delayedTime = Long.valueOf(msgExt.getProperty(TIMER_DELAY_MS));
-                        enqueueQueue.put(new TimerRequest(offsetPy, sizePy, delayedTime, System.currentTimeMillis(), -1, msgExt));
+                        TimerRequest timerRequest = new TimerRequest(offsetPy, sizePy, delayedTime, System.currentTimeMillis(), -1, msgExt);
+                        while (true) {
+                            if (enqueueQueue.offer(timerRequest, 3, TimeUnit.SECONDS)) {
+                                break;
+                            }
+                            if (!isRunningEnqueue()) {
+                                return false;
+                            }
+                        }
                     }
                 } catch (Exception e) {
-                    log.warn("Error in enqueuing", e);
+                    //here may cause the message loss
+                    if (storeConfig.isTimerSkipUnknownError()) {
+                        log.warn("Unknown error in skipped in enqueuing", e);
+                    } else {
+                        throw e;
+                    }
                 } finally {
                     perfs.endTick("enqueue_get");
                 }
+                //if broker role changes, ignore last enqueue
+                if (!isRunningEnqueue()) {
+                    return false;
+                }
                 currQueueOffset = offset + (i / ConsumeQueue.CQ_STORE_UNIT_SIZE);
-                if (!isRunningEnqueue())
-                    break;
             }
             currQueueOffset = offset + (i / ConsumeQueue.CQ_STORE_UNIT_SIZE);
             return i > 0;
@@ -656,7 +679,7 @@ public class TimerMessageStore {
     }
 
     //0 succ; 1 fail, need retry; 2 fail, do not retry;
-    private int doPut(MessageExtBrokerInner message) {
+    private int doPut(MessageExtBrokerInner message) throws Exception {
         if (lastBrokerRole == BrokerRole.SLAVE) {
             log.warn("Trying do put timer msg in slave, [{}]", message);
             return 2;
@@ -668,34 +691,30 @@ public class TimerMessageStore {
         PutMessageResult putMessageResult = messageStore.putMessage(message);
         int retryNum = 0;
         while (retryNum < 3) {
-            try {
-                if (null == putMessageResult || null == putMessageResult.getPutMessageStatus()) {
-                    retryNum++;
-                } else {
-                    switch (putMessageResult.getPutMessageStatus()) {
-                        case PUT_OK:
-                            return 0;
-                        case SERVICE_NOT_AVAILABLE:
-                            return 1;
-                        case MESSAGE_ILLEGAL:
-                        case PROPERTIES_SIZE_EXCEEDED:
-                            return 2;
-                        case CREATE_MAPEDFILE_FAILED:
-                        case FLUSH_DISK_TIMEOUT:
-                        case FLUSH_SLAVE_TIMEOUT:
-                        case OS_PAGECACHE_BUSY:
-                        case SLAVE_NOT_AVAILABLE:
-                        case UNKNOWN_ERROR:
-                        default:
-                            retryNum++;
-                    }
+            if (null == putMessageResult || null == putMessageResult.getPutMessageStatus()) {
+                retryNum++;
+            } else {
+                switch (putMessageResult.getPutMessageStatus()) {
+                    case PUT_OK:
+                        return 0;
+                    case SERVICE_NOT_AVAILABLE:
+                        return 1;
+                    case MESSAGE_ILLEGAL:
+                    case PROPERTIES_SIZE_EXCEEDED:
+                        return 2;
+                    case CREATE_MAPEDFILE_FAILED:
+                    case FLUSH_DISK_TIMEOUT:
+                    case FLUSH_SLAVE_TIMEOUT:
+                    case OS_PAGECACHE_BUSY:
+                    case SLAVE_NOT_AVAILABLE:
+                    case UNKNOWN_ERROR:
+                    default:
+                        retryNum++;
                 }
-                Thread.sleep(50);
-                putMessageResult = messageStore.putMessage(message);
-                log.warn("Retrying to do put timer msg retryNum:{} putRes:{} msg:{}", retryNum, putMessageResult, message);
-            } catch (Exception e) {
-                log.warn("Unknown error in retrying to do put timer msg:{}", message, e);
             }
+            Thread.sleep(50);
+            putMessageResult = messageStore.putMessage(message);
+            log.warn("Retrying to do put timer msg retryNum:{} putRes:{} msg:{}", retryNum, putMessageResult, message);
         }
         return 2;
     }
@@ -764,47 +783,55 @@ public class TimerMessageStore {
                 try {
                     long tmpCommitQueueOffset = currQueueOffset;
                     TimerRequest req = enqueueQueue.poll(10, TimeUnit.MILLISECONDS);
-                    if (null == req) {
-                        commitQueueOffset = tmpCommitQueueOffset;
-                        maybeMoveWriteTime();
-                    } else {
-                        perfs.startTick("enqueue_put");
-                        boolean doRes =  false;
-                        while (!doRes && !isStopped()) {
-                            if (lastBrokerRole != BrokerRole.SLAVE && req.getDelayTime() < currWriteTimeMs) {
-                                MessageExtBrokerInner msg = convert(req.getMsg(), System.currentTimeMillis(), false);
-                                while (!doRes && !isStopped() && lastBrokerRole != BrokerRole.SLAVE) {
-                                    doRes =  1 == doPut(msg);
+                    boolean doRes =  false;
+                    while (!isStopped() && !doRes) {
+                        try {
+                            if (null == req) {
+                                commitQueueOffset = tmpCommitQueueOffset;
+                                maybeMoveWriteTime();
+                                doRes = true;
+                            } else {
+                                perfs.startTick("enqueue_put");
+                                if (isMaster() && req.getDelayTime() < currWriteTimeMs) {
+                                    MessageExtBrokerInner msg = convert(req.getMsg(), System.currentTimeMillis(), false);
+                                    while (!doRes && !isStopped() && isMaster()) {
+                                        doRes =  1 != doPut(msg);
+                                        if (!doRes) {
+                                            Thread.sleep(50);
+                                        }
+                                        maybeMoveWriteTime();
+                                    }
+                                }
+                                //the broker role may have changed
+                                if (!doRes) {
+                                    doRes = doEnqueue(req.getOffsetPy(), req.getSizePy(), req.getDelayTime(), req.getMsg());
                                     if (!doRes) {
                                         Thread.sleep(50);
                                     }
                                     maybeMoveWriteTime();
                                 }
-                            }
-                            //the broker role may have changed
-                            if (!doRes) {
-                                doRes = doEnqueue(req.getOffsetPy(), req.getSizePy(), req.getDelayTime(), req.getMsg());
-                                if (!doRes) {
-                                    Thread.sleep(50);
+                                if (!doRes && storeConfig.isTimerSkipUnknownError()) {
+                                    break;
                                 }
-                                maybeMoveWriteTime();
+                                if (doRes) {
+                                    if (enqueueQueue.size() == 0) {
+                                        commitQueueOffset = tmpCommitQueueOffset;
+                                    } else {
+                                        commitQueueOffset = req.getMsg().getQueueOffset();
+                                    }
+                                }
+                                perfs.endTick("enqueue_put");
                             }
-                            if (!doRes && storeConfig.isTimerSkipUnknownError()) {
-                                break;
+                        } catch (Throwable t) {
+                            log.error("Unknown error", t);
+                            if (storeConfig.isTimerSkipUnknownError()) {
+                                doRes = true;
                             }
                         }
-                        if (!doRes && isStopped()) {
-                            break;
-                        }
-                        if (enqueueQueue.size() == 0) {
-                            commitQueueOffset = tmpCommitQueueOffset;
-                        } else {
-                            commitQueueOffset = req.getMsg().getQueueOffset();
-                        }
-                        perfs.endTick("enqueue_put");
                     }
+
                 } catch (Throwable e) {
-                    TimerMessageStore.log.error("Error occurred in " + getServiceName(), e);
+                    TimerMessageStore.log.error("Unknown error", e);
                 }
             }
             TimerMessageStore.log.info(this.getServiceName() + " service end");
@@ -843,27 +870,41 @@ public class TimerMessageStore {
             while (!this.isStopped() || dequeueQueue.size() != 0) {
                 try {
                     long tmpReadTimeMs = currReadTimeMs;
-                    TimerRequest tr = dequeueQueue.poll(50, TimeUnit.MILLISECONDS);
-                    if (null != tr) {
-                        perfs.startTick("dequeue_put");
-                        MessageExtBrokerInner msg = convert(tr.getMsg(), tr.getEnqueueTime(), needRoll(tr.getMagic()));
-                        int putRes = doPut(msg);
-                        while (1 == putRes && !isStopped()) {
-                            doPut(msg);
-                            Thread.sleep(50);
+                    TimerRequest tr = dequeueQueue.poll(10, TimeUnit.MILLISECONDS);
+                    boolean doRes = false;
+                    while (!isStopped() && !doRes && isRunningDequeue()) {
+                        try {
+                            if (null == tr) {
+                                commitReadTimeMs = tmpReadTimeMs;
+                                doRes = true;
+                            } else {
+                                perfs.startTick("dequeue_put");
+                                MessageExtBrokerInner msg = convert(tr.getMsg(), tr.getEnqueueTime(), needRoll(tr.getMagic()));
+                                doRes  = 1 !=  doPut(msg);
+                                while (!doRes && !isStopped() && isRunningDequeue()) {
+                                    doRes = 1 != doPut(msg);
+                                    Thread.sleep(50);
+                                }
+                                if (doRes) {
+                                    if (dequeueQueue.size() == 0) {
+                                        commitReadTimeMs = tmpReadTimeMs;
+                                    } else {
+                                        commitReadTimeMs = tr.getDelayTime();
+                                    }
+                                }
+                                perfs.endTick("dequeue_put");
+                            }
+                        } catch (Throwable t) {
+                            log.info("Unknown error", t);
+                            if (storeConfig.isTimerSkipUnknownError()) {
+                                doRes = true;
+                            }
                         }
-                        if (isStopped())
-                            break;
-                        if (dequeueQueue.size() == 0) {
-                            commitReadTimeMs = tmpReadTimeMs;
-                        } else {
-                            commitReadTimeMs = tr.getDelayTime();
-                        }
-                        perfs.endTick("dequeue_put");
-                    } else {
-                        commitReadTimeMs = tmpReadTimeMs;
                     }
-                } catch (Exception e) {
+                    if (!isRunningDequeue() && dequeueQueue.size() > 0) {
+                        dequeueQueue.clear();
+                    }
+                } catch (Throwable e) {
                     TimerMessageStore.log.error("Error occurred in " + getServiceName(), e);
                 }
             }
@@ -896,28 +937,42 @@ public class TimerMessageStore {
                         continue;
                     }
                     long start = System.currentTimeMillis();
-                    for (TimerRequest tr : trs) {
+                    for (int i = 0; i < trs.size(); ) {
+                        TimerRequest tr =  trs.get(i);
+                        boolean doRes = false;
                         try {
                             long tmp = System.currentTimeMillis();
                             MessageExt msgExt = getMessageByCommitOffset(tr.getOffsetPy(), tr.getSizePy());
                             if (null != msgExt) {
                                 if (tr.getDeleteList().size() > 0 && tr.getDeleteList().contains(MessageClientIDSetter.getUniqID(msgExt))) {
+                                    doRes = true;
                                     perfs.getCounter("dequeue_delete").flow(1);
                                 } else {
                                     tr.setMsg(msgExt);
-                                    dequeueQueue.put(tr);
+                                    while (!isStopped() && !doRes) {
+                                        doRes = dequeueQueue.offer(tr, 3, TimeUnit.SECONDS);
+                                    }
                                 }
                                 perfs.getCounter("dequeue_get_2").flow(System.currentTimeMillis() - tmp);
                             } else {
+                                doRes = true;
                                 perfs.getCounter("dequeue_get_2_miss").flow(System.currentTimeMillis() - tmp);
                             }
+                        } catch (Throwable e) {
+                            log.error("Unknown exception", e);
+                            if (storeConfig.isTimerSkipUnknownError()) {
+                                doRes = true;
+                            }
                         } finally {
-                            tr.getSemaphore().release();
+                            if (doRes) {
+                                i++;
+                                tr.getSemaphore().release();
+                            }
                         }
                     }
-                    log.debug("Get_One_File num:{} cost:{} tps:{}", trs.size(), System.currentTimeMillis() - start, trs.size() * 1000 / (System.currentTimeMillis() - start + 0.1));
                     trs.clear();
-                } catch (Exception e) {
+                    log.debug("Get_One_File num:{} cost:{} tps:{}", trs.size(), System.currentTimeMillis() - start, trs.size() * 1000 / (System.currentTimeMillis() - start + 0.1));
+                } catch (Throwable e) {
                     TimerMessageStore.log.error("Error occurred in " + getServiceName(), e);
                 }
             }
@@ -995,13 +1050,16 @@ public class TimerMessageStore {
 
     public void prepareTimerCheckPoint() {
         timerCheckpoint.setLastTimerLogFlushPos(timerLog.getMappedFileQueue().getFlushedWhere());
-        if (BrokerRole.SLAVE != lastBrokerRole) {
+        if (isMaster()) {
             timerCheckpoint.setLastReadTimeMs(commitReadTimeMs);
             timerCheckpoint.setMasterTimerQueueOffset(commitQueueOffset);
         }
         timerCheckpoint.setLastTimerQueueOffset(Math.min(commitQueueOffset, timerCheckpoint.getMasterTimerQueueOffset()));
     }
 
+    public boolean isMaster() {
+        return BrokerRole.SLAVE != lastBrokerRole;
+    }
 
     public long getCurrReadTimeMs() {
         return this.currReadTimeMs;
@@ -1030,6 +1088,8 @@ public class TimerMessageStore {
     public TimerLog getTimerLog() {
         return timerLog;
     }
+
+
 
 
 }
