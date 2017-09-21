@@ -152,6 +152,7 @@ public class MessageStoreConfig {
     private int timerProgressLogIntervalMs = 10 * 1000;
     private int timerGetMessageThreadNum = 1;
     private boolean timerWarmEnable = false;
+    private boolean timerSkipUnknownError = false;
 
 
     public boolean isDebugLockEnable() {
@@ -739,5 +740,13 @@ public class MessageStoreConfig {
 
     public void setTimerGetMessageThreadNum(int timerGetMessageThreadNum) {
         this.timerGetMessageThreadNum = timerGetMessageThreadNum;
+    }
+
+    public boolean isTimerSkipUnknownError() {
+        return timerSkipUnknownError;
+    }
+
+    public void setTimerSkipUnknownError(boolean timerSkipUnknownError) {
+        this.timerSkipUnknownError = timerSkipUnknownError;
     }
 }

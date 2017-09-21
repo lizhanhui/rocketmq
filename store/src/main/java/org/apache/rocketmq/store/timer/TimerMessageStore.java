@@ -415,7 +415,7 @@ public class TimerMessageStore {
         return false;
     }
 
-    public void doEnqueue(long offsetPy, int sizePy, long delayedTime, MessageExt messageExt) {
+    public boolean doEnqueue(long offsetPy, int sizePy, long delayedTime, MessageExt messageExt) {
         log.debug("Do enqueue [{}] [{}]", new Timestamp(delayedTime), messageExt);
         int size = 4  //size
             + 8 //prev pos
@@ -449,7 +449,7 @@ public class TimerMessageStore {
         if (-1 != ret) {
             timerWheel.putSlot(delayedTime / 1000, slot.firstPos == -1 ? ret : slot.firstPos, ret);
         }
-        maybeMoveWriteTime();
+        return -1 != ret;
     }
 
     public int warmDequeue() {
@@ -527,7 +527,7 @@ public class TimerMessageStore {
         return 1;
     }
 
-    public int dequeue() {
+    public int dequeue() throws Exception {
         if (!isRunningDequeue())
             return -1;
         if (currReadTimeMs >= currWriteTimeMs) {
@@ -539,89 +539,92 @@ public class TimerMessageStore {
             moveReadTime();
             return 0;
         }
-        long currOffsetPy = slot.lastPos;
-        Set<String> deleteUniqKeys = new HashSet<>(4);
-        LinkedList<TimerRequest> stack = new LinkedList<>();
-        LinkedList<SelectMappedBufferResult> sbrs = new LinkedList<>();
-        SelectMappedBufferResult timeSbr = null;
-        int expectNum = 0;
-        Semaphore semaphore = new Semaphore(0);
-        //read the msg one by one
-        while (currOffsetPy != -1) {
-            perfs.startTick("dequeue_get_1");
-            if (null == timeSbr || timeSbr.getStartOffset() > currOffsetPy) {
-                timeSbr = timerLog.getWholeBuffer(currOffsetPy);
-                if (null != timeSbr)
-                    sbrs.add(timeSbr);
-            }
-            if (null == timeSbr)
-                break;
-            long prevPos = -1;
-            try {
-                int position = (int) (currOffsetPy % timerLogFileSize);
-                timeSbr.getByteBuffer().position(position);
-                timeSbr.getByteBuffer().getInt(); //size
-                prevPos = timeSbr.getByteBuffer().getLong();
-                int magic = timeSbr.getByteBuffer().getInt();
-                long enqueueTime = timeSbr.getByteBuffer().getLong();
-                long delayedTime = timeSbr.getByteBuffer().getInt() + enqueueTime;
-                long offsetPy = timeSbr.getByteBuffer().getLong();
-                int sizePy = timeSbr.getByteBuffer().getInt();
-                if (needDelete(magic) && !needRoll(magic)) {
-                    MessageExt msgExt = getMessageByCommitOffset(offsetPy, sizePy);
-                    if (null != msgExt) {
-                        deleteUniqKeys.add("" + msgExt.getProperty(TIMER_DELETE_UNIQKEY));
-                    } else {
-                        perfs.getCounter("dequeue_get_1_miss").flow(1);
-                    }
-                } else {
-                    TimerRequest timerRequest = new TimerRequest(offsetPy, sizePy, delayedTime, enqueueTime, magic);
-                    timerRequest.setSemaphore(semaphore);
-                    expectNum++;
-                    stack.addFirst(timerRequest);
-                }
-            } catch (Exception e) {
-                log.error("Error in dequeue_get_1", e);
-            } finally {
-                currOffsetPy = prevPos;
-                perfs.endTick("dequeue_get_1");
-            }
-        }
-        for (SelectMappedBufferResult sbr : sbrs) {
-            if (null != sbr)
-                sbr.release();
-        }
-        long start = System.currentTimeMillis();
-        int fileNum = -1;
-        int fileIndexPy = -1;
-        List<TimerRequest> currList = null;
-        for (TimerRequest tr : stack) {
-            tr.setDeleteList(deleteUniqKeys);
-            if (fileIndexPy != tr.getOffsetPy() / commitLogFileSize) {
-                fileNum++;
-                if (null != currList && currList.size() > 0) {
-                    getMessageServices[fileNum % getMessageServices.length].addTimerRequest(currList);
-                }
-                currList = new LinkedList<>();
-                currList.add(tr);
-                fileIndexPy = (int) (tr.getOffsetPy() / commitLogFileSize);
-            } else {
-                currList.add(tr);
-            }
-        }
-        fileNum++;
-        if (null != currList && currList.size() > 0) {
-            getMessageServices[fileNum % getMessageServices.length].addTimerRequest(currList);
-        }
-        long endSplit = System.currentTimeMillis() - start;
         try {
+            long currOffsetPy = slot.lastPos;
+            Set<String> deleteUniqKeys = new HashSet<>(4);
+            LinkedList<TimerRequest> stack = new LinkedList<>();
+            LinkedList<SelectMappedBufferResult> sbrs = new LinkedList<>();
+            SelectMappedBufferResult timeSbr = null;
+            int expectNum = 0;
+            Semaphore semaphore = new Semaphore(0);
+            //read the msg one by one
+            while (currOffsetPy != -1) {
+                perfs.startTick("dequeue_get_1");
+                if (null == timeSbr || timeSbr.getStartOffset() > currOffsetPy) {
+                    timeSbr = timerLog.getWholeBuffer(currOffsetPy);
+                    if (null != timeSbr)
+                        sbrs.add(timeSbr);
+                }
+                if (null == timeSbr)
+                    break;
+                long prevPos = -1;
+                try {
+                    int position = (int) (currOffsetPy % timerLogFileSize);
+                    timeSbr.getByteBuffer().position(position);
+                    timeSbr.getByteBuffer().getInt(); //size
+                    prevPos = timeSbr.getByteBuffer().getLong();
+                    int magic = timeSbr.getByteBuffer().getInt();
+                    long enqueueTime = timeSbr.getByteBuffer().getLong();
+                    long delayedTime = timeSbr.getByteBuffer().getInt() + enqueueTime;
+                    long offsetPy = timeSbr.getByteBuffer().getLong();
+                    int sizePy = timeSbr.getByteBuffer().getInt();
+                    if (needDelete(magic) && !needRoll(magic)) {
+                        MessageExt msgExt = getMessageByCommitOffset(offsetPy, sizePy);
+                        if (null != msgExt) {
+                            deleteUniqKeys.add("" + msgExt.getProperty(TIMER_DELETE_UNIQKEY));
+                        } else {
+                            perfs.getCounter("dequeue_get_1_miss").flow(1);
+                        }
+                    } else {
+                        TimerRequest timerRequest = new TimerRequest(offsetPy, sizePy, delayedTime, enqueueTime, magic);
+                        timerRequest.setSemaphore(semaphore);
+                        expectNum++;
+                        stack.addFirst(timerRequest);
+                    }
+                } catch (Exception e) {
+                    log.error("Error in dequeue_get_1", e);
+                } finally {
+                    currOffsetPy = prevPos;
+                    perfs.endTick("dequeue_get_1");
+                }
+            }
+            for (SelectMappedBufferResult sbr : sbrs) {
+                if (null != sbr)
+                    sbr.release();
+            }
+            long start = System.currentTimeMillis();
+            int fileNum = -1;
+            int fileIndexPy = -1;
+            List<TimerRequest> currList = null;
+            for (TimerRequest tr : stack) {
+                tr.setDeleteList(deleteUniqKeys);
+                if (fileIndexPy != tr.getOffsetPy() / commitLogFileSize) {
+                    fileNum++;
+                    if (null != currList && currList.size() > 0) {
+                        getMessageServices[fileNum % getMessageServices.length].addTimerRequest(currList);
+                    }
+                    currList = new LinkedList<>();
+                    currList.add(tr);
+                    fileIndexPy = (int) (tr.getOffsetPy() / commitLogFileSize);
+                } else {
+                    currList.add(tr);
+                }
+            }
+            fileNum++;
+            if (null != currList && currList.size() > 0) {
+                getMessageServices[fileNum % getMessageServices.length].addTimerRequest(currList);
+            }
+            long endSplit = System.currentTimeMillis() - start;
             semaphore.acquire(expectNum);
-        } catch (Exception e) {
-            log.error("Timer dequeue acquired failed, readTime:{}", currReadTimeMs);
+            long endGet = System.currentTimeMillis() - start;
+            log.debug("DequeueTps endSplit:{} endGet:{} size:{} tps:{}", endSplit, endGet, stack.size(), stack.size() * 1000 / (endGet + 1));
+            moveReadTime();
+        } catch (Throwable t) {
+            log.error("Unknown error in dequeue process", t);
+            if (storeConfig.isTimerSkipUnknownError()) {
+                moveReadTime();
+            }
         }
-        long endGet = System.currentTimeMillis() - start;
-        log.debug("DequeueTps endSplit:{} endGet:{} size:{} tps:{}", endSplit, endGet, stack.size(), stack.size() * 1000 / (endGet + 1));
-        moveReadTime();
         return 1;
     }
 
@@ -766,18 +769,32 @@ public class TimerMessageStore {
                         maybeMoveWriteTime();
                     } else {
                         perfs.startTick("enqueue_put");
-                        if (lastBrokerRole != BrokerRole.SLAVE && req.getDelayTime() < currWriteTimeMs) {
-                            MessageExtBrokerInner msg = convert(req.getMsg(), System.currentTimeMillis(), false);
-                            int putRes = doPut(msg);
-                            while (putRes == 1 && !isStopped()) {
-                                putRes = doPut(msg);
-                                Thread.sleep(50);
+                        boolean doRes =  false;
+                        while (!doRes && !isStopped()) {
+                            if (lastBrokerRole != BrokerRole.SLAVE && req.getDelayTime() < currWriteTimeMs) {
+                                MessageExtBrokerInner msg = convert(req.getMsg(), System.currentTimeMillis(), false);
+                                while (!doRes && !isStopped() && lastBrokerRole != BrokerRole.SLAVE) {
+                                    doRes =  1 == doPut(msg);
+                                    if (!doRes) {
+                                        Thread.sleep(50);
+                                    }
+                                    maybeMoveWriteTime();
+                                }
                             }
-                            if (isStopped()) {
+                            //the broker role may have changed
+                            if (!doRes) {
+                                doRes = doEnqueue(req.getOffsetPy(), req.getSizePy(), req.getDelayTime(), req.getMsg());
+                                if (!doRes) {
+                                    Thread.sleep(50);
+                                }
+                                maybeMoveWriteTime();
+                            }
+                            if (!doRes && storeConfig.isTimerSkipUnknownError()) {
                                 break;
                             }
-                        } else {
-                            doEnqueue(req.getOffsetPy(), req.getSizePy(), req.getDelayTime(), req.getMsg());
+                        }
+                        if (!doRes && isStopped()) {
+                            break;
                         }
                         if (enqueueQueue.size() == 0) {
                             commitQueueOffset = tmpCommitQueueOffset;
@@ -984,6 +1001,7 @@ public class TimerMessageStore {
         }
         timerCheckpoint.setLastTimerQueueOffset(Math.min(commitQueueOffset, timerCheckpoint.getMasterTimerQueueOffset()));
     }
+
 
     public long getCurrReadTimeMs() {
         return this.currReadTimeMs;
