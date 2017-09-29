@@ -12,9 +12,11 @@ public class Producer {
         String producerGroupTemp="P_longji";
         DefaultMQProducer producer = new DefaultMQProducer(producerGroupTemp);
         producer.setNamesrvAddr("127.0.0.1:9876");
+       // producer.setNamesrvAddr("10.137.84.33:9876");
+        
         producer.start();
-        String topic="longji1";
-        for (int i = 0; i < 4; i++) {
+        String topic="longji2";
+        for (int i = 0; i < 5; i++) { 
         	Message msg=new Message(topic, new byte[]{1,1});
     		SendResult result=producer.send(msg);
     		System.out.println(result);

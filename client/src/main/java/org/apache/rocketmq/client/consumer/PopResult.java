@@ -24,6 +24,7 @@ public class PopResult {
     private PopStatus popStatus;
 	private long popTime;
     private long invisibleTime;
+    private long msgNum;
     public PopResult(PopStatus popStatus,List<MessageExt> msgFoundList) {
         this.popStatus=popStatus;
         this.msgFoundList = msgFoundList;
@@ -37,7 +38,12 @@ public class PopResult {
 	public void setPopTime(long popTime) {
 		this.popTime = popTime;
 	}
-
+	public long getMsgNum() {
+		return msgNum;
+	}
+	public void setMsgNum(long msgNum) {
+		this.msgNum = msgNum;
+	}
 
 	public long getInvisibleTime() {
 		return invisibleTime;

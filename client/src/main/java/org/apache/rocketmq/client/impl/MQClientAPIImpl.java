@@ -738,7 +738,7 @@ public class MQClientAPIImpl {
 		}
 		PopResult popResult = new PopResult(popStatus, msgFoundList);
 		PopMessageResponseHeader responseHeader = (PopMessageResponseHeader) response.decodeCommandCustomHeader(PopMessageResponseHeader.class);
-
+		popResult.setMsgNum(responseHeader.getMsgNum());
 		if (responseHeader.getPopTime() > 0 && popStatus == PopStatus.FOUND) {
 			popResult.setInvisibleTime(responseHeader.getInvisibleTime());
 			popResult.setPopTime(responseHeader.getPopTime());

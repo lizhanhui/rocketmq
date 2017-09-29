@@ -34,7 +34,8 @@ public class PopMessageResponseHeader implements CommandCustomHeader {
     
     @CFNotNull
     private int reviveQid;   
-
+    @CFNotNull
+    private long msgNum;  
 
 	@Override
     public void checkFields() throws RemotingCommandException {
@@ -42,7 +43,12 @@ public class PopMessageResponseHeader implements CommandCustomHeader {
     public Long getPopTime() {
 		return popTime;
 	}
-
+    public long getMsgNum() {
+		return msgNum;
+	}
+    public void setMsgNum(long msgNum) {
+		this.msgNum = msgNum;
+	}
 	public void setPopTime(Long popTime) {
 		this.popTime = popTime;
 	}

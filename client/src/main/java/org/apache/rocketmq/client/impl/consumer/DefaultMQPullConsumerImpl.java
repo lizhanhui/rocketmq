@@ -700,8 +700,19 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner ,MQPopConsumer
 		}
 		throw new MQClientException("The broker[" + mq.getBrokerName() + "] not exist", null);
 	}
+    private void subscribe(String topic, String consumerGroup) throws MQClientException {
+        try {
+            SubscriptionData subscriptionData = FilterAPI.buildSubscriptionData(consumerGroup, //
+                topic, "*");
+            if (this.mQClientFactory != null&& this.rebalanceImpl.getSubscriptionInner().putIfAbsent(topic, subscriptionData)==null) {
+                this.mQClientFactory.sendHeartbeatToAllBrokerWithLock();
+            }
+        } catch (Exception e) {
+            throw new MQClientException("subscription exception", e);
+        }
+    }
 	@Override
-	public void popAsync(MessageQueue mq, long invisibleTime, int maxNums, String consumerGroup, long timeout, PopCallback popCallback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+	public void popAsync(MessageQueue mq, long invisibleTime, int maxNums, String consumerGroup, long timeout, PopCallback popCallback, boolean poll) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
         this.subscriptionAutomatically(mq.getTopic());
 		FindBrokerResult findBrokerResult = this.mQClientFactory.findBrokerAddressInSubscribe(mq.getBrokerName(), MixAll.MASTER_ID, true);
 		if (null == findBrokerResult) {
@@ -715,6 +726,11 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner ,MQPopConsumer
 			requestHeader.setQueueId(mq.getQueueId());
 			requestHeader.setMaxMsgNums(maxNums);
 			requestHeader.setInvisibleTime(invisibleTime);
+			//give 1000 ms for server response
+			if (poll) {
+				requestHeader.setPollTime(timeout);
+				requestHeader.setBornTime(System.currentTimeMillis());	
+			}
 			String brokerAddr = findBrokerResult.getBrokerAddr();
 			this.mQClientFactory.getMQClientAPIImpl().popMessageAsync(brokerAddr, requestHeader, timeout,popCallback);
 			return ;

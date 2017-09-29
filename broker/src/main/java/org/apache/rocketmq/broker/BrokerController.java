@@ -169,7 +169,7 @@ public class BrokerController {
         this.changeInvisibleTimeProcessor=new ChangeInvisibleTimeProcessor(this);
         
         this.pullRequestHoldService = new PullRequestHoldService(this);
-        this.messageArrivingListener = new NotifyMessageArrivingListener(this.pullRequestHoldService);
+        this.messageArrivingListener = new NotifyMessageArrivingListener(this.pullRequestHoldService,this.popMessageProcessor);
         this.consumerIdsChangeListener = new DefaultConsumerIdsChangeListener(this);
         this.consumerManager = new ConsumerManager(this.consumerIdsChangeListener);
         this.consumerFilterManager = new ConsumerFilterManager(this);

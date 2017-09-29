@@ -16,10 +16,15 @@ public class Consumer {
 		final String consumerGroup="C_longji";
 		final DefaultMQPullConsumer pullConsumer = new DefaultMQPullConsumer(consumerGroup);
 		pullConsumer.setNamesrvAddr("127.0.0.1:9876");
+		//pullConsumer.setNamesrvAddr("10.137.84.33:9876");
 		pullConsumer.start();
-        String topic="longji1";
+		//SendResult [sendStatus=SEND_OK, msgId=1E056189586318B4AAC246B811320003, offsetMsgId=0A89542100002A9F00000005A659F74A, messageQueue=MessageQueue [topic=longji1, brokerName=xigutestdaily-01, queueId=1], queueOffset=0]
+//SendResult [sendStatus=SEND_OK, msgId=1E0560847F5B2A139A5560FC2DEF0001, offsetMsgId=1E05608400002A9F00000000000062F8, messageQueue=MessageQueue [topic=longji1, brokerName=broker-a, queueId=3], queueOffset=4]
+
+       // String topic="1_smq_abc";
+		String topic="longji2";
         final String brokerName="broker-a";
-		MessageQueue mq=new MessageQueue(topic, brokerName, -1);
+		MessageQueue mq=new MessageQueue(topic, brokerName, 0);
 		//PopResult popResult=pullConsumer.peekMessage(mq, 2, 1000);
 		/*PopResult popResult=pullConsumer.pop(mq, 50000, 4, consumerGroup, 10000000);
 		if (popResult.getPopStatus()==PopStatus.FOUND) {
@@ -28,8 +33,8 @@ public class Consumer {
 			}
 		}
 		System.out.println(popResult);
-		*/
-		pullConsumer.popAsync(mq, 50000, 4, consumerGroup, 100000, new PopCallback() {
+		*/ 
+		pullConsumer.popAsync(mq, 50000, 30, consumerGroup, 100000, new PopCallback() {
 			
 			@Override
 			public void onSuccess(PopResult popResult) {
@@ -49,7 +54,7 @@ public class Consumer {
 			public void onException(Throwable e) {
 				e.printStackTrace();
 			}
-		});
+		},true);
 		Thread.sleep(10000000L);
 		
 	}

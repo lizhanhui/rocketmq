@@ -1,10 +1,10 @@
-package org.apache.rocketmq.store.pop;
-
-import org.apache.rocketmq.common.MixAll;
+package org.apache.rocketmq.common;
 
 public class PopAckConstants {
 	public static long ackTimeInterval=1000;
 	public static long scanTime=10000;
+	public static long lockTime=5000;
+	public static long cidCacheTime=60000;
 
 	public static String REVIVE_GROUP=MixAll.CID_RMQ_SYS_PREFIX+"REVIVE_GROUP";
 	public static String LOCAL_HOST="127.0.0.1";

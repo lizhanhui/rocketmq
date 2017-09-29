@@ -35,7 +35,11 @@ public class PopMessageRequestHeader implements CommandCustomHeader {
     private Integer maxMsgNums;
     @CFNotNull
     private Long invisibleTime;   
-    
+    @CFNotNull
+    private Long pollTime;   
+    @CFNotNull
+    private Long bornTime;   
+
     @Override
     public void checkFields() throws RemotingCommandException {
     }
@@ -45,6 +49,12 @@ public class PopMessageRequestHeader implements CommandCustomHeader {
     public void setInvisibleTime(Long invisibleTime) {
 		this.invisibleTime = invisibleTime;
 	}
+    public Long getPollTime() {
+		return pollTime;
+	}
+    public void setPollTime(Long pollTime) {
+		this.pollTime = pollTime;
+	}
     public String getConsumerGroup() {
         return consumerGroup;
     }
@@ -52,6 +62,12 @@ public class PopMessageRequestHeader implements CommandCustomHeader {
     public void setConsumerGroup(String consumerGroup) {
         this.consumerGroup = consumerGroup;
     }
+    public Long getBornTime() {
+		return bornTime;
+	}
+    public void setBornTime(Long bornTime) {
+		this.bornTime = bornTime;
+	}
 
     public String getTopic() {
         return topic;
