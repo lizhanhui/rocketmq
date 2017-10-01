@@ -25,4 +25,8 @@ public class PopRequest {
 	public boolean isExpired() {
 		return expired;
 	}
+	@Override
+	public String toString() {
+		return remotingCommand.toString();
+	}
 }

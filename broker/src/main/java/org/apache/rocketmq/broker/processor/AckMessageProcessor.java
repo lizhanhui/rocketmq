@@ -70,12 +70,12 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 							long startTime = 0;
 							long endTime = 0;
 							long oldOffset = brokerController.getConsumerOffsetManager().queryOffset(PopAckConstants.REVIVE_GROUP, reviveTopic, i);
-							long offset = oldOffset+1;
+							long offset = oldOffset + 1;
 							while (true) {
 								List<MessageExt> messageExts = getReviveMessage(offset, i);
 								if (messageExts.isEmpty()) {
-									if (endTime!=0&&(System.currentTimeMillis()-endTime > 10 * PopAckConstants.ackTimeInterval)) {
-										endTime=System.currentTimeMillis();
+									if (endTime != 0 && (System.currentTimeMillis() - endTime > 10 * PopAckConstants.ackTimeInterval)) {
+										endTime = System.currentTimeMillis();
 									}
 									break;
 								}
@@ -86,7 +86,7 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 									long deliverTime = Long.valueOf(messageExt.getUserProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS));
 									if (PopAckConstants.CK_TAG.equals(messageExt.getTags())) {
 										PopCheckPoint point = JSON.parseObject(new String(messageExt.getBody(), DataConverter.charset), PopCheckPoint.class);
-										if (point.getTopic()==null||point.getCid()==null) {
+										if (point.getTopic() == null || point.getCid() == null) {
 											continue;
 										}
 										map.put(point.getTopic() + point.getCid() + point.getQueueId() + point.getStartOffset(), point);
@@ -130,6 +130,7 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 											msgInner.setBornHost(brokerController.getStoreHost());
 											msgInner.setStoreHost(brokerController.getStoreHost());
 											msgInner.getProperties().putAll(messageExt.getProperties());
+											msgInner.setPropertiesString(MessageDecoder.messageProperties2String(msgInner.getProperties()));
 											PutMessageResult putMessageResult = brokerController.getMessageStore().putMessage(msgInner);
 										}
 									}

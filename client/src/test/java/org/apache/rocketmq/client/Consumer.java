@@ -1,5 +1,7 @@
 package org.apache.rocketmq.client;
 
+import java.util.Date;
+
 import org.apache.rocketmq.client.consumer.DefaultMQPullConsumer;
 import org.apache.rocketmq.client.consumer.PopCallback;
 import org.apache.rocketmq.client.consumer.PopResult;
@@ -22,9 +24,9 @@ public class Consumer {
 //SendResult [sendStatus=SEND_OK, msgId=1E0560847F5B2A139A5560FC2DEF0001, offsetMsgId=1E05608400002A9F00000000000062F8, messageQueue=MessageQueue [topic=longji1, brokerName=broker-a, queueId=3], queueOffset=4]
 
        // String topic="1_smq_abc";
-		String topic="longji2";
+		String topic="longji10";
         final String brokerName="broker-a";
-		MessageQueue mq=new MessageQueue(topic, brokerName, 0);
+		final MessageQueue mq=new MessageQueue(topic, brokerName, -1);
 		//PopResult popResult=pullConsumer.peekMessage(mq, 2, 1000);
 		/*PopResult popResult=pullConsumer.pop(mq, 50000, 4, consumerGroup, 10000000);
 		if (popResult.getPopStatus()==PopStatus.FOUND) {
@@ -34,16 +36,20 @@ public class Consumer {
 		}
 		System.out.println(popResult);
 		*/ 
-		pullConsumer.popAsync(mq, 50000, 30, consumerGroup, 100000, new PopCallback() {
+		final PopCallback callback=new PopCallback() {
 			
 			@Override
 			public void onSuccess(PopResult popResult) {
 				try {
+					System.out.println(new Date()+"     "+popResult);
 					if (popResult.getPopStatus()==PopStatus.FOUND) {
 						for (MessageExt msg : popResult.getMsgFoundList()) {
+							System.out.println("delay time:"+(System.currentTimeMillis()-msg.getBornTimestamp()));
 							pullConsumer.ackMessage(new MessageQueue(msg.getTopic(),brokerName,msg.getQueueId()), msg.getQueueOffset(), consumerGroup, msg.getProperty(MessageConst.PROPERTY_POP_CK));
 						}
 					}
+					PopCallback tmPopCallback=this;
+					pullConsumer.popAsync(mq, 10000, 30, consumerGroup, 100000,  tmPopCallback, true);
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -53,8 +59,10 @@ public class Consumer {
 			@Override
 			public void onException(Throwable e) {
 				e.printStackTrace();
+				
 			}
-		},true);
+		};
+		pullConsumer.popAsync(mq, 50000, 30, consumerGroup, 100000, callback,true);
 		Thread.sleep(10000000L);
 		
 	}

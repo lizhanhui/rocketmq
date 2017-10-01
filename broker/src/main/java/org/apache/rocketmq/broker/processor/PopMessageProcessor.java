@@ -29,6 +29,7 @@ import javassist.expr.NewArray;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
@@ -103,24 +104,22 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 		}
 		if (cids != null) {
 			for (String cid : cids) {
-				ArrayBlockingQueue<PopRequest> remotingCommands = pollingPop.get(buildPollingKey(topic, cid, queueId));
-				if (remotingCommands == null) {
-					continue;
+				ArrayBlockingQueue<PopRequest> remotingCommands = pollingPop.get(buildPollingKey(topic, cid, -1));
+				if (remotingCommands != null) {
+					PopRequest popRequest = remotingCommands.poll();
+					while (popRequest != null && popRequest.isExpired()) {
+						popRequest = remotingCommands.poll();
+					}
+					wakeUp(popRequest);
 				}
-				PopRequest popRequest = remotingCommands.poll();
-				while (popRequest != null && popRequest.isExpired()) {
-					popRequest = remotingCommands.poll();
+				remotingCommands = pollingPop.get(buildPollingKey(topic, cid, queueId));
+				if (remotingCommands != null) {
+					PopRequest popRequest = remotingCommands.poll();
+					while (popRequest != null && popRequest.isExpired()) {
+						popRequest = remotingCommands.poll();
+					}
+					wakeUp(popRequest);
 				}
-				wakeUp(popRequest);
-				remotingCommands = pollingPop.get(buildPollingKey(topic, cid, -1));
-				if (remotingCommands == null) {
-					continue;
-				}
-				popRequest = remotingCommands.poll();
-				while (popRequest != null && popRequest.isExpired()) {
-					popRequest = remotingCommands.poll();
-				}
-				wakeUp(popRequest);
 			}
 		}
     }
@@ -135,6 +134,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 		if (request == null||request.isExpired()) {
 			return ;
 		}
+		System.out.println(new Date()+"wakeUp :"+request);
 		request.setExpired(true);
 		Runnable run = new Runnable() {
 			@Override
@@ -344,6 +344,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 				result=queue.offer(request);
 			}
 			if (result) {
+				System.out.println(new Date()+" polling :"+remotingCommand);
 				timer.newTimeout(new TimerTask() {
 					@Override
 					public void run(Timeout timeout) throws Exception {
