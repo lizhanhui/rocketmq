@@ -183,6 +183,7 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 			}
 		});
 		thread.setDaemon(true);
+		thread.setName("reviveLoop");
 		thread.start();
 	}
 

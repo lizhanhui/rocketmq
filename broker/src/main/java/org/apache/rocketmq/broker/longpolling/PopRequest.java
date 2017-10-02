@@ -1,5 +1,7 @@
 package org.apache.rocketmq.broker.longpolling;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 
 import io.netty.channel.Channel;
@@ -7,11 +9,12 @@ import io.netty.channel.Channel;
 public class PopRequest {
 	private RemotingCommand remotingCommand;
 	private Channel channel;
-	private volatile boolean expired;
-	
+	private  long expired;
+	private AtomicBoolean complete=new AtomicBoolean(false);
 	public PopRequest(RemotingCommand remotingCommand,Channel channel,long expired) {
 		this.channel=channel;
 		this.remotingCommand=remotingCommand;
+		this.expired=expired;
 	}
 	public Channel getChannel() {
 		return channel;
@@ -19,11 +22,11 @@ public class PopRequest {
 	public RemotingCommand getRemotingCommand() {
 		return remotingCommand;
 	}
-	public void setExpired(boolean expired) {
-		this.expired = expired;
+	public boolean isTimeout() {
+		return System.currentTimeMillis() > (expired - 3000);
 	}
-	public boolean isExpired() {
-		return expired;
+	public boolean complete(){
+		return complete.compareAndSet(false, true);
 	}
 	@Override
 	public String toString() {

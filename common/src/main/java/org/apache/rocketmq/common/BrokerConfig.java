@@ -120,6 +120,7 @@ public class BrokerConfig {
     // whether do filter when retry.
     private boolean filterSupportRetry = false;
     private boolean enablePropertyFilter = false;
+    private int  popPollingSize = 20;
 
     public static String localHostName() {
         try {
@@ -554,4 +555,10 @@ public class BrokerConfig {
     public void setEnablePropertyFilter(boolean enablePropertyFilter) {
         this.enablePropertyFilter = enablePropertyFilter;
     }
+    public void setPopPollingSize(int popPollingSize) {
+		this.popPollingSize = popPollingSize;
+	}
+    public int getPopPollingSize() {
+		return popPollingSize;
+	}
 }
