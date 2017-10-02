@@ -82,8 +82,14 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 						Collection<ArrayBlockingQueue<PopRequest>> pops=pollingMap.values();
 						for (ArrayBlockingQueue<PopRequest> popQ : pops) {
 							PopRequest tmPopRequest=popQ.peek();
+							if (tmPopRequest==null) {
+								continue;
+							}
 							if (tmPopRequest.isTimeout()) {
 								tmPopRequest=popQ.poll();
+								if (tmPopRequest==null) {
+									continue;
+								}
 								if (!tmPopRequest.isTimeout()) {
 									popQ.offer(tmPopRequest);
 								}else {
@@ -96,7 +102,6 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 						LOG.error("checkPolling error",e);
 					}
 				}
-				
 			}
 		});
         t.setDaemon(true);
