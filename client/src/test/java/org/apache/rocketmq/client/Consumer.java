@@ -16,7 +16,7 @@ import org.apache.rocketmq.remoting.exception.RemotingException;
 public class Consumer {
 	public static void main(String[] args) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
 		final String consumerGroup="C_longji";
-		final DefaultMQPullConsumer pullConsumer = new DefaultMQPullConsumer(consumerGroup);
+		final DefaultMQPullConsumer pullConsumer = new DefaultMQPullConsumer(consumerGroup+"1");
 		pullConsumer.setNamesrvAddr("127.0.0.1:9876");
 		//pullConsumer.setNamesrvAddr("10.137.84.33:9876");
 		pullConsumer.start();
@@ -44,7 +44,7 @@ public class Consumer {
 					System.out.println(new Date()+"     "+popResult);
 					if (popResult.getPopStatus()==PopStatus.FOUND) {
 						for (MessageExt msg : popResult.getMsgFoundList()) {
-							System.out.println("delay time:"+(System.currentTimeMillis()-msg.getBornTimestamp()));
+							System.out.println("delay time:"+(System.currentTimeMillis()-msg.getBornTimestamp())+" msg id:"+new String(msg.getBody()));
 							pullConsumer.ackMessage(new MessageQueue(msg.getTopic(),brokerName,msg.getQueueId()), msg.getQueueOffset(), consumerGroup, msg.getProperty(MessageConst.PROPERTY_POP_CK));
 						}
 					}

@@ -19,7 +19,7 @@ public class Producer {
         final String brokerName="broker-a";
 		final MessageQueue mq=new MessageQueue(topic, brokerName, -1);
         for (int i = 0; i < 10; i++) { 
-        	Message msg=new Message(topic, new byte[]{1,1});
+        	Message msg=new Message(topic, String.valueOf(i).getBytes());
     		SendResult result=producer.send(msg);
     		//SendResult result=producer.send(msg, mq);
     		System.out.println(result);
