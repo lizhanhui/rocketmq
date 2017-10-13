@@ -662,6 +662,7 @@ public class DefaultMessageStore implements MessageStore {
         return this.commitLog.getMessage(commitLogOffset, msgSize);
     }
 
+    @Override
     public boolean getData(long offset, int size, ByteBuffer byteBuffer) {
         return this.commitLog.getData(offset, size, byteBuffer);
     }

@@ -17,6 +17,7 @@
 
 package org.apache.rocketmq.broker.plugin;
 
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Set;
@@ -245,5 +246,10 @@ public abstract class AbstractPluginMessageStore implements MessageStore {
     @Override
     public ConsumeQueue getConsumeQueue(String topic, int queueId) {
         return next.getConsumeQueue(topic, queueId);
+    }
+
+    @Override
+    public boolean getData(long offset, int size, ByteBuffer byteBuffer) {
+        return next.getData(offset, size, byteBuffer);
     }
 }
