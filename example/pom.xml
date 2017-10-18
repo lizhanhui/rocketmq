@@ -49,9 +49,8 @@
             <artifactId>openmessaging-api</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.apache.rocketmq</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>rocketmq-openmessaging</artifactId>
-            <version>4.1.2</version>
         </dependency>
     </dependencies>
 </project>
