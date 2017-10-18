@@ -607,7 +607,8 @@ public class MessageStoreConfig {
     }
 
     /**
-     * Enable transient commitLog store poll only if transientStorePoolEnable is true and the FlushDiskType is ASYNC_FLUSH
+     * Enable transient commitLog store poll only if transientStorePoolEnable is true and the FlushDiskType is
+     * ASYNC_FLUSH
      *
      * @return <tt>true</tt> or <tt>false</tt>
      */
