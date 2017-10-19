@@ -51,13 +51,13 @@ public class NettySystemConfig {
     /**
      * For server, three SSL modes are supported: disabled, permissive and enforcing.
      * <ol>
-     *     <li><strong>disable:</strong> SSL is not supported; any incoming SSL handshake will be rejected, causing connection closed.</li>
+     *     <li><strong>disabled:</strong> SSL is not supported; any incoming SSL handshake will be rejected, causing connection closed.</li>
      *     <li><strong>permissive:</strong> SSL is optional, aka, server in this mode can serve client connections with or without SSL;</li>
      *     <li><strong>enforcing:</strong> SSL is required, aka, non SSL connection will be rejected.</li>
      * </ol>
      */
     public static SslMode sslMode = //
-        SslMode.parse(System.getProperty(ORG_APACHE_ROCKETMQ_REMOTING_SSL_MODE, "permissive"));
+        SslMode.parse(System.getProperty(ORG_APACHE_ROCKETMQ_REMOTING_SSL_MODE, "disabled"));
 
     public static String sslConfigFile = //
         System.getProperty(ORG_APACHE_ROCKETMQ_REMOTING_SSL_CONFIG_FILE, "/etc/rocketmq/ssl.properties");
