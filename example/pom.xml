@@ -19,7 +19,7 @@
     <parent>
         <groupId>org.apache.rocketmq</groupId>
         <artifactId>rocketmq-all</artifactId>
-        <version>4.1.2</version>
+        <version>4.1.3</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -49,9 +49,8 @@
             <artifactId>openmessaging-api</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.apache.rocketmq</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>rocketmq-openmessaging</artifactId>
-            <version>4.1.2</version>
         </dependency>
     </dependencies>
 </project>

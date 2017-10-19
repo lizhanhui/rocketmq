@@ -49,6 +49,8 @@ public class ClientConfig {
     private boolean decodeReadBody = Boolean.parseBoolean(System.getProperty(DECODE_READ_BODY, "true"));
     private boolean decodeDecompressBody = Boolean.parseBoolean(System.getProperty(DECODE_DECOMPRESS_BODY, "true"));
 
+    private boolean useTLS;
+
     public String buildMQClientId() {
         StringBuilder sb = new StringBuilder();
         sb.append(this.getClientIP());
@@ -98,6 +100,7 @@ public class ClientConfig {
         this.vipChannelEnabled = cc.vipChannelEnabled;
         this.decodeReadBody = cc.decodeReadBody;
         this.decodeDecompressBody = cc.decodeDecompressBody;
+        this.useTLS = cc.useTLS;
     }
 
     public ClientConfig cloneClientConfig() {
@@ -114,6 +117,7 @@ public class ClientConfig {
         cc.vipChannelEnabled = vipChannelEnabled;
         cc.decodeReadBody = decodeReadBody;
         cc.decodeDecompressBody = decodeDecompressBody;
+        cc.useTLS = useTLS;
         return cc;
     }
 
@@ -197,12 +201,21 @@ public class ClientConfig {
         this.decodeDecompressBody = decodeDecompressBody;
     }
 
+    public boolean isUseTLS() {
+        return useTLS;
+    }
+
+    public void setUseTLS(boolean useTLS) {
+        this.useTLS = useTLS;
+    }
+
     @Override
     public String toString() {
         return "ClientConfig [namesrvAddr=" + namesrvAddr + ", clientIP=" + clientIP + ", instanceName=" + instanceName
             + ", clientCallbackExecutorThreads=" + clientCallbackExecutorThreads + ", pollNameServerInterval=" + pollNameServerInterval
             + ", heartbeatBrokerInterval=" + heartbeatBrokerInterval + ", persistConsumerOffsetInterval="
             + persistConsumerOffsetInterval + ", unitMode=" + unitMode + ", unitName=" + unitName + ", vipChannelEnabled="
-            + vipChannelEnabled + ", decodeReadBody=" + decodeReadBody + ", decodeDecompressBody=" + decodeDecompressBody + "]";
+            + vipChannelEnabled + ", decodeReadBody=" + decodeReadBody + ", decodeDecompressBody=" + decodeDecompressBody
+            + ", useTLS=" + useTLS + "]";
     }
 }
