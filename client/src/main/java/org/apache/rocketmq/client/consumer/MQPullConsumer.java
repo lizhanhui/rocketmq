@@ -205,4 +205,6 @@ public interface MQPullConsumer extends MQConsumer {
 
 	void popAsync(MessageQueue mq, long invisibleTime, int maxNums, String consumerGroup, long timeout, PopCallback popCallback, boolean poll)
 			throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+
+	void peekAsync(MessageQueue mq, int maxNums, String consumerGroup, long timeout, PopCallback popCallback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 }

@@ -627,6 +627,38 @@ public class MQClientAPIImpl {
                 }
             });
         }
+	public void peekMessageAsync(//
+			final String addr, //
+			final PeekMessageRequestHeader requestHeader, //
+			final long timeoutMillis ,//
+            final PopCallback popCallback//
+        ) throws RemotingException, InterruptedException {
+			final RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.PEEK_MESSAGE, requestHeader);
+            this.remotingClient.invokeAsync(addr, request, timeoutMillis, new InvokeCallback() {
+                @Override
+                public void operationComplete(ResponseFuture responseFuture) {
+                    RemotingCommand response = responseFuture.getResponseCommand();
+                    if (response != null) {
+                        try {
+                            PopResult popResult = MQClientAPIImpl.this.processPopResponse(response);
+                            assert popResult != null;
+                            popCallback.onSuccess(popResult);
+                        } catch (Exception e) {
+                        	popCallback.onException(e);
+                        }
+                    } else {
+                        if (!responseFuture.isSendRequestOK()) {
+                        	popCallback.onException(new MQClientException("send request failed to " + addr + ". Request: " + request, responseFuture.getCause()));
+                        } else if (responseFuture.isTimeout()) {
+                        	popCallback.onException(new MQClientException("wait response from " + addr + " timeout :" + responseFuture.getTimeoutMillis() + "ms" + ". Request: " + request,
+                                responseFuture.getCause()));
+                        } else {
+                        	popCallback.onException(new MQClientException("unknown reason. addr: " + addr + ", timeoutMillis: " + timeoutMillis + ". Request: " + request, responseFuture.getCause()));
+                        }
+                    }
+                }
+            });
+        }	
 	public PopResult peekMessage(//
 			final String addr, //
 			final PeekMessageRequestHeader requestHeader, //

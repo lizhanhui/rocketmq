@@ -357,7 +357,10 @@ public class MessageDecoder {
             if (isClient) {
                 ((MessageClientExt) msgExt).setOffsetMsgId(msgId);
             }
+            if (propertiesLength<=0) {
+                System.out.println("not property:"+msgExt);
 
+			}
             return msgExt;
         } catch (Exception e) {
             byteBuffer.position(byteBuffer.limit());

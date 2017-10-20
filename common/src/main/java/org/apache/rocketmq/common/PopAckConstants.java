@@ -1,5 +1,7 @@
 package org.apache.rocketmq.common;
 
+import java.nio.charset.Charset;
+
 public class PopAckConstants {
 	public static long ackTimeInterval=1000;
 	public static long scanTime=10000;

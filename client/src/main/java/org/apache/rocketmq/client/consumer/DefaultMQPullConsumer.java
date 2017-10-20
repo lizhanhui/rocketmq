@@ -327,6 +327,11 @@ public class DefaultMQPullConsumer extends ClientConfig implements MQPullConsume
     	this.defaultMQPullConsumerImpl.popAsync(mq, invisibleTime, maxNums, consumerGroup, timeout, popCallback,poll);
 	}
     @Override
+	public void peekAsync(MessageQueue mq, int maxNums, String consumerGroup, long timeout,PopCallback popCallback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+		registerTopics.add(mq.getTopic());
+    	this.defaultMQPullConsumerImpl.peekAsync(mq, maxNums, consumerGroup,timeout, popCallback);
+	}
+    @Override
 	public void ackMessage(MessageQueue mq, long offset, String consumerGroup, String extraInfo) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
 		 this.defaultMQPullConsumerImpl.ack(mq, offset, consumerGroup, extraInfo);
 	}

@@ -27,31 +27,45 @@ import java.util.Random;
 
 import org.apache.rocketmq.broker.BrokerController;
 import org.apache.rocketmq.broker.pagecache.ManyMessageTransfer;
+import org.apache.rocketmq.common.PopAckConstants;
 import org.apache.rocketmq.common.TopicConfig;
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.common.constant.PermName;
 import org.apache.rocketmq.common.help.FAQUrl;
+import org.apache.rocketmq.common.message.MessageConst;
 import org.apache.rocketmq.common.message.MessageDecoder;
 import org.apache.rocketmq.common.protocol.ResponseCode;
 import org.apache.rocketmq.common.protocol.header.AckMessageRequestHeader;
+import org.apache.rocketmq.common.protocol.header.ChangeInvisibleTimeRequestHeader;
 import org.apache.rocketmq.common.protocol.header.PopMessageRequestHeader;
 import org.apache.rocketmq.common.protocol.header.PopMessageResponseHeader;
+import org.apache.rocketmq.common.utils.DataConverter;
 import org.apache.rocketmq.remoting.common.RemotingHelper;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 import org.apache.rocketmq.remoting.netty.NettyRequestProcessor;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
+import org.apache.rocketmq.store.AppendMessageStatus;
 import org.apache.rocketmq.store.GetMessageResult;
 import org.apache.rocketmq.store.GetMessageStatus;
+import org.apache.rocketmq.store.MessageExtBrokerInner;
+import org.apache.rocketmq.store.PutMessageResult;
 import org.apache.rocketmq.store.SelectMappedBufferResult;
+import org.apache.rocketmq.store.pop.AckMsg;
+import org.apache.rocketmq.store.pop.PopCheckPoint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.alibaba.fastjson.JSON;
+
 public class ChangeInvisibleTimeProcessor implements NettyRequestProcessor {
-	private static final Logger LOG = LoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
+	private static final Logger LOG = LoggerFactory.getLogger(LoggerName.ROCKETMQ_POP_LOGGER_NAME);
 	private final BrokerController brokerController;
+	private String reviveTopic;
 
 	public ChangeInvisibleTimeProcessor(final BrokerController brokerController) {
 		this.brokerController = brokerController;
+		this.reviveTopic = PopAckConstants.REVIVE_TOPIC + this.brokerController.getBrokerConfig().getBrokerClusterName();
+
 	}
 
 	@Override
@@ -65,9 +79,49 @@ public class ChangeInvisibleTimeProcessor implements NettyRequestProcessor {
 	}
 
 	private RemotingCommand processRequest(final Channel channel, RemotingCommand request, boolean brokerAllowSuspend) throws RemotingCommandException {
-		final AckMessageRequestHeader requestHeader = (AckMessageRequestHeader) request.decodeCommandCustomHeader(AckMessageRequestHeader.class);
-		System.out.println(requestHeader.getExtraInfo());
+		final ChangeInvisibleTimeRequestHeader requestHeader = (ChangeInvisibleTimeRequestHeader) request.decodeCommandCustomHeader(ChangeInvisibleTimeRequestHeader.class);
+		//final AckMessageRequestHeader requestHeader = (AckMessageRequestHeader) request.decodeCommandCustomHeader(AckMessageRequestHeader.class);
+		// ack origin msg first
+		MessageExtBrokerInner msgInner = new MessageExtBrokerInner();
+		AckMsg ackMsg = new AckMsg();
+		String[] extraInfo = requestHeader.getExtraInfo().split(MessageConst.KEY_SEPARATOR);
+		ackMsg.setAckOffset(requestHeader.getOffset());
+		ackMsg.setStartOffset(Long.valueOf(extraInfo[0]));
+		ackMsg.setConsumerGroup(requestHeader.getConsumerGroup());
+		ackMsg.setTopic(requestHeader.getTopic());
+		ackMsg.setQueueId(requestHeader.getQueueId());
+		msgInner.setTopic(reviveTopic);
+		msgInner.setBody(JSON.toJSONString(ackMsg).getBytes(DataConverter.charset));
+		msgInner.setQueueId(Integer.valueOf(extraInfo[3]));
+		msgInner.setTags(PopAckConstants.ACK_TAG);
+		msgInner.setBornTimestamp(System.currentTimeMillis());
+		msgInner.setBornHost(this.brokerController.getStoreHost());
+		msgInner.setStoreHost(this.brokerController.getStoreHost());
+		msgInner.putUserProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS, String.valueOf(Long.valueOf(extraInfo[1]) + Long.valueOf(extraInfo[2])));
+		PutMessageResult putMessageResult = this.brokerController.getMessageStore().putMessage(msgInner);
+		// add new ck 
+		appendCheckPoint(channel, requestHeader, Integer.valueOf(extraInfo[3]), requestHeader.getQueueId(), requestHeader.getOffset(),Long.valueOf(extraInfo[1]+requestHeader.getInvisibleTime()));
 		return null;
 	}
-
+	private void appendCheckPoint(final Channel channel, final ChangeInvisibleTimeRequestHeader requestHeader, int reviveQid, int queueId, long offset,long reviveTime) {
+		// add check point msg to revive log
+		MessageExtBrokerInner msgInner = new MessageExtBrokerInner();
+		msgInner.setTopic(reviveTopic);
+		PopCheckPoint ck=new PopCheckPoint();
+		ck.setBitMap(0);
+		ck.setNum((byte) 1);
+		ck.setReviveTime(System.currentTimeMillis()+requestHeader.getInvisibleTime());
+		ck.setStartOffset(offset);
+		ck.setCid(requestHeader.getConsumerGroup());
+		ck.setTopic(requestHeader.getTopic());
+		ck.setQueueId((byte) queueId);
+		msgInner.setBody(JSON.toJSONString(ck).getBytes(DataConverter.charset));
+		msgInner.setQueueId(reviveQid);
+		msgInner.setTags(PopAckConstants.CK_TAG);
+		msgInner.setBornTimestamp(System.currentTimeMillis());
+		msgInner.setBornHost(this.brokerController.getStoreHost());
+		msgInner.setStoreHost(this.brokerController.getStoreHost());
+		msgInner.putUserProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS, String.valueOf(reviveTime-PopAckConstants.ackTimeInterval));
+		PutMessageResult putMessageResult = this.brokerController.getMessageStore().putMessage(msgInner);
+	}
 }

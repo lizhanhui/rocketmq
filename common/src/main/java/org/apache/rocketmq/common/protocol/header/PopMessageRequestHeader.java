@@ -78,6 +78,9 @@ public class PopMessageRequestHeader implements CommandCustomHeader {
     }
 
     public Integer getQueueId() {
+    	if (queueId < 0) {
+			return -1;
+		}
         return queueId;
     }
 

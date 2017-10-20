@@ -31,6 +31,9 @@ public class ChangeInvisibleTimeRequestHeader implements CommandCustomHeader {
     private String topic;
     @CFNotNull
     private Integer queueId;
+    /**
+     * startOffset popTime invisibleTime queueId
+     */
     @CFNotNull
     private String extraInfo;
 
@@ -61,6 +64,9 @@ public class ChangeInvisibleTimeRequestHeader implements CommandCustomHeader {
     public void setExtraInfo(String extraInfo) {
 		this.extraInfo = extraInfo;
 	}
+    /**
+     * startOffset popTime invisibleTime queueId
+     */
     public String getExtraInfo() {
 		return extraInfo;
 	}
