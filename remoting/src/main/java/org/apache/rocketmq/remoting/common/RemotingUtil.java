@@ -93,8 +93,6 @@ public class RemotingUtil {
     }
 
     public static String getLocalAddress() {
-    	return "127.0.0.1";
-    	/*
         try {
             // Traversal Network interface to get the first non-loopback and non-private address
             Enumeration<NetworkInterface> enumeration = NetworkInterface.getNetworkInterfaces();
@@ -139,7 +137,7 @@ public class RemotingUtil {
         }
 
         return null;
-    */}
+    }
 
     public static String normalizeHostAddress(final InetAddress localHost) {
         if (localHost instanceof Inet6Address) {
