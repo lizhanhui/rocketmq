@@ -23,10 +23,12 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 
 import org.apache.rocketmq.broker.BrokerController;
+import org.apache.rocketmq.common.KeyBuilder;
 import org.apache.rocketmq.common.PopAckConstants;
 import org.apache.rocketmq.common.TopicConfig;
 import org.apache.rocketmq.common.constant.LoggerName;
@@ -38,6 +40,7 @@ import org.apache.rocketmq.common.utils.DataConverter;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 import org.apache.rocketmq.remoting.netty.NettyRequestProcessor;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
+import org.apache.rocketmq.store.AppendMessageStatus;
 import org.apache.rocketmq.store.GetMessageResult;
 import org.apache.rocketmq.store.MessageExtBrokerInner;
 import org.apache.rocketmq.store.PutMessageResult;
@@ -49,7 +52,7 @@ import org.slf4j.LoggerFactory;
 import com.alibaba.fastjson.JSON;
 
 public class AckMessageProcessor implements NettyRequestProcessor {
-	private static final Logger LOG = LoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
+	private static final Logger LOG = LoggerFactory.getLogger(LoggerName.ROCKETMQ_POP_LOGGER_NAME);
 	private final BrokerController brokerController;
 	private String reviveTopic;
 
@@ -61,86 +64,102 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 			public void run() {
 				while (true) {
 					try {
-						Thread.sleep(5000L);
+						Thread.sleep(200L);
 						TopicConfig topicConfig = brokerController.getTopicConfigManager().selectTopicConfig(reviveTopic);
 						for (int i = 0; i < topicConfig.getReadQueueNums(); i++) {
-							Thread.sleep(5000L);
-							HashMap<String, PopCheckPoint> map = new HashMap<>();
-							long startScanTime = System.currentTimeMillis();
-							long startTime = 0;
-							long endTime = 0;
-							long oldOffset = brokerController.getConsumerOffsetManager().queryOffset(PopAckConstants.REVIVE_GROUP, reviveTopic, i);
-							long offset = oldOffset + 1;
-							while (true) {
-								List<MessageExt> messageExts = getReviveMessage(offset, i);
-								if (messageExts.isEmpty()) {
-									if (endTime != 0 && (System.currentTimeMillis() - endTime > 10 * PopAckConstants.ackTimeInterval)) {
-										endTime = System.currentTimeMillis();
-									}
-									break;
-								}
-								if (System.currentTimeMillis() - startScanTime > PopAckConstants.scanTime) {
-									break;
-								}
-								for (MessageExt messageExt : messageExts) {
-									long deliverTime = Long.valueOf(messageExt.getUserProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS));
-									if (PopAckConstants.CK_TAG.equals(messageExt.getTags())) {
-										PopCheckPoint point = JSON.parseObject(new String(messageExt.getBody(), DataConverter.charset), PopCheckPoint.class);
-										if (point.getTopic() == null || point.getCid() == null) {
-											continue;
+							try {
+
+								Thread.sleep(200L);
+								HashMap<String, PopCheckPoint> map = new HashMap<>();
+								long startScanTime = System.currentTimeMillis();
+								long startTime = 0;
+								long endTime = 0;
+								long oldOffset = brokerController.getConsumerOffsetManager().queryOffset(PopAckConstants.REVIVE_GROUP, reviveTopic, i);
+								LOG.error("topic is {}, queueId is {}, old offset is {} ", reviveTopic,i,oldOffset);
+								long offset = oldOffset + 1;
+								while (true) {
+									List<MessageExt> messageExts = getReviveMessage(offset, i);
+									if (messageExts.isEmpty()) {
+										if (endTime != 0 && (System.currentTimeMillis() - endTime > 10 * PopAckConstants.ackTimeInterval)) {
+											endTime = System.currentTimeMillis();
 										}
-										map.put(point.getTopic() + point.getCid() + point.getQueueId() + point.getStartOffset(), point);
-										if (startTime == 0) {
-											startTime = deliverTime;
-										}
-										point.setReviveOffset(messageExt.getQueueOffset());
-									} else if (PopAckConstants.ACK_TAG.equals(messageExt.getTags())) {
-										AckMsg ackMsg = JSON.parseObject(new String(messageExt.getBody(), DataConverter.charset), AckMsg.class);
-										PopCheckPoint point = map.get(ackMsg.getTopic() + ackMsg.getConsumerGroup() + ackMsg.getQueueId() + ackMsg.getStartOffset());
-										if (point != null) {
-											point.setBitMap(DataConverter.setBit(point.getBitMap(), (int) (ackMsg.getAckOffset() - ackMsg.getStartOffset()), true));
-										}
+										LOG.info("topic is {}, queueId is {}, offset is {}, can not get new msg  ", reviveTopic, i, offset);
+										break;
 									}
-									if (deliverTime > endTime) {
-										endTime = deliverTime;
+									if (System.currentTimeMillis() - startScanTime > PopAckConstants.scanTime) {
+										LOG.info("topic is {}, queueId is {}, scan timeout  ", reviveTopic,i);
+										break;
 									}
-								}
-								offset = offset + messageExts.size();
-							}
-							ArrayList<PopCheckPoint> sortList = new ArrayList<>(map.values());
-							Collections.sort(sortList, new Comparator<PopCheckPoint>() {
-								@Override
-								public int compare(PopCheckPoint o1, PopCheckPoint o2) {
-									return (int) (o1.getReviveOffset() - o2.getReviveOffset());
-								}
-							});
-							long newOffset = oldOffset;
-							for (PopCheckPoint popCheckPoint : sortList) {
-								if (endTime - popCheckPoint.getReviveTime() > PopAckConstants.ackTimeInterval) {
-									for (int j = 0; j < popCheckPoint.getNum(); j++) {
-										if (!DataConverter.getBit(popCheckPoint.getBitMap(), j)) {
-											// retry msg
-											MessageExt messageExt = getBizMessage(popCheckPoint.getTopic(), popCheckPoint.getStartOffset() + j, popCheckPoint.getQueueId());
-											MessageExtBrokerInner msgInner = new MessageExtBrokerInner();
-											msgInner.setTopic(messageExt.getTopic());
-											msgInner.setBody(messageExt.getBody());
-											msgInner.setQueueId(messageExt.getQueueId());
-											msgInner.setTags(messageExt.getTags());
-											msgInner.setBornTimestamp(System.currentTimeMillis());
-											msgInner.setBornHost(brokerController.getStoreHost());
-											msgInner.setStoreHost(brokerController.getStoreHost());
-											msgInner.getProperties().putAll(messageExt.getProperties());
-											msgInner.setPropertiesString(MessageDecoder.messageProperties2String(msgInner.getProperties()));
-											PutMessageResult putMessageResult = brokerController.getMessageStore().putMessage(msgInner);
+									for (MessageExt messageExt : messageExts) {
+										long deliverTime = Long.valueOf(messageExt.getUserProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS));
+										if (PopAckConstants.CK_TAG.equals(messageExt.getTags())) {
+											PopCheckPoint point = JSON.parseObject(new String(messageExt.getBody(), DataConverter.charset), PopCheckPoint.class);
+											if (point.getTopic() == null || point.getCid() == null) {
+												continue;
+											}
+											map.put(point.getTopic() + point.getCid() + point.getQueueId() + point.getStartOffset(), point);
+											if (startTime == 0) {
+												startTime = deliverTime;
+											}
+											System.out.println(new Date()+", find ck, msg born time is "+ new Date(messageExt.getBornTimestamp())+", msg offset "+messageExt.getQueueOffset());
+											point.setReviveOffset(messageExt.getQueueOffset());
+										} else if (PopAckConstants.ACK_TAG.equals(messageExt.getTags())) {
+											AckMsg ackMsg = JSON.parseObject(new String(messageExt.getBody(), DataConverter.charset), AckMsg.class);
+											PopCheckPoint point = map.get(ackMsg.getTopic() + ackMsg.getConsumerGroup() + ackMsg.getQueueId() + ackMsg.getStartOffset());
+											if (point != null) {
+												point.setBitMap(DataConverter.setBit(point.getBitMap(), (int) (ackMsg.getAckOffset() - ackMsg.getStartOffset()), true));
+											}
+										}
+										if (deliverTime > endTime) {
+											endTime = deliverTime;
 										}
 									}
-								} else {
-									break;
+									offset = offset + messageExts.size();
 								}
-								newOffset = popCheckPoint.getReviveOffset();
-							}
-							if (newOffset > oldOffset) {
-								brokerController.getConsumerOffsetManager().commitOffset(PopAckConstants.LOCAL_HOST, PopAckConstants.REVIVE_GROUP, reviveTopic, i, newOffset);
+								ArrayList<PopCheckPoint> sortList = new ArrayList<>(map.values());
+								Collections.sort(sortList, new Comparator<PopCheckPoint>() {
+									@Override
+									public int compare(PopCheckPoint o1, PopCheckPoint o2) {
+										return (int) (o1.getReviveOffset() - o2.getReviveOffset());
+									}
+								});
+								long newOffset = oldOffset;
+								for (PopCheckPoint popCheckPoint : sortList) {
+									if (endTime - popCheckPoint.getReviveTime() > PopAckConstants.ackTimeInterval) {
+										for (int j = 0; j < popCheckPoint.getNum(); j++) {
+											if (!DataConverter.getBit(popCheckPoint.getBitMap(), j)) {
+												// retry msg
+												MessageExt messageExt = getBizMessage(popCheckPoint.getTopic(), popCheckPoint.getStartOffset() + j, popCheckPoint.getQueueId());
+												MessageExtBrokerInner msgInner = new MessageExtBrokerInner();
+												msgInner.setTopic(KeyBuilder.buildPopRetryTopic(popCheckPoint.getTopic(), popCheckPoint.getCid()));
+												msgInner.setBody(messageExt.getBody());
+												msgInner.setQueueId(0);
+												msgInner.setTags(messageExt.getTags());
+												msgInner.setBornTimestamp(System.currentTimeMillis());
+												msgInner.setBornHost(brokerController.getStoreHost());
+												msgInner.setStoreHost(brokerController.getStoreHost());
+												msgInner.setReconsumeTimes(messageExt.getReconsumeTimes() + 1);
+												msgInner.getProperties().putAll(messageExt.getProperties());
+												msgInner.setPropertiesString(MessageDecoder.messageProperties2String(msgInner.getProperties()));
+												System.out.println(new Date()+", retry "+ messageExt.getQueueOffset());
+												PutMessageResult putMessageResult = brokerController.getMessageStore().putMessage(msgInner);
+												if (putMessageResult.getAppendMessageResult().getStatus()!=AppendMessageStatus.PUT_OK) {
+													throw new Exception("revive error ,msg is :"+msgInner);
+												}
+											}
+										}
+									} else {
+										break;
+									}
+									newOffset = popCheckPoint.getReviveOffset();
+								}
+								LOG.info("revive finish, topic is {}, queueId is {}, old offset is {}, new offset is {}  ", reviveTopic, i, oldOffset, newOffset);
+								if (newOffset > oldOffset) {
+									brokerController.getConsumerOffsetManager().commitOffset(PopAckConstants.LOCAL_HOST, PopAckConstants.REVIVE_GROUP, reviveTopic, i, newOffset);
+								}
+							
+							} catch (Exception e) {
+								LOG.error("revive error , queueId is "+i, e);
 							}
 						}
 

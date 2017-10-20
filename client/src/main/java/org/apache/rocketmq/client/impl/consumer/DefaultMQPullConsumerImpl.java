@@ -16,13 +16,6 @@
  */
 package org.apache.rocketmq.client.impl.consumer;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-import java.util.concurrent.ConcurrentMap;
 import org.apache.rocketmq.client.QueryResult;
 import org.apache.rocketmq.client.Validators;
 import org.apache.rocketmq.client.consumer.DefaultMQPullConsumer;
@@ -70,6 +63,14 @@ import org.apache.rocketmq.remoting.RPCHook;
 import org.apache.rocketmq.remoting.common.RemotingHelper;
 import org.apache.rocketmq.remoting.exception.RemotingException;
 import org.slf4j.Logger;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
 
 public class DefaultMQPullConsumerImpl implements MQConsumerInner ,MQPopConsumer{
     private final Logger log = ClientLogger.getLog();
@@ -679,40 +680,31 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner ,MQPopConsumer
         this.makeSureStateOK();
         return this.mQClientFactory.getMQAdminImpl().viewMessage(msgId);
     }
-	@Override
-	public PopResult pop(MessageQueue mq, long invisibleTime, int maxNums, String consumerGroup, long timeout) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+
+    @Override
+    public PopResult pop(MessageQueue mq, long invisibleTime, int maxNums, String consumerGroup, long timeout) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
         this.subscriptionAutomatically(mq.getTopic());
-		FindBrokerResult findBrokerResult = this.mQClientFactory.findBrokerAddressInSubscribe(mq.getBrokerName(), MixAll.MASTER_ID, true);
-		if (null == findBrokerResult) {
-			this.mQClientFactory.updateTopicRouteInfoFromNameServer(mq.getTopic());
-			findBrokerResult = this.mQClientFactory.findBrokerAddressInSubscribe(mq.getBrokerName(), MixAll.MASTER_ID, true);
-		}
-		if (findBrokerResult != null) {
-			PopMessageRequestHeader requestHeader = new PopMessageRequestHeader();
-			requestHeader.setConsumerGroup(consumerGroup);
-			requestHeader.setTopic(mq.getTopic());
-			requestHeader.setQueueId(mq.getQueueId());
-			requestHeader.setMaxMsgNums(maxNums);
-			requestHeader.setInvisibleTime(invisibleTime);
-			String brokerAddr = findBrokerResult.getBrokerAddr();
-			PopResult popResult = this.mQClientFactory.getMQClientAPIImpl().popMessage(brokerAddr, requestHeader, timeout);
-			return popResult;
-		}
-		throw new MQClientException("The broker[" + mq.getBrokerName() + "] not exist", null);
-	}
-    private void subscribe(String topic, String consumerGroup) throws MQClientException {
-        try {
-            SubscriptionData subscriptionData = FilterAPI.buildSubscriptionData(consumerGroup, //
-                topic, "*");
-            if (this.mQClientFactory != null&& this.rebalanceImpl.getSubscriptionInner().putIfAbsent(topic, subscriptionData)==null) {
-                this.mQClientFactory.sendHeartbeatToAllBrokerWithLock();
-            }
-        } catch (Exception e) {
-            throw new MQClientException("subscription exception", e);
+        FindBrokerResult findBrokerResult = this.mQClientFactory.findBrokerAddressInSubscribe(mq.getBrokerName(), MixAll.MASTER_ID, true);
+        if (null == findBrokerResult) {
+            this.mQClientFactory.updateTopicRouteInfoFromNameServer(mq.getTopic());
+            findBrokerResult = this.mQClientFactory.findBrokerAddressInSubscribe(mq.getBrokerName(), MixAll.MASTER_ID, true);
         }
+        if (findBrokerResult != null) {
+            PopMessageRequestHeader requestHeader = new PopMessageRequestHeader();
+            requestHeader.setConsumerGroup(consumerGroup);
+            requestHeader.setTopic(mq.getTopic());
+            requestHeader.setQueueId(mq.getQueueId());
+            requestHeader.setMaxMsgNums(maxNums);
+            requestHeader.setInvisibleTime(invisibleTime);
+            String brokerAddr = findBrokerResult.getBrokerAddr();
+            PopResult popResult = this.mQClientFactory.getMQClientAPIImpl().popMessage(brokerAddr, requestHeader, timeout);
+            return popResult;
+        }
+        throw new MQClientException("The broker[" + mq.getBrokerName() + "] not exist", null);
     }
-	@Override
-	public void popAsync(MessageQueue mq, long invisibleTime, int maxNums, String consumerGroup, long timeout, PopCallback popCallback, boolean poll) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+
+    @Override
+    public void popAsync(MessageQueue mq, long invisibleTime, int maxNums, String consumerGroup, long timeout, PopCallback popCallback, boolean poll) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
         this.subscriptionAutomatically(mq.getTopic());
 		FindBrokerResult findBrokerResult = this.mQClientFactory.findBrokerAddressInSubscribe(mq.getBrokerName(), MixAll.MASTER_ID, true);
 		if (null == findBrokerResult) {
