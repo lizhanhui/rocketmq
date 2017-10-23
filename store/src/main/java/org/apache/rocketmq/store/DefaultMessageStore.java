@@ -61,6 +61,7 @@ import org.slf4j.LoggerFactory;
 import static org.apache.rocketmq.store.config.BrokerRole.SLAVE;
 
 public class DefaultMessageStore implements MessageStore {
+
     private static final Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
 
     private final MessageStoreConfig messageStoreConfig;
@@ -101,6 +102,7 @@ public class DefaultMessageStore implements MessageStore {
     private volatile boolean shutdown = true;
 
     private StoreCheckpoint storeCheckpoint;
+    private TimerMessageStore timerMessageStore;
 
     private AtomicLong printTimes = new AtomicLong(0);
 
@@ -667,6 +669,22 @@ public class DefaultMessageStore implements MessageStore {
         return this.commitLog.getData(offset, size, byteBuffer);
     }
 
+    @Override public long getTimingMessageCount(String topic) {
+        if (null == timerMessageStore) {
+            return 0L;
+        } else {
+            return timerMessageStore.getTimerMetrics().getTimingCount(topic);
+        }
+    }
+
+    @Override public TimerMessageStore getTimerMessageStore() {
+        return this.timerMessageStore;
+    }
+
+    @Override public void setTimerMessageStore(TimerMessageStore timerMessageStore) {
+        this.timerMessageStore = timerMessageStore;
+    }
+
     public String getRunningDataInfo() {
         return this.storeStatsService.toString();
     }
@@ -1024,6 +1042,7 @@ public class DefaultMessageStore implements MessageStore {
     public long dispatchBehindBytes() {
         return this.reputMessageService.behind();
     }
+
 
     @Override
     public long flush() {

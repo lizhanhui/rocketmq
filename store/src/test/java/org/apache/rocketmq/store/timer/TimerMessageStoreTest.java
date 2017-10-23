@@ -48,6 +48,7 @@ import org.apache.rocketmq.store.config.FlushDiskType;
 import org.apache.rocketmq.store.config.MessageStoreConfig;
 import org.apache.rocketmq.store.stats.BrokerStatsManager;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -116,6 +117,10 @@ public class TimerMessageStoreTest {
                 assertEquals(PutMessageStatus.PUT_OK, putMessageResult.getPutMessageStatus());
             }
         }
+        Thread.sleep(1000);
+        for (int i = 0; i < 10; i++) {
+            Assert.assertEquals(5, timerMessageStore.getTimerMetrics().getTimingCount(topic + i));
+        }
         int index = 0;
         for (int i = 0; i < 10; i++) {
             for (int j = 0; j < 5; j++) {
@@ -129,6 +134,9 @@ public class TimerMessageStoreTest {
                 assertTrue(tagIndex > index);
                 index = tagIndex;
             }
+        }
+        for (int i = 0; i < 10; i++) {
+            Assert.assertEquals(0, timerMessageStore.getTimerMetrics().getTimingCount(topic + i));
         }
     }
 

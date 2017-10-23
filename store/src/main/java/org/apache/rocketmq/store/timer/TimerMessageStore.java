@@ -105,6 +105,7 @@ public class TimerMessageStore {
     private final int ttlSecs;
     private final MessageStoreConfig storeConfig;
     private volatile BrokerRole lastBrokerRole = BrokerRole.SLAVE;
+    private TimerMetrics timerMetrics;
 
     public TimerMessageStore(final MessageStore messageStore, final MessageStoreConfig storeConfig,
         TimerCheckpoint timerCheckpoint) throws IOException {
@@ -115,6 +116,7 @@ public class TimerMessageStore {
         this.ttlSecs = 2 * DAY_SECS;
         this.timerWheel = new TimerWheel(getTimerWheelPath(storeConfig.getStorePathRootDir()), 2 * DAY_SECS);
         this.timerLog = new TimerLog(getTimerLogPath(storeConfig.getStorePathRootDir()), timerLogFileSize);
+        this.timerMetrics = new TimerMetrics(storeConfig.getStorePathRootDir());
         this.timerCheckpoint = timerCheckpoint;
         this.lastBrokerRole = storeConfig.getBrokerRole();
         if (storeConfig.getTimerRollWindowSec() > ttlSecs - TIME_BLANK || storeConfig.getTimerRollWindowSec() < 2) {
@@ -147,6 +149,7 @@ public class TimerMessageStore {
 
     public boolean load() {
         boolean load = timerLog.load();
+        load = load && this.timerMetrics.load();
         recover();
         return load;
     }
@@ -376,6 +379,12 @@ public class TimerMessageStore {
         return isRunning();
     }
 
+    public void addMetric(MessageExt msg, int value) {
+        if (null == msg || null == msg.getProperty(MessageConst.PROPERTY_REAL_TOPIC)) {
+            return;
+        }
+        timerMetrics.addAndGet(msg.getProperty(MessageConst.PROPERTY_REAL_TOPIC), value);
+    }
     public boolean enqueue(int queueId) {
         if (!isRunningEnqueue()) {
             return false;
@@ -471,6 +480,7 @@ public class TimerMessageStore {
         long ret = timerLog.append(tmpBuffer.array(), 0, TimerLog.UNIT_SIZE);
         if (-1 != ret) {
             timerWheel.putSlot(delayedTime / 1000, slot.firstPos == -1 ? ret : slot.firstPos, ret);
+            addMetric(messageExt, 1);
         }
         return -1 != ret;
     }
@@ -958,6 +968,9 @@ public class TimerMessageStore {
                                 doRes = true;
                                 perfs.getCounter("dequeue_get_2_miss").flow(System.currentTimeMillis() - tmp);
                             }
+                            if (doRes) {
+                                addMetric(msgExt, -1);
+                            }
                         } catch (Throwable e) {
                             log.error("Unknown exception", e);
                             if (storeConfig.isTimerSkipUnknownError()) {
@@ -1090,6 +1103,10 @@ public class TimerMessageStore {
     }
 
 
+
+    public TimerMetrics getTimerMetrics() {
+        return this.timerMetrics;
+    }
 
 
 }

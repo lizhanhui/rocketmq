@@ -216,6 +216,7 @@ public class BrokerController {
                 if (messageStoreConfig.isTimerWheelEnable()) {
                     this.timerCheckpoint =  new TimerCheckpoint(TimerMessageStore.getTimerCheckPath(messageStoreConfig.getStorePathRootDir()));
                     this.timerMessageStore = new TimerMessageStore(messageStore, messageStoreConfig, timerCheckpoint);
+                    messageStore.setTimerMessageStore(this.timerMessageStore);
                 }
             } catch (IOException e) {
                 result = false;

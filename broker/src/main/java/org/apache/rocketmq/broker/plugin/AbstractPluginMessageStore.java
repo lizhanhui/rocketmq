@@ -31,6 +31,7 @@ import org.apache.rocketmq.store.MessageStore;
 import org.apache.rocketmq.store.PutMessageResult;
 import org.apache.rocketmq.store.QueryMessageResult;
 import org.apache.rocketmq.store.SelectMappedBufferResult;
+import org.apache.rocketmq.store.timer.TimerMessageStore;
 
 public abstract class AbstractPluginMessageStore implements MessageStore {
     protected MessageStore next = null;
@@ -252,4 +253,20 @@ public abstract class AbstractPluginMessageStore implements MessageStore {
     public boolean getData(long offset, int size, ByteBuffer byteBuffer) {
         return next.getData(offset, size, byteBuffer);
     }
+
+    @Override
+    public TimerMessageStore getTimerMessageStore() {
+        return next.getTimerMessageStore();
+    }
+    @Override
+    public void setTimerMessageStore(TimerMessageStore timerMessageStore) {
+        next.setTimerMessageStore(timerMessageStore);
+    }
+
+    @Override
+    public long getTimingMessageCount(String topic) {
+        return next.getTimingMessageCount(topic);
+    }
+
+
 }

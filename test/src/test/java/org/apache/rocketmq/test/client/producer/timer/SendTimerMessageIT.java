@@ -31,6 +31,7 @@ import org.apache.rocketmq.test.base.BaseConf;
 import org.apache.rocketmq.test.factory.ProducerFactory;
 import org.apache.rocketmq.test.util.RandomUtils;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -68,6 +69,7 @@ public class SendTimerMessageIT extends BaseConf {
         //query the message by system topic
         MessageExt sysRes = getMessageByUniqkey(TimerMessageStore.TIMER_TOPIC, sendResult.getMsgId(), 1000);
         assertNotNull(sysRes);
+        Thread.sleep(1000);
         //query the message by real topic
         MessageExt abosulteRes = getMessageByUniqkey(topic, sendResult.getMsgId(), 4000);
         assertNotNull(abosulteRes);
