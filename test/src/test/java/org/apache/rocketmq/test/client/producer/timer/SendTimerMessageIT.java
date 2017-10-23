@@ -26,6 +26,7 @@ import org.apache.rocketmq.common.message.Message;
 import org.apache.rocketmq.common.message.MessageAccessor;
 import org.apache.rocketmq.common.message.MessageConst;
 import org.apache.rocketmq.common.message.MessageExt;
+import org.apache.rocketmq.store.timer.TimerMessageStore;
 import org.apache.rocketmq.test.base.BaseConf;
 import org.apache.rocketmq.test.factory.ProducerFactory;
 import org.apache.rocketmq.test.util.RandomUtils;
@@ -64,14 +65,20 @@ public class SendTimerMessageIT extends BaseConf {
         MessageAccessor.putProperty(absolute, MessageConst.PROPERTY_TIMER_DELIVER_MS, curr + delayMs + "");
         SendResult sendResult = producer.send(absolute);
         assertEquals(SendStatus.SEND_OK, sendResult.getSendStatus());
-        MessageExt abosulteRes = getMessageByUniqkey(sendResult.getMsgId(), 4000);
+        //query the message by system topic
+        MessageExt sysRes = getMessageByUniqkey(TimerMessageStore.TIMER_TOPIC, sendResult.getMsgId(), 1000);
+        assertNotNull(sysRes);
+        //query the message by real topic
+        MessageExt abosulteRes = getMessageByUniqkey(topic, sendResult.getMsgId(), 4000);
         assertNotNull(abosulteRes);
+        //check the sys message and the real message
+        assertEquals(sysRes.getProperty("REAL_TOPIC"), abosulteRes.getTopic());
         long elapse = System.currentTimeMillis() - curr;
         assertTrue(elapse > 2000);
         assertTrue(elapse < 3000);
     }
 
-    private MessageExt getMessageByUniqkey(String uniqkey, int maxWaitMs) throws Exception {
+    private MessageExt getMessageByUniqkey(String topic, String uniqkey, int maxWaitMs) throws Exception {
         long begin = System.currentTimeMillis();
         MessageExt messageExt = null;
         while (System.currentTimeMillis() < begin + maxWaitMs) {
