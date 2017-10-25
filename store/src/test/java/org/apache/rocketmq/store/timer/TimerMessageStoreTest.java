@@ -85,6 +85,7 @@ public class TimerMessageStoreTest {
         storeConfig.setStorePathRootDir(baseDir);
         storeConfig.setStorePathCommitLog(baseDir + File.separator + "commitlog");
         storeConfig.setFlushDiskType(FlushDiskType.ASYNC_FLUSH);
+        storeConfig.setTimerInterceptDelayLevel(true);
         messageStore = new DefaultMessageStore(storeConfig, new BrokerStatsManager("TimerTest"), new MyMessageArrivingListener(), new BrokerConfig());
         boolean load = messageStore.load();
         assertTrue(load);
@@ -278,6 +279,32 @@ public class TimerMessageStoreTest {
         storeConfig.setTimerRollWindowSec(Integer.MAX_VALUE);
     }
 
+    @Test
+    public void testInterceptDelayLevel() throws Exception {
+        String topic = "TimerTest08";
+        TimerMessageStore timerMessageStore = createTimerMessageStore(null);
+        timerMessageStore.load();
+        timerMessageStore.start();
+        long curr = (System.currentTimeMillis() / 1000) * 1000;
+        MessageExtBrokerInner inner = buildMessage(0, topic , false);
+        MessageAccessor.clearProperty(inner, MessageConst.PROPERTY_TIMER_DELIVER_MS);
+        inner.setDelayTimeLevel(1);
+        PutMessageResult putMessageResult = messageStore.putMessage(inner);
+        assertEquals(PutMessageStatus.PUT_OK, putMessageResult.getPutMessageStatus());
+        Thread.sleep(500);
+        Assert.assertEquals(1, timerMessageStore.getTimerMetrics().getTimingCount(topic));
+        ByteBuffer msgBuff = getOneMessage(topic, 0, 0, 3000);
+        assertNotNull(msgBuff);
+        MessageExt msgExt = MessageDecoder.decode(msgBuff);
+        assertNotNull(msgExt);
+        assertEquals(topic, msgExt.getTopic());
+        assertEquals(1, msgExt.getDelayTimeLevel());
+        for (int i = 0; i < 10; i++) {
+            Assert.assertEquals(0, timerMessageStore.getTimerMetrics().getTimingCount(topic + i));
+        }
+        Assert.assertEquals(0, timerMessageStore.getTimerMetrics().getTimingCount(topic));
+    }
+
     public ByteBuffer getOneMessage(String topic, int queue, long offset, int timeout) throws Exception {
         int retry = timeout / 100;
         while (retry-- > 0) {
@@ -294,9 +321,6 @@ public class TimerMessageStoreTest {
         MessageExtBrokerInner msg = new MessageExtBrokerInner();
         msg.setTopic(topic);
         msg.setQueueId(0);
-        //msg.setTopic(TimerMessageStore.TIMER_TOPIC);
-        //MessageAccessor.putProperty(msg, MessageConst.PROPERTY_REAL_TOPIC, topic);
-        //MessageAccessor.putProperty(msg, MessageConst.PROPERTY_REAL_QUEUE_ID, "0");
         msg.setTags(counter.incrementAndGet() + "");
         msg.setKeys("timer");
         if (relative) {

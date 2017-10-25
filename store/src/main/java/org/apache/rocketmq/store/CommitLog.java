@@ -519,18 +519,75 @@ public class CommitLog {
         return beginTimeInLock;
     }
 
+
+    private boolean isRolledTimerMessage(MessageExtBrokerInner msg) {
+        return TimerMessageStore.TIMER_TOPIC.equals(msg.getTopic());
+    }
+
     private boolean checkIfTimerMessage(MessageExtBrokerInner msg) {
         if (!this.defaultMessageStore.getMessageStoreConfig().isTimerWheelEnable()) {
             return false;
         }
-        if (TimerMessageStore.TIMER_TOPIC.equals(msg.getTopic())) {
+        //double check
+        if (TimerMessageStore.TIMER_TOPIC.equals(msg.getTopic()) || null != msg.getProperty(MessageConst.PROPERTY_TIMER_OUT_MS)) {
             return false;
         }
-        if (msg.getDelayTimeLevel() > 0 || null != msg.getProperty(MessageConst.PROPERTY_TIMER_IN_MS)) {
-            return false;
+        if (msg.getDelayTimeLevel() > 0) {
+            return this.defaultMessageStore.getMessageStoreConfig().isTimerInterceptDelayLevel();
+        }
+        return null != msg.getProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS) || null != msg.getProperty(MessageConst.PROPERTY_TIMER_DELAY_SEC);
+    }
+
+    private PutMessageResult transformTimerMessage(MessageExtBrokerInner msg) {
+        //do transform
+        if (msg.getDelayTimeLevel() > 0) {
+            if (msg.getDelayTimeLevel() > this.defaultMessageStore.getScheduleMessageService().getMaxDelayLevel()) {
+                msg.setDelayTimeLevel(this.defaultMessageStore.getScheduleMessageService().getMaxDelayLevel());
+            }
+            MessageAccessor.putProperty(msg, MessageConst.PROPERTY_TIMER_DELIVER_MS, this.defaultMessageStore.getScheduleMessageService().computeDeliverTimestamp(msg.getDelayTimeLevel(),
+                System.currentTimeMillis()) + "");
+        }
+        long deliverMs;
+        try {
+            if (msg.getProperty(MessageConst.PROPERTY_TIMER_DELAY_SEC) != null) {
+                deliverMs = System.currentTimeMillis() + Integer.valueOf(msg.getProperty(MessageConst.PROPERTY_TIMER_DELAY_SEC)) * 1000;
+            } else {
+                deliverMs = Long.valueOf(msg.getProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS));
+            }
+        } catch (Exception e) {
+            return new PutMessageResult(PutMessageStatus.MESSAGE_ILLEGAL, null);
+        }
+        if (deliverMs > System.currentTimeMillis()) {
+            if (msg.getDelayTimeLevel() <= 0 && deliverMs - System.currentTimeMillis() > this.defaultMessageStore.getMessageStoreConfig().getTimerMaxDelaySec() * 1000) {
+                return new PutMessageResult(PutMessageStatus.MESSAGE_ILLEGAL, null);
+            }
+            if (deliverMs % 1000 == 0) {
+                deliverMs = deliverMs - 1000;
+            } else {
+                deliverMs = (deliverMs / 1000) * 1000;
+            }
+            MessageAccessor.putProperty(msg, MessageConst.PROPERTY_TIMER_OUT_MS, deliverMs + "");
+            MessageAccessor.putProperty(msg, MessageConst.PROPERTY_REAL_TOPIC, msg.getTopic());
+            MessageAccessor.putProperty(msg, MessageConst.PROPERTY_REAL_QUEUE_ID, String.valueOf(msg.getQueueId()));
+            msg.setPropertiesString(MessageDecoder.messageProperties2String(msg.getProperties()));
+            msg.setTopic(TimerMessageStore.TIMER_TOPIC);
+            msg.setQueueId(0);
+        }
+        return null;
+    }
+
+    public void transformDelayLevelMessage(MessageExtBrokerInner msg) {
+        if (msg.getDelayTimeLevel() > this.defaultMessageStore.getScheduleMessageService().getMaxDelayLevel()) {
+            msg.setDelayTimeLevel(this.defaultMessageStore.getScheduleMessageService().getMaxDelayLevel());
         }
 
-        return null != msg.getProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS) || null != msg.getProperty(MessageConst.PROPERTY_TIMER_DELAY_SEC);
+        // Backup real topic, queueId
+        MessageAccessor.putProperty(msg, MessageConst.PROPERTY_REAL_TOPIC, msg.getTopic());
+        MessageAccessor.putProperty(msg, MessageConst.PROPERTY_REAL_QUEUE_ID, String.valueOf(msg.getQueueId()));
+        msg.setPropertiesString(MessageDecoder.messageProperties2String(msg.getProperties()));
+
+        msg.setTopic(ScheduleMessageService.SCHEDULE_TOPIC);
+        msg.setQueueId(ScheduleMessageService.delayLevel2QueueId(msg.getDelayTimeLevel()));
     }
 
     public PutMessageResult putMessage(final MessageExtBrokerInner msg) {
@@ -544,56 +601,19 @@ public class CommitLog {
 
         StoreStatsService storeStatsService = this.defaultMessageStore.getStoreStatsService();
 
-        String topic = msg.getTopic();
-        int queueId = msg.getQueueId();
 
         final int tranType = MessageSysFlag.getTransactionValue(msg.getSysFlag());
         if (tranType == MessageSysFlag.TRANSACTION_NOT_TYPE
             || tranType == MessageSysFlag.TRANSACTION_COMMIT_TYPE) {
-            // Delay Delivery
-            if (msg.getDelayTimeLevel() > 0) {
-                if (msg.getDelayTimeLevel() > this.defaultMessageStore.getScheduleMessageService().getMaxDelayLevel()) {
-                    msg.setDelayTimeLevel(this.defaultMessageStore.getScheduleMessageService().getMaxDelayLevel());
-                }
-
-                topic = ScheduleMessageService.SCHEDULE_TOPIC;
-                queueId = ScheduleMessageService.delayLevel2QueueId(msg.getDelayTimeLevel());
-
-                // Backup real topic, queueId
-                MessageAccessor.putProperty(msg, MessageConst.PROPERTY_REAL_TOPIC, msg.getTopic());
-                MessageAccessor.putProperty(msg, MessageConst.PROPERTY_REAL_QUEUE_ID, String.valueOf(msg.getQueueId()));
-                msg.setPropertiesString(MessageDecoder.messageProperties2String(msg.getProperties()));
-
-                msg.setTopic(topic);
-                msg.setQueueId(queueId);
-            } else if (checkIfTimerMessage(msg)) {
-                long deliverMs = 0L;
-                try {
-                    if (msg.getProperty(MessageConst.PROPERTY_TIMER_DELAY_SEC) != null) {
-                        deliverMs = System.currentTimeMillis() + Integer.valueOf(msg.getProperty(MessageConst.PROPERTY_TIMER_DELAY_SEC)) * 1000;
-                    } else {
-                        deliverMs = Long.valueOf(msg.getProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS));
+            if (!isRolledTimerMessage(msg)) {
+                if (checkIfTimerMessage(msg)) {
+                    PutMessageResult tranformRes = transformTimerMessage(msg);
+                    if (null != tranformRes) {
+                        return tranformRes;
                     }
-                } catch (Exception e) {
-                    return new PutMessageResult(PutMessageStatus.MESSAGE_ILLEGAL, null);
+                } else if (msg.getDelayTimeLevel() > 0) {
+                    transformDelayLevelMessage(msg);
                 }
-                if (deliverMs > System.currentTimeMillis()) {
-                    if (deliverMs - System.currentTimeMillis() > this.defaultMessageStore.getMessageStoreConfig().getTimerMaxDelaySec() * 1000) {
-                        return new PutMessageResult(PutMessageStatus.MESSAGE_ILLEGAL, null);
-                    }
-                    if (deliverMs % 1000 == 0) {
-                        deliverMs = deliverMs - 1000;
-                    } else {
-                        deliverMs = (deliverMs / 1000) * 1000;
-                    }
-                    MessageAccessor.putProperty(msg, MessageConst.PROPERTY_TIMER_IN_MS, deliverMs + "");
-                    MessageAccessor.putProperty(msg, MessageConst.PROPERTY_REAL_TOPIC, msg.getTopic());
-                    MessageAccessor.putProperty(msg, MessageConst.PROPERTY_REAL_QUEUE_ID, String.valueOf(msg.getQueueId()));
-                    msg.setPropertiesString(MessageDecoder.messageProperties2String(msg.getProperties()));
-                    msg.setTopic(TimerMessageStore.TIMER_TOPIC);
-                    msg.setQueueId(0);
-                }
-
             }
         }
 
@@ -665,7 +685,7 @@ public class CommitLog {
 
         // Statistics
         storeStatsService.getSinglePutMessageTopicTimesTotal(msg.getTopic()).incrementAndGet();
-        storeStatsService.getSinglePutMessageTopicSizeTotal(topic).addAndGet(result.getWroteBytes());
+        storeStatsService.getSinglePutMessageTopicSizeTotal(msg.getTopic()).addAndGet(result.getWroteBytes());
 
         handleDiskFlush(result, putMessageResult, msg);
         handleHA(result, putMessageResult, msg);

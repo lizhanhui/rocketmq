@@ -153,6 +153,7 @@ public class MessageStoreConfig {
     private int timerGetMessageThreadNum = 1;
     private boolean timerWarmEnable = false;
     private boolean timerSkipUnknownError = false;
+    private boolean timerInterceptDelayLevel = false;
 
 
     public boolean isDebugLockEnable() {
@@ -748,5 +749,13 @@ public class MessageStoreConfig {
 
     public void setTimerSkipUnknownError(boolean timerSkipUnknownError) {
         this.timerSkipUnknownError = timerSkipUnknownError;
+    }
+
+    public boolean isTimerInterceptDelayLevel() {
+        return timerInterceptDelayLevel;
+    }
+
+    public void setTimerInterceptDelayLevel(boolean timerInterceptDelayLevel) {
+        this.timerInterceptDelayLevel = timerInterceptDelayLevel;
     }
 }
