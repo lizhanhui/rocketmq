@@ -137,6 +137,8 @@ public class AdminBrokerProcessor implements NettyRequestProcessor {
                 return this.getAllTopicConfig(ctx, request);
             case RequestCode.GET_TIMER_CHECK_POINT:
                 return this.getTimerCheckPoint(ctx, request);
+            case RequestCode.GET_TIMER_METRICS:
+                return this.getTimerMetrics(ctx, request);
             case RequestCode.UPDATE_BROKER_CONFIG:
                 return this.updateBrokerConfig(ctx, request);
             case RequestCode.GET_BROKER_CONFIG:
@@ -315,6 +317,24 @@ public class AdminBrokerProcessor implements NettyRequestProcessor {
 
         return response;
     }
+
+    private RemotingCommand getTimerMetrics(ChannelHandlerContext ctx, RemotingCommand request) {
+        final RemotingCommand response = RemotingCommand.createResponseCommand(ResponseCode.SYSTEM_ERROR, "Unknown");
+
+
+        if (null == this.brokerController.getMessageStore().getTimerMessageStore()) {
+            log.error("The timer message store is null, client: {}", ctx.channel().remoteAddress());
+            response.setCode(ResponseCode.SYSTEM_ERROR);
+            response.setRemark("The timer message store is null");
+            return response;
+        }
+        response.setBody(brokerController.getMessageStore().getTimerMessageStore().getTimerMetrics().encode().getBytes());
+        response.setCode(ResponseCode.SUCCESS);
+        response.setRemark(null);
+
+        return response;
+    }
+
 
 
     private RemotingCommand updateBrokerConfig(ChannelHandlerContext ctx, RemotingCommand request) {

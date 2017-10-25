@@ -17,6 +17,7 @@
 package org.apache.rocketmq.store.timer;
 
 import java.io.File;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -62,6 +63,10 @@ public class TimerMetrics extends ConfigManager {
 
     public long getTimingCount(String topic) {
         return getPair(topic).getCount().get();
+    }
+
+    public Map<String, Metric> getTimingCount() {
+        return timingCount;
     }
     @Override public String encode() {
         return encode(false);

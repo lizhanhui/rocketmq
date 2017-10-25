@@ -70,7 +70,9 @@ public class RequestCode {
 
     public static final int CHECK_CLIENT_CONFIG = 46;
 
-    public static final int GET_TIMER_CHECK_POINT = 47;
+    public static final int GET_TIMER_CHECK_POINT = 60;
+
+    public static final int GET_TIMER_METRICS = 61;
 
     public static final int PUT_KV_CONFIG = 100;
 

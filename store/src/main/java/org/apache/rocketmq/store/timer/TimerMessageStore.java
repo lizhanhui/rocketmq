@@ -1052,6 +1052,7 @@ public class TimerMessageStore {
                         TimerMessageStore.log.info("[{}]Timer progress-offset commitOffset:{} currReadOffset:{} offsetBehind:{} behindMaster:{}",
                             storeConfig.getBrokerRole(), commitQueueOffset, currQueueOffset - commitQueueOffset, maxOffsetInQueue - currQueueOffset, timerCheckpoint.getMasterTimerQueueOffset() - currQueueOffset);
                     }
+                    timerMetrics.persist();
                     waitForRunning(storeConfig.getTimerFlushIntervalMs());
                 } catch (Throwable e) {
                     TimerMessageStore.log.error("Error occurred in " + getServiceName(), e);
