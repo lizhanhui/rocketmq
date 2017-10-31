@@ -88,7 +88,7 @@ public class TimerMessageStore {
     private final TimerEnqueuePutService enqueuePutService;
     private final TimerDequeueWarmService dequeueWarmService;
     private final TimerDequeueGetService dequeueGetService;
-    private final TimerDequeuePutService dequeuePutService;
+    private final TimerDequeuePutService[] dequeuePutServices;
     private final TimerDequeueGetMessageService[] getMessageServices;
     private final TimerFlushService timerFlushService;
 
@@ -134,16 +134,20 @@ public class TimerMessageStore {
         enqueuePutService = new TimerEnqueuePutService();
         dequeueWarmService = new TimerDequeueWarmService();
         dequeueGetService = new TimerDequeueGetService();
-        dequeuePutService = new TimerDequeuePutService();
         timerFlushService = new TimerFlushService();
         int getThreadNum =  storeConfig.getTimerGetMessageThreadNum();
-        if (getThreadNum <= 0 || getThreadNum > 20) {
-            getThreadNum = 10;
-        }
+        if (getThreadNum <= 0) getThreadNum =1;
         getMessageServices = new TimerDequeueGetMessageService[getThreadNum];
         for (int i = 0; i < getMessageServices.length; i++) {
             getMessageServices[i] = new TimerDequeueGetMessageService();
         }
+        int putThreadNum = storeConfig.getTimerputMessageThreadNum();
+        if (putThreadNum <= 0) putThreadNum = 1;
+        dequeuePutServices = new TimerDequeuePutService[putThreadNum];
+        for (int i = 0; i < dequeuePutServices.length; i++) {
+            dequeuePutServices[i] =  new TimerDequeuePutService();
+        }
+
 
     }
 
@@ -284,7 +288,9 @@ public class TimerMessageStore {
         for (int i = 0; i < getMessageServices.length; i++) {
             getMessageServices[i].start();
         }
-        dequeuePutService.start();
+        for (int i = 0; i < dequeuePutServices.length; i++) {
+            dequeuePutServices[i].start();
+        }
         timerFlushService.start();
 
         scheduler.scheduleAtFixedRate(new Runnable() {
@@ -323,7 +329,9 @@ public class TimerMessageStore {
         for (int i = 0; i < getMessageServices.length; i++) {
             getMessageServices[i].shutdown();
         }
-        dequeuePutService.shutdown();
+        for (int i = 0; i < dequeuePutServices.length; i++) {
+            dequeuePutServices[i].shutdown();
+        }
         timerWheel.shutdown(false);
 
     }
@@ -336,6 +344,7 @@ public class TimerMessageStore {
 
     private void moveReadTime() {
         currReadTimeMs = currReadTimeMs + 1000;
+        commitReadTimeMs = currReadTimeMs;
     }
 
     private boolean isRunning() {
@@ -882,38 +891,41 @@ public class TimerMessageStore {
                     long tmpReadTimeMs = currReadTimeMs;
                     TimerRequest tr = dequeueQueue.poll(10, TimeUnit.MILLISECONDS);
                     boolean doRes = false;
-                    while (!isStopped() && !doRes && isRunningDequeue()) {
-                        try {
-                            if (null == tr) {
-                                commitReadTimeMs = tmpReadTimeMs;
-                                doRes = true;
-                            } else {
-                                perfs.startTick("dequeue_put");
-                                MessageExtBrokerInner msg = convert(tr.getMsg(), tr.getEnqueueTime(), needRoll(tr.getMagic()));
-                                doRes  = 1 !=  doPut(msg);
-                                while (!doRes && !isStopped() && isRunningDequeue()) {
-                                    doRes = 1 != doPut(msg);
-                                    Thread.sleep(50);
-                                }
-                                if (doRes) {
-                                    if (dequeueQueue.size() == 0) {
-                                        commitReadTimeMs = tmpReadTimeMs;
-                                    } else {
-                                        commitReadTimeMs = tr.getDelayTime();
+                    try {
+                        while (!isStopped() && !doRes && isRunningDequeue()) {
+                            try {
+                                if (null == tr) {
+                                    commitReadTimeMs = tmpReadTimeMs;
+                                    doRes = true;
+                                } else {
+                                    perfs.startTick("dequeue_put");
+                                    MessageExtBrokerInner msg = convert(tr.getMsg(), tr.getEnqueueTime(), needRoll(tr.getMagic()));
+                                    doRes  = 1 !=  doPut(msg);
+                                    while (!doRes && !isStopped() && isRunningDequeue()) {
+                                        doRes = 1 != doPut(msg);
+                                        Thread.sleep(50);
                                     }
+                                    if (doRes) {
+                                        if (dequeueQueue.size() == 0) {
+                                            commitReadTimeMs = tmpReadTimeMs;
+                                        } else {
+                                            commitReadTimeMs = tr.getDelayTime();
+                                        }
+                                    }
+                                    perfs.endTick("dequeue_put");
                                 }
-                                perfs.endTick("dequeue_put");
-                            }
-                        } catch (Throwable t) {
-                            log.info("Unknown error", t);
-                            if (storeConfig.isTimerSkipUnknownError()) {
-                                doRes = true;
+                            } catch (Throwable t) {
+                                log.info("Unknown error", t);
+                                if (storeConfig.isTimerSkipUnknownError()) {
+                                    doRes = true;
+                                }
                             }
                         }
+                    } finally {
+                        if (null != tr)
+                            tr.getSemaphore().release();
                     }
-                    if (!isRunningDequeue() && dequeueQueue.size() > 0) {
-                        dequeueQueue.clear();
-                    }
+
                 } catch (Throwable e) {
                     TimerMessageStore.log.error("Error occurred in " + getServiceName(), e);
                 }
@@ -956,6 +968,7 @@ public class TimerMessageStore {
                             if (null != msgExt) {
                                 if (tr.getDeleteList().size() > 0 && tr.getDeleteList().contains(MessageClientIDSetter.getUniqID(msgExt))) {
                                     doRes = true;
+                                    tr.getSemaphore().release();
                                     perfs.getCounter("dequeue_delete").flow(1);
                                 } else {
                                     tr.setMsg(msgExt);
@@ -979,7 +992,6 @@ public class TimerMessageStore {
                         } finally {
                             if (doRes) {
                                 i++;
-                                tr.getSemaphore().release();
                             }
                         }
                     }

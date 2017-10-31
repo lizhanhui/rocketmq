@@ -122,7 +122,6 @@ public class TimerMessageStoreTest {
         for (int i = 0; i < 10; i++) {
             Assert.assertEquals(5, timerMessageStore.getTimerMetrics().getTimingCount(topic + i));
         }
-        int index = 0;
         for (int i = 0; i < 10; i++) {
             for (int j = 0; j < 5; j++) {
                 ByteBuffer msgBuff = getOneMessage(topic + i, 0, j, 3000);
@@ -131,9 +130,7 @@ public class TimerMessageStoreTest {
                 assertNotNull(msgExt);
                 assertEquals(topic + i, msgExt.getTopic());
                 assertTrue(System.currentTimeMillis() - delayMs - 1000 < 200);
-                int tagIndex = Integer.valueOf(msgExt.getTags());
-                assertTrue(tagIndex > index);
-                index = tagIndex;
+                assertEquals(topic + i, msgExt.getTopic());
             }
         }
         for (int i = 0; i < 10; i++) {
