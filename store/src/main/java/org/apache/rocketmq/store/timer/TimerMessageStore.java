@@ -32,6 +32,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.common.ServiceThread;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
@@ -106,6 +107,7 @@ public class TimerMessageStore {
     private final MessageStoreConfig storeConfig;
     private volatile BrokerRole lastBrokerRole = BrokerRole.SLAVE;
     private TimerMetrics timerMetrics;
+    private AtomicInteger frequency = new AtomicInteger(0);
 
     public TimerMessageStore(final MessageStore messageStore, final MessageStoreConfig storeConfig,
         TimerCheckpoint timerCheckpoint) throws IOException {
@@ -389,10 +391,17 @@ public class TimerMessageStore {
     }
 
     public void addMetric(MessageExt msg, int value) {
-        if (null == msg || null == msg.getProperty(MessageConst.PROPERTY_REAL_TOPIC)) {
-            return;
+        try {
+            if (null == msg || null == msg.getProperty(MessageConst.PROPERTY_REAL_TOPIC)) {
+                return;
+            }
+            timerMetrics.addAndGet(msg.getProperty(MessageConst.PROPERTY_REAL_TOPIC), value);
+        } catch (Throwable t) {
+            if (frequency.incrementAndGet() % 1000 == 0) {
+                log.error("error in adding metric", t);
+            }
         }
-        timerMetrics.addAndGet(msg.getProperty(MessageConst.PROPERTY_REAL_TOPIC), value);
+
     }
     public boolean enqueue(int queueId) {
         if (!isRunningEnqueue()) {
@@ -899,6 +908,7 @@ public class TimerMessageStore {
                                     doRes = true;
                                 } else {
                                     perfs.startTick("dequeue_put");
+                                    addMetric(tr.getMsg(), -1);
                                     MessageExtBrokerInner msg = convert(tr.getMsg(), tr.getEnqueueTime(), needRoll(tr.getMagic()));
                                     doRes  = 1 !=  doPut(msg);
                                     while (!doRes && !isStopped() && isRunningDequeue()) {
@@ -980,9 +990,6 @@ public class TimerMessageStore {
                             } else {
                                 doRes = true;
                                 perfs.getCounter("dequeue_get_2_miss").flow(System.currentTimeMillis() - tmp);
-                            }
-                            if (doRes) {
-                                addMetric(msgExt, -1);
                             }
                         } catch (Throwable e) {
                             log.error("Unknown exception", e);
