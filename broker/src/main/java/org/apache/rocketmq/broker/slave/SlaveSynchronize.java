@@ -26,6 +26,7 @@ import org.apache.rocketmq.common.protocol.body.SubscriptionGroupWrapper;
 import org.apache.rocketmq.common.protocol.body.TopicConfigSerializeWrapper;
 import org.apache.rocketmq.store.config.StorePathConfigHelper;
 import org.apache.rocketmq.store.timer.TimerCheckpoint;
+import org.apache.rocketmq.store.timer.TimerMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,6 +53,7 @@ public class SlaveSynchronize {
         this.syncDelayOffset();
         this.syncSubscriptionGroupConfig();
         this.syncTimerCheckPoint();
+        this.syncTimerMetrics();
     }
 
     private void syncTopicConfig() {
@@ -156,6 +158,26 @@ public class SlaveSynchronize {
                 }
             } catch (Exception e) {
                 log.error("SyncSubscriptionGroup Exception, {}", masterAddrBak, e);
+            }
+        }
+    }
+
+    private void syncTimerMetrics() {
+        String masterAddrBak = this.masterAddr;
+        if (masterAddrBak != null) {
+            try {
+                if (null != brokerController.getMessageStore().getTimerMessageStore()) {
+                    TimerMetrics.TimerMetricsSerializeWrapper metricsSerializeWrapper =
+                        this.brokerController.getBrokerOuterAPI().getTimerMetrics(masterAddrBak);
+                    if (!brokerController.getMessageStore().getTimerMessageStore().getTimerMetrics().getDataVersion().equals(metricsSerializeWrapper.getDataVersion())) {
+                        this.brokerController.getMessageStore().getTimerMessageStore().getTimerMetrics().getDataVersion().assignNewOne(metricsSerializeWrapper.getDataVersion());
+                        this.brokerController.getMessageStore().getTimerMessageStore().getTimerMetrics().getTimingCount().clear();
+                        this.brokerController.getMessageStore().getTimerMessageStore().getTimerMetrics().getTimingCount().putAll(metricsSerializeWrapper.getTimingCount());
+                        this.brokerController.getMessageStore().getTimerMessageStore().getTimerMetrics().persist();
+                    }
+                }
+            } catch (Exception e) {
+                log.error("SyncTimerMetrics Exception, {}", masterAddrBak, e);
             }
         }
     }

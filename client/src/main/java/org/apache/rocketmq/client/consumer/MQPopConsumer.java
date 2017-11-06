@@ -26,22 +26,7 @@ import org.apache.rocketmq.remoting.exception.RemotingException;
  */
 public interface MQPopConsumer {
 
-    /**
-     * pop message in the specified timeout， broker maintains the consume offset.
-     * @param if mq queueId is -1,  pop message in any queue from broker; else pop message in the specified queue from broker.
-     * @param invisibleTime
-     * @param maxNums
-     * @param consumerGroup
-     * @param timeout
-     * @return msg list
-     * @throws MQClientException
-     * @throws RemotingException
-     * @throws MQBrokerException
-     * @throws InterruptedException
-     */
-	PopResult pop(final MessageQueue mq, final long invisibleTime,
-        final int maxNums, String consumerGroup,final long timeout) throws MQClientException, RemotingException,
-        MQBrokerException, InterruptedException;
+
     
     /**
      * peek message in the specified timeout without change any status
@@ -87,9 +72,26 @@ public interface MQPopConsumer {
 	void changeInvisibleTime(final MessageQueue mq, final long offset, 
 			String consumerGroup , String extraInfo , final long invisibleTime) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 
-	void popAsync(MessageQueue mq, long invisibleTime, int maxNums, String consumerGroup, long timeout, PopCallback popCallback, boolean poll)
+	void popAsync(MessageQueue mq, long invisibleTime, int maxNums, String consumerGroup, long timeout, PopCallback popCallback, boolean poll, int initMode)
 			throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 
 
-	void peekAsync(MessageQueue mq, int maxNums, String consumerGroup, long timeout, PopCallback popCallback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException; 
+	void peekAsync(MessageQueue mq, int maxNums, String consumerGroup, long timeout, PopCallback popCallback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+    /**
+     * pop message in the specified timeout， broker maintains the consume offset.
+     * @param if mq queueId is -1,  pop message in any queue from broker; else pop message in the specified queue from broker.
+     * @param invisibleTime
+     * @param maxNums
+     * @param consumerGroup
+     * @param timeout
+     * @return msg list
+     * @throws MQClientException
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
+	PopResult pop(MessageQueue mq, long invisibleTime, int maxNums, String consumerGroup, long timeout, int initMode)
+			throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+	void ackAsync(MessageQueue mq, long offset, String consumerGroup, String extraInfo, long timeOut, AckCallback callback)
+			throws MQClientException, RemotingException, MQBrokerException, InterruptedException; 
 }

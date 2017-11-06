@@ -109,6 +109,10 @@ public class PeekMessageProcessor implements NettyRequestProcessor {
 			}
 			for (int i = 0; i < topicConfig.getReadQueueNums(); i++) {
 				long offset = this.brokerController.getMessageStore().getMaxOffsetInQueue(topicConfig.getTopicName(), i) - num;
+				long minOffset = this.brokerController.getMessageStore().getMinOffsetInQueue(topicConfig.getTopicName(), i);
+				if (offset < minOffset) {
+					offset = minOffset;
+				}
 				final GetMessageResult getMessageTmpResult = this.brokerController.getMessageStore().getMessage(requestHeader.getConsumerGroup(), requestHeader.getTopic(), i, offset,
 						num, null);
 				for (SelectMappedBufferResult mapedBuffer : getMessageTmpResult.getMessageMapedList()) {

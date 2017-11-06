@@ -144,7 +144,17 @@ public class MessageStoreConfig {
     private boolean fastFailIfNoBufferInStorePool = false;
 
 
-    private int mapedFileSizeTimerLog = 100 * 1024 * 1024;
+    private boolean timerWheelEnable = true;
+    private int mappedFileSizeTimerLog = 100 * 1024 * 1024;
+    private int timerRollWindowSec = Integer.MAX_VALUE;
+    private int timerMaxDelaySec = 3600 * 24 * 3;
+    private int timerFlushIntervalMs = 1000;
+    private int timerProgressLogIntervalMs = 10 * 1000;
+    private int timerGetMessageThreadNum = 3;
+    private int timerputMessageThreadNum = 3;
+    private boolean timerWarmEnable = false;
+    private boolean timerSkipUnknownError = false;
+    private boolean timerInterceptDelayLevel = false;
 
 
     public boolean isDebugLockEnable() {
@@ -608,7 +618,8 @@ public class MessageStoreConfig {
     }
 
     /**
-     * Enable transient commitLog store poll only if transientStorePoolEnable is true and the FlushDiskType is ASYNC_FLUSH
+     * Enable transient commitLog store poll only if transientStorePoolEnable is true and the FlushDiskType is
+     * ASYNC_FLUSH
      *
      * @return <tt>true</tt> or <tt>false</tt>
      */
@@ -669,11 +680,91 @@ public class MessageStoreConfig {
         this.commitCommitLogThoroughInterval = commitCommitLogThoroughInterval;
     }
 
-    public int getMapedFileSizeTimerLog() {
-        return mapedFileSizeTimerLog;
+    public int getMappedFileSizeTimerLog() {
+        return mappedFileSizeTimerLog;
     }
 
-    public void setMapedFileSizeTimerLog(final int mapedFileSizeTimerLog) {
-        this.mapedFileSizeTimerLog = mapedFileSizeTimerLog;
+    public void setMappedFileSizeTimerLog(final int mappedFileSizeTimerLog) {
+        this.mappedFileSizeTimerLog = mappedFileSizeTimerLog;
+    }
+
+    public int getTimerRollWindowSec() {
+        return timerRollWindowSec;
+    }
+
+    public void setTimerRollWindowSec(final int timerRollWindowSec) {
+        this.timerRollWindowSec = timerRollWindowSec;
+    }
+
+    public int getTimerMaxDelaySec() {
+        return timerMaxDelaySec;
+    }
+
+    public void setTimerMaxDelaySec(final int timerMaxDelaySec) {
+        this.timerMaxDelaySec = timerMaxDelaySec;
+    }
+
+    public int getTimerFlushIntervalMs() {
+        return timerFlushIntervalMs;
+    }
+
+    public void setTimerFlushIntervalMs(final int timerFlushIntervalMs) {
+        this.timerFlushIntervalMs = timerFlushIntervalMs;
+    }
+
+    public int getTimerProgressLogIntervalMs() {
+        return timerProgressLogIntervalMs;
+    }
+
+    public void setTimerProgressLogIntervalMs(final int timerProgressLogIntervalMs) {
+        this.timerProgressLogIntervalMs = timerProgressLogIntervalMs;
+    }
+
+    public boolean isTimerWarmEnable() {
+        return timerWarmEnable;
+    }
+
+    public void setTimerWarmEnable(final boolean timerWarmEnable) {
+        this.timerWarmEnable = timerWarmEnable;
+    }
+
+    public boolean isTimerWheelEnable() {
+        return timerWheelEnable;
+    }
+
+    public void setTimerWheelEnable(boolean timerWheelEnable) {
+        this.timerWheelEnable = timerWheelEnable;
+    }
+
+    public int getTimerGetMessageThreadNum() {
+        return timerGetMessageThreadNum;
+    }
+
+    public void setTimerGetMessageThreadNum(int timerGetMessageThreadNum) {
+        this.timerGetMessageThreadNum = timerGetMessageThreadNum;
+    }
+
+    public boolean isTimerSkipUnknownError() {
+        return timerSkipUnknownError;
+    }
+
+    public void setTimerSkipUnknownError(boolean timerSkipUnknownError) {
+        this.timerSkipUnknownError = timerSkipUnknownError;
+    }
+
+    public boolean isTimerInterceptDelayLevel() {
+        return timerInterceptDelayLevel;
+    }
+
+    public void setTimerInterceptDelayLevel(boolean timerInterceptDelayLevel) {
+        this.timerInterceptDelayLevel = timerInterceptDelayLevel;
+    }
+
+    public int getTimerputMessageThreadNum() {
+        return timerputMessageThreadNum;
+    }
+
+    public void setTimerputMessageThreadNum(int timerputMessageThreadNum) {
+        this.timerputMessageThreadNum = timerputMessageThreadNum;
     }
 }

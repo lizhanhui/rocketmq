@@ -44,6 +44,7 @@ public class MessageConst {
     public static final String PROPERTY_TIMER_DELAY_SEC = "TIMER_DELAY_SEC";
     public static final String PROPERTY_TIMER_DELIVER_MS = "TIMER_DELIVER_MS";
     public static final String PROPERTY_TIMER_IN_MS = "TIMER_IN_MS";
+    public static final String PROPERTY_TIMER_OUT_MS = "TIMER_OUT_MS";
     public static final String PROPERTY_TIMER_ENQUEUE_MS = "TIMER_ENQUEUE_MS";
     public static final String PROPERTY_TIMER_DEQUEUE_MS = "TIMER_DEQUEUE_MS";
     public static final String PROPERTY_TIMER_ROLL_TIMES = "TIMER_ROLL_TIMES";
@@ -79,9 +80,12 @@ public class MessageConst {
         STRING_HASH_SET.add(PROPERTY_MAX_RECONSUME_TIMES);
         STRING_HASH_SET.add(PROPERTY_CONSUME_START_TIMESTAMP);
         STRING_HASH_SET.add(PROPERTY_TIMER_IN_MS);
+        STRING_HASH_SET.add(PROPERTY_TIMER_OUT_MS);
         STRING_HASH_SET.add(PROPERTY_TIMER_ENQUEUE_MS);
         STRING_HASH_SET.add(PROPERTY_TIMER_DEQUEUE_MS);
         STRING_HASH_SET.add(PROPERTY_TIMER_ROLL_TIMES);
+        STRING_HASH_SET.add(PROPERTY_POP_CK);
+        STRING_HASH_SET.add(PROPERTY_POP_CK_OFFSET);
 
     }
 }

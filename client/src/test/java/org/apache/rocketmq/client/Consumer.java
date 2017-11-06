@@ -8,6 +8,7 @@ import org.apache.rocketmq.client.consumer.PopResult;
 import org.apache.rocketmq.client.consumer.PopStatus;
 import org.apache.rocketmq.client.exception.MQBrokerException;
 import org.apache.rocketmq.client.exception.MQClientException;
+import org.apache.rocketmq.common.constant.ConsumeInitMode;
 import org.apache.rocketmq.common.message.MessageConst;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.message.MessageQueue;
@@ -27,11 +28,13 @@ public class Consumer {
 		String topic="longji11";
         final String brokerName="broker-a";
 		final MessageQueue mq=new MessageQueue(topic, brokerName, -1);
+		/*PopResult popResult=pullConsumer.peekMessage(mq, 1000, 1000);
+		System.out.println("sync peek:"+popResult);
 		pullConsumer.peekAsync(mq, 2, consumerGroup, 1000, new PopCallback() {
 			
 			@Override
 			public void onSuccess(PopResult popResult) {
-				System.out.println(popResult);
+				System.out.println("async peek:"+popResult);
 				
 			}
 			
@@ -41,20 +44,17 @@ public class Consumer {
 				e.printStackTrace();
 				
 			}
-		});
+		});*/
 		//PopResult popResult=pullConsumer.peekMessage(mq, 2, 1000);
-		/*PopResult popResult=pullConsumer.pop(mq, 50000, 4, consumerGroup, 10000000);
-		if (popResult.getPopStatus()==PopStatus.FOUND) {
-			for (MessageExt msg : popResult.getMsgFoundList()) {
-				pullConsumer.ackMessage(new MessageQueue(msg.getTopic(),brokerName,msg.getQueueId()), msg.getQueueOffset(), consumerGroup, msg.getProperty(MessageConst.PROPERTY_POP_CK));
-			}
-		}
-		System.out.println(popResult);
-		*/ 
+		//popResult=pullConsumer.pop(mq, 50000, 4, consumerGroup, 10000000,ConsumeInitMode.MAX);
+		//System.out.println("sync pop:"+popResult);
+		 
 		final PopCallback callback=new PopCallback() {
 			
 			@Override
 			public void onSuccess(PopResult popResult) {
+				System.out.println("async pop:"+popResult);
+
 				try {
 					//System.out.println(new Date()+"     "+popResult);
 					if (popResult.getPopStatus()==PopStatus.FOUND) {
@@ -65,7 +65,7 @@ public class Consumer {
 						}
 					}
 					PopCallback tmPopCallback=this;
-					pullConsumer.popAsync(mq, 10000, 30, consumerGroup, 100000,  tmPopCallback, true);
+					pullConsumer.popAsync(mq, 10000, 5, consumerGroup, 300000,  tmPopCallback, true,ConsumeInitMode.MIN);
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -78,7 +78,7 @@ public class Consumer {
 				
 			}
 		};
-		pullConsumer.popAsync(mq, 10000, 30, consumerGroup, 100000, callback,true);
+		pullConsumer.popAsync(mq, 10000, 5, consumerGroup, 300000, callback,true,ConsumeInitMode.MIN);
 		Thread.sleep(10000000L);
 		
 	}

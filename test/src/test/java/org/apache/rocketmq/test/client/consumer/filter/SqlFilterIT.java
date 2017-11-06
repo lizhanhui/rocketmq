@@ -64,11 +64,11 @@ public class SqlFilterIT extends BaseConf {
         producer.send("TagB", msgSize);
         producer.send("TagC", msgSize);
         Assert.assertEquals("Not all sent succeeded", msgSize * 3, producer.getAllUndupMsgBody().size());
-        consumer.getListner().waitForMessageConsume(msgSize * 2, consumeTime);
+        consumer.getListener().waitForMessageConsume(msgSize * 2, consumeTime);
         assertThat(producer.getAllMsgBody())
             .containsAllIn(VerifyUtils.getFilterdMessage(producer.getAllMsgBody(),
-            consumer.getListner().getAllMsgBody()));
+                consumer.getListener().getAllMsgBody()));
 
-        assertThat(consumer.getListner().getAllMsgBody().size()).isEqualTo(msgSize * 2);
+        assertThat(consumer.getListener().getAllMsgBody().size()).isEqualTo(msgSize * 2);
     }
 }

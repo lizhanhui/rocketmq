@@ -17,6 +17,7 @@
 
 package org.apache.rocketmq.broker.plugin;
 
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Set;
@@ -30,6 +31,7 @@ import org.apache.rocketmq.store.MessageStore;
 import org.apache.rocketmq.store.PutMessageResult;
 import org.apache.rocketmq.store.QueryMessageResult;
 import org.apache.rocketmq.store.SelectMappedBufferResult;
+import org.apache.rocketmq.store.timer.TimerMessageStore;
 
 public abstract class AbstractPluginMessageStore implements MessageStore {
     protected MessageStore next = null;
@@ -87,7 +89,7 @@ public abstract class AbstractPluginMessageStore implements MessageStore {
 
     @Override
     public GetMessageResult getMessage(String group, String topic, int queueId, long offset,
-                                       int maxMsgNums, final MessageFilter messageFilter) {
+        int maxMsgNums, final MessageFilter messageFilter) {
         return next.getMessage(group, topic, queueId, offset, maxMsgNums, messageFilter);
     }
 
@@ -246,4 +248,25 @@ public abstract class AbstractPluginMessageStore implements MessageStore {
     public ConsumeQueue getConsumeQueue(String topic, int queueId) {
         return next.getConsumeQueue(topic, queueId);
     }
+
+    @Override
+    public boolean getData(long offset, int size, ByteBuffer byteBuffer) {
+        return next.getData(offset, size, byteBuffer);
+    }
+
+    @Override
+    public TimerMessageStore getTimerMessageStore() {
+        return next.getTimerMessageStore();
+    }
+    @Override
+    public void setTimerMessageStore(TimerMessageStore timerMessageStore) {
+        next.setTimerMessageStore(timerMessageStore);
+    }
+
+    @Override
+    public long getTimingMessageCount(String topic) {
+        return next.getTimingMessageCount(topic);
+    }
+
+
 }

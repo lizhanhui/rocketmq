@@ -78,7 +78,8 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
         this(nettyServerConfig, null);
     }
 
-    public NettyRemotingServer(final NettyServerConfig nettyServerConfig, final ChannelEventListener channelEventListener) {
+    public NettyRemotingServer(final NettyServerConfig nettyServerConfig,
+        final ChannelEventListener channelEventListener) {
         super(nettyServerConfig.getServerOnewaySemaphoreValue(), nettyServerConfig.getServerAsyncSemaphoreValue());
         this.serverBootstrap = new ServerBootstrap();
         this.nettyServerConfig = nettyServerConfig;
@@ -195,7 +196,7 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
             public void run() {
                 try {
                     NettyRemotingServer.this.scanResponseTable();
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     log.error("scanResponseTable exception", e);
                 }
             }

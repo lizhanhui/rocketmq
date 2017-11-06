@@ -74,7 +74,9 @@ public class RequestCode {
 
     public static final int CHECK_CLIENT_CONFIG = 46;
 
-    public static final int GET_TIMER_CHECK_POINT = 47;
+    public static final int GET_TIMER_CHECK_POINT = 60;
+
+    public static final int GET_TIMER_METRICS = 61;
 
     public static final int PUT_KV_CONFIG = 100;
 
@@ -167,7 +169,6 @@ public class RequestCode {
      * get config from name server
      */
     public static final int GET_NAMESRV_CONFIG = 319;
-
 
     public static final int SEND_BATCH_MESSAGE = 320;
 

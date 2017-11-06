@@ -19,7 +19,8 @@ public class TimerLogTest {
     private List<TimerLog> timerLogs = new ArrayList<>();
 
     public TimerLog createTimerLog(String baseDir) {
-        if (null == baseDir) baseDir = StoreTestUtils.createBaseDir();
+        if (null == baseDir)
+            baseDir = StoreTestUtils.createBaseDir();
         TimerLog timerLog = new TimerLog(baseDir, 1024);
         timerLogs.add(timerLog);
         baseDirs.add(baseDir);
@@ -29,7 +30,7 @@ public class TimerLogTest {
 
     @Test
     public void testAppendRollSelectDelete() throws Exception {
-        TimerLog timerLog =  createTimerLog(null);
+        TimerLog timerLog = createTimerLog(null);
         ByteBuffer byteBuffer = ByteBuffer.allocate(TimerLog.UNIT_SIZE);
         byteBuffer.putInt(40);
         byteBuffer.putLong(Long.MAX_VALUE);
@@ -40,7 +41,7 @@ public class TimerLogTest {
         byteBuffer.putInt(10);
         long ret = -1;
         for (int i = 0; i < 10; i++) {
-            ret  = timerLog.append(byteBuffer.array());
+            ret = timerLog.append(byteBuffer.array());
             assertEquals(i * TimerLog.UNIT_SIZE, ret);
         }
         for (int i = 0; i < 100; i++) {
@@ -58,29 +59,27 @@ public class TimerLogTest {
         assertEquals(1, timerLog.getMappedFileQueue().getMappedFiles().size());
     }
 
-
     @Test
     public void testRecovery() throws Exception {
         String basedir = StoreTestUtils.createBaseDir();
-        TimerLog first =  createTimerLog(basedir);
+        TimerLog first = createTimerLog(basedir);
         first.append(new byte[512]);
         first.append(new byte[510]);
         byte[] data = "Hello Recovery".getBytes();
         first.append(data);
         first.shutdown();
-        TimerLog second =  createTimerLog(basedir);
+        TimerLog second = createTimerLog(basedir);
         assertEquals(2, second.getMappedFileQueue().getMappedFiles().size());
         second.getMappedFileQueue().truncateDirtyFiles(1204 + 1000);
-        SelectMappedBufferResult sbr =  second.getTimerMessage(1024 + 510);
+        SelectMappedBufferResult sbr = second.getTimerMessage(1024 + 510);
         byte[] expect = new byte[data.length];
         sbr.getByteBuffer().get(expect);
         assertArrayEquals(expect, data);
     }
 
-
     @After
     public void shutdown() {
-        for (TimerLog timerLog: timerLogs) {
+        for (TimerLog timerLog : timerLogs) {
             timerLog.shutdown();
             timerLog.getMappedFileQueue().destroy();
         }

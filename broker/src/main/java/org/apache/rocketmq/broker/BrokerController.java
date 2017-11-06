@@ -150,11 +150,11 @@ public class BrokerController {
     private BrokerFastFailure brokerFastFailure;
     private Configuration configuration;
 
-    public BrokerController(//
-        final BrokerConfig brokerConfig, //
-        final NettyServerConfig nettyServerConfig, //
-        final NettyClientConfig nettyClientConfig, //
-        final MessageStoreConfig messageStoreConfig //
+    public BrokerController(
+        final BrokerConfig brokerConfig,
+        final NettyServerConfig nettyServerConfig,
+        final NettyClientConfig nettyClientConfig,
+        final MessageStoreConfig messageStoreConfig
     ) {
         this.brokerConfig = brokerConfig;
         this.nettyServerConfig = nettyServerConfig;
@@ -229,15 +229,22 @@ public class BrokerController {
                 MessageStorePluginContext context = new MessageStorePluginContext(messageStoreConfig, brokerStatsManager, messageArrivingListener, brokerConfig);
                 this.messageStore = MessageStoreFactory.build(context, this.messageStore);
                 this.messageStore.getDispatcherList().addFirst(new CommitLogDispatcherCalcBitMap(this.brokerConfig, this.consumerFilterManager));
-                this.timerCheckpoint =  new TimerCheckpoint(TimerMessageStore.getTimerCheckPath(messageStoreConfig.getStorePathRootDir()));
-                this.timerMessageStore = new TimerMessageStore(messageStore, messageStoreConfig, timerCheckpoint);
+                if (messageStoreConfig.isTimerWheelEnable()) {
+                    this.timerCheckpoint =  new TimerCheckpoint(TimerMessageStore.getTimerCheckPath(messageStoreConfig.getStorePathRootDir()));
+                    this.timerMessageStore = new TimerMessageStore(messageStore, messageStoreConfig, timerCheckpoint);
+                    messageStore.setTimerMessageStore(this.timerMessageStore);
+                }
             } catch (IOException e) {
                 result = false;
-                e.printStackTrace();
+                log.error("Failed to initialize", e);
             }
         }
         result = result && this.messageStore.load();
         result = result && this.timerMessageStore.load();
+
+        if (messageStoreConfig.isTimerWheelEnable()) {
+            result = result && this.timerMessageStore.load();
+        }
 
         if (result) {
             this.remotingServer = new NettyRemotingServer(this.nettyServerConfig, this.clientHousekeepingService);
@@ -278,7 +285,6 @@ public class BrokerController {
 
             this.registerProcessor();
 
-            // TODO remove in future
             final long initialDelay = UtilAll.computNextMorningTimeMillis() - System.currentTimeMillis();
             final long period = 1000 * 60 * 60 * 24;
             this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
@@ -319,7 +325,7 @@ public class BrokerController {
                 public void run() {
                     try {
                         BrokerController.this.protectBroker();
-                    } catch (Exception e) {
+                    } catch (Throwable e) {
                         log.error("protectBroker error.", e);
                     }
                 }
@@ -330,7 +336,7 @@ public class BrokerController {
                 public void run() {
                     try {
                         BrokerController.this.printWaterMark();
-                    } catch (Exception e) {
+                    } catch (Throwable e) {
                         log.error("printWaterMark error.", e);
                     }
                 }

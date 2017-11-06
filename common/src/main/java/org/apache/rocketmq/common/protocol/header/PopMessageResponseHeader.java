@@ -28,36 +28,38 @@ public class PopMessageResponseHeader implements CommandCustomHeader {
 
 
 	@CFNotNull
-    private Long popTime;
+    private long popTime;
     @CFNotNull
-    private Long invisibleTime;
+    private long invisibleTime;
     
     @CFNotNull
-    private int reviveQid;   
+    private int reviveQid; 
+    /**
+     * the rest num in queue
+     */
     @CFNotNull
-    private long msgNum;  
+    private long restNum;  
 
 	@Override
     public void checkFields() throws RemotingCommandException {
     }
-    public Long getPopTime() {
+    public long getPopTime() {
 		return popTime;
 	}
-    public long getMsgNum() {
-		return msgNum;
-	}
-    public void setMsgNum(long msgNum) {
-		this.msgNum = msgNum;
-	}
-	public void setPopTime(Long popTime) {
+	public void setPopTime(long popTime) {
 		this.popTime = popTime;
 	}
 
-	public Long getInvisibleTime() {
+	public long getInvisibleTime() {
 		return invisibleTime;
 	}
-
-	public void setInvisibleTime(Long invisibleTime) {
+	public long getRestNum() {
+		return restNum;
+	}
+	public void setRestNum(long restNum) {
+		this.restNum = restNum;
+	}
+	public void setInvisibleTime(long invisibleTime) {
 		this.invisibleTime = invisibleTime;
 	}
     public int getReviveQid() {

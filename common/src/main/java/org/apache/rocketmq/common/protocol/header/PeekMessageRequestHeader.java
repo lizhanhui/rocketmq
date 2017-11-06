@@ -28,9 +28,9 @@ public class PeekMessageRequestHeader implements CommandCustomHeader {
     @CFNotNull
     private String topic;
     @CFNotNull
-    private Integer queueId;
+    private int queueId;
     @CFNotNull
-    private Integer maxMsgNums;
+    private int maxMsgNums;
     @CFNotNull
     private String consumerGroup;
     @Override
@@ -50,20 +50,20 @@ public class PeekMessageRequestHeader implements CommandCustomHeader {
         this.topic = topic;
     }
 
-    public Integer getQueueId() {
+    public int getQueueId() {
         return queueId;
     }
 
-    public void setQueueId(Integer queueId) {
+    public void setQueueId(int queueId) {
         this.queueId = queueId;
     }
 
 
-    public Integer getMaxMsgNums() {
+    public int getMaxMsgNums() {
         return maxMsgNums;
     }
 
-    public void setMaxMsgNums(Integer maxMsgNums) {
+    public void setMaxMsgNums(int maxMsgNums) {
         this.maxMsgNums = maxMsgNums;
     }
 

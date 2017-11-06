@@ -24,35 +24,43 @@ import org.apache.rocketmq.remoting.CommandCustomHeader;
 import org.apache.rocketmq.remoting.annotation.CFNotNull;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 
+
 public class PopMessageRequestHeader implements CommandCustomHeader {
     @CFNotNull
     private String consumerGroup;
     @CFNotNull
     private String topic;
     @CFNotNull
-    private Integer queueId;
+    private int queueId;
     @CFNotNull
-    private Integer maxMsgNums;
+    private int maxMsgNums;
     @CFNotNull
-    private Long invisibleTime;   
+    private long invisibleTime;   
     @CFNotNull
-    private Long pollTime;   
+    private long pollTime;   
     @CFNotNull
-    private Long bornTime;   
-
+    private long bornTime;   
+    @CFNotNull
+    private int initMode;   
     @Override
     public void checkFields() throws RemotingCommandException {
     }
-    public Long getInvisibleTime() {
+    public void setInitMode(int initMode) {
+		this.initMode = initMode;
+	}
+    public int getInitMode() {
+		return initMode;
+	}
+    public long getInvisibleTime() {
 		return invisibleTime;
 	}
-    public void setInvisibleTime(Long invisibleTime) {
+    public void setInvisibleTime(long invisibleTime) {
 		this.invisibleTime = invisibleTime;
 	}
-    public Long getPollTime() {
+    public long getPollTime() {
 		return pollTime;
 	}
-    public void setPollTime(Long pollTime) {
+    public void setPollTime(long pollTime) {
 		this.pollTime = pollTime;
 	}
     public String getConsumerGroup() {
@@ -62,10 +70,10 @@ public class PopMessageRequestHeader implements CommandCustomHeader {
     public void setConsumerGroup(String consumerGroup) {
         this.consumerGroup = consumerGroup;
     }
-    public Long getBornTime() {
+    public long getBornTime() {
 		return bornTime;
 	}
-    public void setBornTime(Long bornTime) {
+    public void setBornTime(long bornTime) {
 		this.bornTime = bornTime;
 	}
 
@@ -77,23 +85,23 @@ public class PopMessageRequestHeader implements CommandCustomHeader {
         this.topic = topic;
     }
 
-    public Integer getQueueId() {
+    public int getQueueId() {
     	if (queueId < 0) {
 			return -1;
 		}
         return queueId;
     }
 
-    public void setQueueId(Integer queueId) {
+    public void setQueueId(int queueId) {
         this.queueId = queueId;
     }
 
 
-    public Integer getMaxMsgNums() {
+    public int getMaxMsgNums() {
         return maxMsgNums;
     }
 
-    public void setMaxMsgNums(Integer maxMsgNums) {
+    public void setMaxMsgNums(int maxMsgNums) {
         this.maxMsgNums = maxMsgNums;
     }
 

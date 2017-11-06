@@ -22,7 +22,6 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.FileRegion;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map.Entry;
@@ -36,6 +35,7 @@ import org.apache.rocketmq.broker.pagecache.ManyMessageTransfer;
 import org.apache.rocketmq.common.KeyBuilder;
 import org.apache.rocketmq.common.PopAckConstants;
 import org.apache.rocketmq.common.TopicConfig;
+import org.apache.rocketmq.common.constant.ConsumeInitMode;
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.common.constant.PermName;
 import org.apache.rocketmq.common.help.FAQUrl;
@@ -164,6 +164,9 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 		if (request == null||!request.complete()) {
 			return ;
 		}
+		if (!request.getChannel().isActive()) {
+			return ;
+		}
 		Runnable run = new Runnable() {
 			@Override
 			public void run() {
@@ -241,7 +244,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 		int randomQ=random.nextInt(100);
 		int reviveQid=randomQ % PopAckConstants.REVIVE_QUEUE_NUM;
 		GetMessageResult getMessageResult=new GetMessageResult();
-		long  restNum=-1;
+		long restNum = 0;
 		if (requestHeader.getQueueId() < 0) {
 			// read all queue
 			for (int i = 0; i < topicConfig.getReadQueueNums(); i++) {
@@ -253,11 +256,20 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 				try {
 					long offset = this.brokerController.getConsumerOffsetManager().queryOffset(requestHeader.getConsumerGroup(), requestHeader.getTopic(), queueId);
 					if (offset < 0) {
-						offset = this.brokerController.getMessageStore().getMinOffsetInQueue(requestHeader.getTopic(), requestHeader.getQueueId());
+						if (ConsumeInitMode.MIN == requestHeader.getInitMode()) {
+							offset = this.brokerController.getMessageStore().getMinOffsetInQueue(requestHeader.getTopic(), queueId);
+						} else {
+							offset = this.brokerController.getMessageStore().getMaxOffsetInQueue(requestHeader.getTopic(), queueId);
+						}
+					}
+					if (getMessageResult.getMessageMapedList().size() >= requestHeader.getMaxMsgNums()) {
+						restNum = this.brokerController.getMessageStore().getMaxOffsetInQueue(requestHeader.getTopic(), queueId) - offset + restNum;
+						continue;
 					}
 					getMessageTmpResult = this.brokerController.getMessageStore().getMessage(requestHeader.getConsumerGroup(), requestHeader.getTopic(), queueId, offset,
 							requestHeader.getMaxMsgNums() - getMessageResult.getMessageMapedList().size(), null);
-					restNum=getMessageTmpResult.getMaxOffset()-getMessageTmpResult.getNextBeginOffset();
+					System.out.println("qid:"+queueId+",offset:"+offset+", num:"+(requestHeader.getMaxMsgNums() - getMessageResult.getMessageMapedList().size())+","+getMessageTmpResult);
+					restNum = getMessageTmpResult.getMaxOffset() - getMessageTmpResult.getNextBeginOffset() + restNum;
 					if (!getMessageTmpResult.getMessageMapedList().isEmpty()) {
 						appendCheckPoint(channel, requestHeader, reviveQid, queueId, offset, getMessageTmpResult);
 					}
@@ -269,34 +281,36 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 						getMessageResult.addMessage(mapedBuffer);
 					}
 				}
-				if (getMessageResult.getMessageMapedList().size() >= requestHeader.getMaxMsgNums()) {
-					break;
-				}
 			}
 		}else {
-			if (LockManager.tryLock(LockManager.buildKey(requestHeader, requestHeader.getQueueId()),PopAckConstants.lockTime)) {
+			int queueId = requestHeader.getQueueId();
+			if (LockManager.tryLock(LockManager.buildKey(requestHeader, queueId),PopAckConstants.lockTime)) {
 				try{
 					// read specified queue
-					long offset = this.brokerController.getConsumerOffsetManager().queryOffset(requestHeader.getConsumerGroup(), requestHeader.getTopic(), requestHeader.getQueueId());
+					long offset = this.brokerController.getConsumerOffsetManager().queryOffset(requestHeader.getConsumerGroup(), requestHeader.getTopic(), queueId);
 					if (offset < 0) {
-						offset = this.brokerController.getMessageStore().getMinOffsetInQueue(requestHeader.getTopic(), requestHeader.getQueueId());
+						if (ConsumeInitMode.MIN == requestHeader.getInitMode()) {
+							offset = this.brokerController.getMessageStore().getMinOffsetInQueue(requestHeader.getTopic(), queueId);
+						} else {
+							offset = this.brokerController.getMessageStore().getMaxOffsetInQueue(requestHeader.getTopic(), queueId);
+						}
 					}
-					getMessageResult = this.brokerController.getMessageStore().getMessage(requestHeader.getConsumerGroup(), requestHeader.getTopic(), requestHeader.getQueueId(), offset,
+					getMessageResult = this.brokerController.getMessageStore().getMessage(requestHeader.getConsumerGroup(), requestHeader.getTopic(), queueId, offset,
 							requestHeader.getMaxMsgNums(), null);
 					restNum=getMessageResult.getMaxOffset()-getMessageResult.getNextBeginOffset();
 					if (!getMessageResult.getMessageMapedList().isEmpty()) {
 						// add check point msg to revive log
-						appendCheckPoint(channel, requestHeader, reviveQid, requestHeader.getQueueId(), offset, getMessageResult);
+						appendCheckPoint(channel, requestHeader, reviveQid, queueId, offset, getMessageResult);
 					}	
 				}finally {
-					LockManager.unLock(LockManager.buildKey(requestHeader, requestHeader.getQueueId()));
+					LockManager.unLock(LockManager.buildKey(requestHeader, queueId));
 				}
 			}
 		}
 		if (!getMessageResult.getMessageBufferList().isEmpty()) {
             response.setCode(ResponseCode.SUCCESS);
             getMessageResult.setStatus(GetMessageStatus.FOUND);
-            if (restNum>-1) {
+			if (restNum > 0) {
             	// all queue pop can not notify specified queue pop, and vice versa
                 notifyMessageArriving(requestHeader.getTopic(), requestHeader.getConsumerGroup(),requestHeader.getQueueId());
 			}
@@ -310,6 +324,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 		responseHeader.setInvisibleTime(requestHeader.getInvisibleTime());
 		responseHeader.setPopTime(System.currentTimeMillis());
 		responseHeader.setReviveQid(reviveQid);
+		responseHeader.setRestNum(restNum);
         response.setRemark(getMessageResult.getStatus().name());
         switch (response.getCode()) {
             case ResponseCode.SUCCESS:
@@ -322,6 +337,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 
                 this.brokerController.getBrokerStatsManager().incBrokerGetNums(getMessageResult.getMessageCount());
                 if (this.brokerController.getBrokerConfig().isTransferMsgByHeap()) {
+            		System.out.println(restNum+",fetch num,heap:"+getMessageResult.getMessageBufferList().size());
                     final long beginTimeMills = this.brokerController.getMessageStore().now();
                     final byte[] r = this.readGetMessageResult(getMessageResult, requestHeader.getConsumerGroup(), requestHeader.getTopic(), requestHeader.getQueueId());
                     this.brokerController.getBrokerStatsManager().incGroupGetLatency(requestHeader.getConsumerGroup(),
@@ -331,6 +347,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
                 } else {
                 	final GetMessageResult tmpGetMessageResult=getMessageResult;
                     try {
+                		System.out.println("fetch num,zero:"+getMessageResult.getMessageBufferList().size());
                         FileRegion fileRegion =
                             new ManyMessageTransfer(response.encodeHeader(getMessageResult.getBufferTotalSize()), getMessageResult);
                         channel.writeAndFlush(fileRegion).addListener(new ChannelFutureListener() {
@@ -411,6 +428,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 		if (putMessageResult.getAppendMessageResult().getStatus() == AppendMessageStatus.PUT_OK) {
 			this.brokerController.getConsumerOffsetManager().commitOffset(channel.remoteAddress().toString(), requestHeader.getConsumerGroup(), requestHeader.getTopic(),
 					queueId, offset + getMessageTmpResult.getMessageMapedList().size());
+			System.out.println("qid:"+queueId+",commit offset:"+(offset + getMessageTmpResult.getMessageMapedList().size()));
 		}
 	}
 

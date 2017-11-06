@@ -11,6 +11,7 @@ import static org.junit.Assert.assertEquals;
 public class TimerCheckPointTest {
 
     private String BASE_DIR;
+
     @Before
     public void init() throws IOException {
         BASE_DIR = StoreTestUtils.createBaseDir();
@@ -29,13 +30,12 @@ public class TimerCheckPointTest {
         first.setLastTimerQueueOffset(1200);
         first.setMasterTimerQueueOffset(1300);
         first.shutdown();
-        TimerCheckpoint second =  new TimerCheckpoint(baseSrc);
+        TimerCheckpoint second = new TimerCheckpoint(baseSrc);
         assertEquals(1000, second.getLastReadTimeMs());
         assertEquals(1100, second.getLastTimerLogFlushPos());
         assertEquals(1200, second.getLastTimerQueueOffset());
         assertEquals(1300, second.getMasterTimerQueueOffset());
     }
-
 
     @Test
     public void testEncodeDecode() throws IOException {

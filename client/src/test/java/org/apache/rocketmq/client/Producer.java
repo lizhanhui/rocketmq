@@ -17,8 +17,8 @@ public class Producer {
         producer.start();
         String topic="longji11";
         final String brokerName="broker-a";
-		final MessageQueue mq=new MessageQueue(topic, brokerName, -1);
-        for (int i = 0; i < 1; i++) { 
+		final MessageQueue mq=new MessageQueue(topic, brokerName, 1);
+        for (int i = 0; i < 10; i++) { 
         	Message msg=new Message(topic, String.valueOf(i).getBytes());
     		SendResult result=producer.send(msg);
     		//SendResult result=producer.send(msg, mq);
