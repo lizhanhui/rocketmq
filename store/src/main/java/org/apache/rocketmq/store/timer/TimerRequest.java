@@ -17,6 +17,7 @@
 package org.apache.rocketmq.store.timer;
 
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
 import org.apache.rocketmq.common.message.MessageExt;
 
@@ -30,7 +31,11 @@ public class TimerRequest {
     private final int magic;
     private MessageExt msg;
 
-    private Semaphore semaphore;
+
+    //optional would be a good choice, but it relies on JDK 8
+    private CountDownLatch latch;
+
+    private boolean released;
 
     private Set<String> deleteList;
 
@@ -75,19 +80,22 @@ public class TimerRequest {
         return magic;
     }
 
-    public Semaphore getSemaphore() {
-        return semaphore;
-    }
-
-    public void setSemaphore(Semaphore semaphore) {
-        this.semaphore = semaphore;
-    }
-
     public Set<String> getDeleteList() {
         return deleteList;
     }
 
     public void setDeleteList(Set<String> deleteList) {
         this.deleteList = deleteList;
+    }
+
+    public void setLatch(CountDownLatch latch) {
+        this.latch = latch;
+    }
+
+    public void idempotentRelease() {
+        if (!released && latch != null) {
+            released = true;
+            latch.countDown();
+        }
     }
 }

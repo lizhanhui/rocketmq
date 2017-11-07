@@ -189,6 +189,31 @@ public class TimerMessageStoreTest {
     }
 
     @Test
+    public void testPutDeleteTimerMessage() throws Exception {
+        String topic = "TimerTest_PutDeleteTimerMessage";
+        TimerMessageStore timerMessageStore = createTimerMessageStore(null);
+        timerMessageStore.load();
+        timerMessageStore.start();
+        long curr = (System.currentTimeMillis() / 1000) * 1000;
+        long delayMs = curr + 1000;
+        for (int i = 0; i < 5; i++) {
+            MessageExtBrokerInner inner = buildMessage(delayMs, topic, false);
+            assertEquals(PutMessageStatus.PUT_OK, messageStore.putMessage(inner).getPutMessageStatus());
+        }
+        MessageExtBrokerInner delMsg = buildMessage(delayMs, topic, false);
+        MessageAccessor.putProperty(delMsg, TimerMessageStore.TIMER_DELETE_UNIQKEY, "XXX");
+        delMsg.setPropertiesString(MessageDecoder.messageProperties2String(delMsg.getProperties()));
+        assertEquals(PutMessageStatus.PUT_OK, messageStore.putMessage(delMsg).getPutMessageStatus());
+        Thread.sleep(1000);
+        for (int i = 0; i < 5; i++) {
+            ByteBuffer msgBuff = getOneMessage(topic, 0, i, 1000);
+            assertNotNull(msgBuff);
+            assertTrue(System.currentTimeMillis() - delayMs < 1000);
+        }
+        assertNull(getOneMessage(topic, 0, 5, 1000));
+    }
+
+    @Test
     public void testStateAndRecover() throws Exception {
         String topic = "TimerTest04";
         String base = StoreTestUtils.createBaseDir();

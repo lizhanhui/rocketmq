@@ -63,7 +63,7 @@ public class PerfCounter {
     }
 
     public void flow(long cost, int num) {
-        if (cost <= 0) return;
+        if (cost < 0) return;
         allCount.addAndGet(num);
         count[getIndex(cost)].addAndGet(num);
         if (allCount.get() >= MAX_NUM_PER_COUNT

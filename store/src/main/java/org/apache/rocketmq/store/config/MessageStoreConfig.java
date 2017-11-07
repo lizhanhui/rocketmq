@@ -151,7 +151,7 @@ public class MessageStoreConfig {
     private int timerFlushIntervalMs = 1000;
     private int timerProgressLogIntervalMs = 10 * 1000;
     private int timerGetMessageThreadNum = 3;
-    private int timerputMessageThreadNum = 3;
+    private int timerPutMessageThreadNum = 3;
     private boolean timerWarmEnable = false;
     private boolean timerSkipUnknownError = false;
     private boolean timerInterceptDelayLevel = false;
@@ -761,10 +761,10 @@ public class MessageStoreConfig {
     }
 
     public int getTimerputMessageThreadNum() {
-        return timerputMessageThreadNum;
+        return timerPutMessageThreadNum;
     }
 
     public void setTimerputMessageThreadNum(int timerputMessageThreadNum) {
-        this.timerputMessageThreadNum = timerputMessageThreadNum;
+        this.timerPutMessageThreadNum = timerputMessageThreadNum;
     }
 }
