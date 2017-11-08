@@ -20,17 +20,14 @@ import io.netty.channel.*;
 import org.apache.rocketmq.broker.BrokerController;
 import org.apache.rocketmq.client.consumer.StatisticsMessagesResult;
 import org.apache.rocketmq.common.TopicConfig;
-import org.apache.rocketmq.common.admin.OffsetWrapper;
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.common.constant.PermName;
-import org.apache.rocketmq.common.message.MessageQueue;
 import org.apache.rocketmq.common.protocol.ResponseCode;
 import org.apache.rocketmq.common.protocol.header.StatisticsMessagesRequestHeader;
 import org.apache.rocketmq.common.protocol.heartbeat.SubscriptionData;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 import org.apache.rocketmq.remoting.netty.NettyRequestProcessor;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
-import org.apache.rocketmq.store.DefaultMessageStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,7 +67,7 @@ public class StatisticsMessagesProcessor implements NettyRequestProcessor {
 //        }
         String topicName = requestHeader.getTopic();
         String consumerGroup = requestHeader.getConsumerGroup();
-        long delayMessages = ((DefaultMessageStore) this.brokerController.getMessageStore()).getTimingMessageCount(topicName);
+        long delayMessages = this.brokerController.getMessageStore().getTimingMessageCount(topicName);
 
         long activeMessages = 0;
         String remark = "";
