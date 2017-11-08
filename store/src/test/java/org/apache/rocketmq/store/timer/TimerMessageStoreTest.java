@@ -96,8 +96,9 @@ public class TimerMessageStoreTest {
         if (null == rootDir) {
             rootDir = StoreTestUtils.createBaseDir();
         }
-        TimerCheckpoint timerCheckpoint = new TimerCheckpoint(TimerMessageStore.getTimerCheckPath(rootDir));
-        TimerMessageStore timerMessageStore = new TimerMessageStore(messageStore, storeConfig, timerCheckpoint);
+        TimerCheckpoint timerCheckpoint = new TimerCheckpoint(rootDir + File.separator + "config" + File.separator + "timercheck");
+        TimerMetrics timerMetrics = new TimerMetrics(rootDir + File.separator + "config" + File.separator + "timermetrics");
+        TimerMessageStore timerMessageStore = new TimerMessageStore(messageStore, storeConfig, timerCheckpoint, timerMetrics);
         baseDirs.add(rootDir);
         timerStores.add(timerMessageStore);
         return timerMessageStore;
@@ -105,7 +106,7 @@ public class TimerMessageStoreTest {
 
     @Test
     public void testPutTimerMessage() throws Exception {
-        String topic = "TimerTest01_";
+        String topic = "TimerTest_testPutTimerMessage";
         TimerMessageStore timerMessageStore = createTimerMessageStore(null);
         timerMessageStore.load();
         timerMessageStore.start();
@@ -140,7 +141,7 @@ public class TimerMessageStoreTest {
 
     @Test
     public void testPutExpiredTimerMessage() throws Exception {
-        String topic = "TimerTest02";
+        String topic = "TimerTest_testPutExpiredTimerMessage";
         TimerMessageStore timerMessageStore = createTimerMessageStore(null);
         timerMessageStore.load();
         timerMessageStore.start();
@@ -160,7 +161,7 @@ public class TimerMessageStoreTest {
 
     @Test
     public void testDeleteTimerMessage() throws Exception {
-        String topic = "TimerTest03";
+        String topic = "TimerTest_testDeleteTimerMessage";
         TimerMessageStore timerMessageStore = createTimerMessageStore(null);
         timerMessageStore.load();
         timerMessageStore.start();
@@ -190,7 +191,7 @@ public class TimerMessageStoreTest {
 
     @Test
     public void testPutDeleteTimerMessage() throws Exception {
-        String topic = "TimerTest_PutDeleteTimerMessage";
+        String topic = "TimerTest_testPutDeleteTimerMessage";
         TimerMessageStore timerMessageStore = createTimerMessageStore(null);
         timerMessageStore.load();
         timerMessageStore.start();
@@ -215,7 +216,7 @@ public class TimerMessageStoreTest {
 
     @Test
     public void testStateAndRecover() throws Exception {
-        String topic = "TimerTest04";
+        String topic = "TimerTest_testStateAndRecover";
         String base = StoreTestUtils.createBaseDir();
         TimerMessageStore first = createTimerMessageStore(base);
         first.load();
@@ -252,7 +253,7 @@ public class TimerMessageStoreTest {
 
     @Test
     public void testMaxDelaySec() throws Exception {
-        String topic = "TimerTest05";
+        String topic = "TimerTest_testMaxDelaySec";
         TimerMessageStore first = createTimerMessageStore(null);
         first.load();
         first.start();
@@ -267,7 +268,7 @@ public class TimerMessageStoreTest {
     @Test
     public void testDisableTimer() throws Exception {
         storeConfig.setTimerWheelEnable(false);
-        String topic = "TimerTest06";
+        String topic = "TimerTest_testDisableTimer";
         TimerMessageStore first = createTimerMessageStore(null);
         first.load();
         first.start();
@@ -284,7 +285,7 @@ public class TimerMessageStoreTest {
     @Test
     public void testRollMessage() throws Exception {
         storeConfig.setTimerRollWindowSec(2);
-        String topic = "TimerTest07";
+        String topic = "TimerTest_testRollMessage";
         TimerMessageStore timerMessageStore = createTimerMessageStore(null);
         timerMessageStore.load();
         timerMessageStore.start();
@@ -303,7 +304,7 @@ public class TimerMessageStoreTest {
 
     @Test
     public void testInterceptDelayLevel() throws Exception {
-        String topic = "TimerTest08";
+        String topic = "TimerTest_testInterceptDelayLevel";
         TimerMessageStore timerMessageStore = createTimerMessageStore(null);
         timerMessageStore.load();
         timerMessageStore.start();

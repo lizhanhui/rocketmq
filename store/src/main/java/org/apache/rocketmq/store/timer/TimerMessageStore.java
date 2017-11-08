@@ -111,7 +111,7 @@ public class TimerMessageStore {
     private AtomicInteger frequency = new AtomicInteger(0);
 
     public TimerMessageStore(final MessageStore messageStore, final MessageStoreConfig storeConfig,
-        TimerCheckpoint timerCheckpoint) throws IOException {
+        TimerCheckpoint timerCheckpoint, TimerMetrics timerMetrics) throws IOException {
         this.messageStore = messageStore;
         this.storeConfig = storeConfig;
         this.commitLogFileSize = storeConfig.getMapedFileSizeCommitLog();
@@ -119,7 +119,7 @@ public class TimerMessageStore {
         this.ttlSecs = 2 * DAY_SECS;
         this.timerWheel = new TimerWheel(getTimerWheelPath(storeConfig.getStorePathRootDir()), 2 * DAY_SECS);
         this.timerLog = new TimerLog(getTimerLogPath(storeConfig.getStorePathRootDir()), timerLogFileSize);
-        this.timerMetrics = new TimerMetrics(storeConfig.getStorePathRootDir());
+        this.timerMetrics = timerMetrics;
         this.timerCheckpoint = timerCheckpoint;
         this.lastBrokerRole = storeConfig.getBrokerRole();
         if (storeConfig.getTimerRollWindowSec() > ttlSecs - TIME_BLANK || storeConfig.getTimerRollWindowSec() < 2) {
@@ -159,10 +159,6 @@ public class TimerMessageStore {
         load = load && this.timerMetrics.load();
         recover();
         return load;
-    }
-
-    public static String getTimerCheckPath(final String rootDir) {
-        return rootDir + File.separator + "config" + File.separator + "timercheck";
     }
 
     public static String getTimerWheelPath(final String rootDir) {

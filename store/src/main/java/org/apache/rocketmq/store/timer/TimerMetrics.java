@@ -41,8 +41,8 @@ public class TimerMetrics extends ConfigManager {
 
     private final String configPath;
 
-    public TimerMetrics(String rootDir) {
-        configPath =  rootDir + File.separator + "timermetrics";
+    public TimerMetrics(String configPath) {
+        this.configPath =  configPath;
     }
 
     public long addAndGet(String topic, int value) {

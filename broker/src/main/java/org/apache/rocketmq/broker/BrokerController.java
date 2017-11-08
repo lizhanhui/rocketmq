@@ -87,6 +87,7 @@ import org.apache.rocketmq.store.stats.BrokerStats;
 import org.apache.rocketmq.store.stats.BrokerStatsManager;
 import org.apache.rocketmq.store.timer.TimerCheckpoint;
 import org.apache.rocketmq.store.timer.TimerMessageStore;
+import org.apache.rocketmq.store.timer.TimerMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -214,8 +215,9 @@ public class BrokerController {
                 this.messageStore = MessageStoreFactory.build(context, this.messageStore);
                 this.messageStore.getDispatcherList().addFirst(new CommitLogDispatcherCalcBitMap(this.brokerConfig, this.consumerFilterManager));
                 if (messageStoreConfig.isTimerWheelEnable()) {
-                    this.timerCheckpoint =  new TimerCheckpoint(TimerMessageStore.getTimerCheckPath(messageStoreConfig.getStorePathRootDir()));
-                    this.timerMessageStore = new TimerMessageStore(messageStore, messageStoreConfig, timerCheckpoint);
+                    this.timerCheckpoint =  new TimerCheckpoint(BrokerPathConfigHelper.getTimerCheckPath(messageStoreConfig.getStorePathRootDir()));
+                    TimerMetrics timerMetrics = new TimerMetrics(BrokerPathConfigHelper.getTimerMetricsPath(messageStoreConfig.getStorePathRootDir()));
+                    this.timerMessageStore = new TimerMessageStore(messageStore, messageStoreConfig, timerCheckpoint, timerMetrics);
                     messageStore.setTimerMessageStore(this.timerMessageStore);
                 }
             } catch (IOException e) {
