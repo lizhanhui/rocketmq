@@ -780,7 +780,11 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner ,MQPopConsumer
 		}
 		if (findBrokerResult != null) {
 			AckMessageRequestHeader requestHeader = new AckMessageRequestHeader();
-			requestHeader.setTopic(mq.getTopic());
+			if (extraInfo.contains(MixAll.RETRY_GROUP_TOPIC_PREFIX)) {
+				requestHeader.setTopic(extraInfo.substring(extraInfo.indexOf(MixAll.RETRY_GROUP_TOPIC_PREFIX), extraInfo.length()));
+			}else {
+				requestHeader.setTopic(mq.getTopic());
+			}
 			requestHeader.setQueueId(mq.getQueueId());
 			requestHeader.setOffset(offset);
 			requestHeader.setConsumerGroup(consumerGroup);
@@ -800,13 +804,17 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner ,MQPopConsumer
 		}
 		if (findBrokerResult != null) {
 			AckMessageRequestHeader requestHeader = new AckMessageRequestHeader();
-			requestHeader.setTopic(mq.getTopic());
+			if (extraInfo.contains(MixAll.RETRY_GROUP_TOPIC_PREFIX)) {
+				requestHeader.setTopic(extraInfo.substring(extraInfo.indexOf(MixAll.RETRY_GROUP_TOPIC_PREFIX), extraInfo.length()));
+			}else {
+				requestHeader.setTopic(mq.getTopic());
+			}
 			requestHeader.setQueueId(mq.getQueueId());
 			requestHeader.setOffset(offset);
 			requestHeader.setConsumerGroup(consumerGroup);
 			requestHeader.setExtraInfo(extraInfo);
 			String brokerAddr = findBrokerResult.getBrokerAddr();
-			this.mQClientFactory.getMQClientAPIImpl().ackMessage(brokerAddr, requestHeader);
+			this.mQClientFactory.getMQClientAPIImpl().ackMessageAsync(brokerAddr, timeOut, callback, requestHeader);
 			return ;
 		}
 		throw new MQClientException("The broker[" + mq.getBrokerName() + "] not exist", null);

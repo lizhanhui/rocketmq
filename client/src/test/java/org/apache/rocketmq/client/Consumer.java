@@ -2,6 +2,8 @@ package org.apache.rocketmq.client;
 
 import java.util.Date;
 
+import org.apache.rocketmq.client.consumer.AckCallback;
+import org.apache.rocketmq.client.consumer.AckResult;
 import org.apache.rocketmq.client.consumer.DefaultMQPullConsumer;
 import org.apache.rocketmq.client.consumer.PopCallback;
 import org.apache.rocketmq.client.consumer.PopResult;
@@ -59,13 +61,27 @@ public class Consumer {
 					//System.out.println(new Date()+"     "+popResult);
 					if (popResult.getPopStatus()==PopStatus.FOUND) {
 						for (MessageExt msg : popResult.getMsgFoundList()) {
-							System.out.println(new Date()+",delay time:"+(System.currentTimeMillis()-msg.getBornTimestamp())+" msg id:"+new String(msg.getBody()));
+							System.out.println(new Date()+",delay time:"+(System.currentTimeMillis()-msg.getBornTimestamp())+" msg id:"+new String(msg.getBody())+",born time:"+ new Date(msg.getBornTimestamp())+",retry time:"+msg.getReconsumeTimes());
 							//pullConsumer.changeInvisibleTime(new MessageQueue(msg.getTopic(),brokerName,msg.getQueueId()), msg.getQueueOffset(), consumerGroup, msg.getProperty(MessageConst.PROPERTY_POP_CK), 30000);
 							pullConsumer.ackMessage(new MessageQueue(msg.getTopic(),brokerName,msg.getQueueId()), msg.getQueueOffset(), consumerGroup, msg.getProperty(MessageConst.PROPERTY_POP_CK));
+							
+							/*pullConsumer.ackMessageAsync(new MessageQueue(msg.getTopic(),brokerName,msg.getQueueId()),  msg.getQueueOffset(), consumerGroup, msg.getProperty(MessageConst.PROPERTY_POP_CK), 1000, new AckCallback() {
+								
+								@Override
+								public void onSuccess(AckResult ackResult) {
+									System.out.println(ackResult);
+								}
+								
+								@Override
+								public void onException(Throwable e) {
+									// TODO Auto-generated method stub
+									
+								}
+							});*/
 						}
 					}
 					PopCallback tmPopCallback=this;
-					pullConsumer.popAsync(mq, 10000, 5, consumerGroup, 300000,  tmPopCallback, true,ConsumeInitMode.MIN);
+					pullConsumer.popAsync(mq, 10000, 5, consumerGroup, 30000,  tmPopCallback, true,ConsumeInitMode.MIN);
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -78,7 +94,7 @@ public class Consumer {
 				
 			}
 		};
-		pullConsumer.popAsync(mq, 10000, 5, consumerGroup, 300000, callback,true,ConsumeInitMode.MIN);
+		pullConsumer.popAsync(mq, 10000, 5, consumerGroup, 30000, callback,true,ConsumeInitMode.MIN);
 		Thread.sleep(10000000L);
 		
 	}

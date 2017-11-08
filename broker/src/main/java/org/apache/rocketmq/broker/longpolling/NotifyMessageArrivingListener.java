@@ -36,6 +36,7 @@ public class NotifyMessageArrivingListener implements MessageArrivingListener {
         long msgStoreTime, byte[] filterBitMap, Map<String, String> properties) {
         this.pullRequestHoldService.notifyMessageArriving(topic, queueId, logicOffset, tagsCode,
             msgStoreTime, filterBitMap, properties);
+        System.out.println("arrive wake up,"+logicOffset);
         this.popMessageProcessor.notifyMessageArriving(topic, queueId);
     }
 }

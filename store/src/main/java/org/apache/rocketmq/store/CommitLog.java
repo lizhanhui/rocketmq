@@ -615,20 +615,6 @@ public class CommitLog {
                     transformDelayLevelMessage(msg);
                 }
             }
-            if (msg.getProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS) != null
-                && null == msg.getProperty(MessageConst.PROPERTY_TIMER_IN_MS)) {
-                Long deliverMs =  Long.valueOf(msg.getProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS));
-                if (deliverMs % 1000 == 0) {
-                    deliverMs = deliverMs - 1;
-                }
-                deliverMs = (deliverMs/1000) * 1000;
-                MessageAccessor.putProperty(msg, MessageConst.PROPERTY_TIMER_IN_MS, deliverMs + "");
-                MessageAccessor.putProperty(msg, MessageConst.PROPERTY_REAL_TOPIC, msg.getTopic());
-                MessageAccessor.putProperty(msg, MessageConst.PROPERTY_REAL_QUEUE_ID, String.valueOf(msg.getQueueId()));
-                msg.setPropertiesString(MessageDecoder.messageProperties2String(msg.getProperties()));
-                msg.setTopic(TimerMessageStore.TIMER_TOPIC);
-                msg.setQueueId(0);
-            }
         }
 
         long eclipseTimeInLock = 0;

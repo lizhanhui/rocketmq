@@ -29,4 +29,11 @@ public class LockManager {
 	public static String buildKey(PopMessageRequestHeader requestHeader, int queueId) {
 		return requestHeader.getConsumerGroup() + PopAckConstants.SPLIT + requestHeader.getTopic() + PopAckConstants.SPLIT + queueId;
 	}
+
+	public static String buildKey(String topic, String cid, int queueId) {
+		return topic + PopAckConstants.SPLIT + cid + PopAckConstants.SPLIT + queueId;
+	}
+	public static String buildKey(String prefix, int queueId) {
+		return prefix + PopAckConstants.SPLIT + queueId;
+	}
 }

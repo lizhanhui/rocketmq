@@ -16,17 +16,13 @@
  */
 package org.apache.rocketmq.client.consumer;
 
-
-public class AckResult {
-	private AckStatus status;
-	public AckStatus getStatus() {
-		return status;
-	}
-	public void setStatus(AckStatus status) {
-		this.status = status;
-	}
-    @Override
-    public String toString() {
-        return "AckResult [AckStatus=" + status + "]";
-    }
+public enum AckStatus {
+    /**
+     * ack success
+     */
+    OK,
+    /**
+     * msg not exist
+     */
+    NO_EXIST,
 }
