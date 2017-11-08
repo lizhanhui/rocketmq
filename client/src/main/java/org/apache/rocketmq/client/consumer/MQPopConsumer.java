@@ -93,5 +93,8 @@ public interface MQPopConsumer {
 	PopResult pop(MessageQueue mq, long invisibleTime, int maxNums, String consumerGroup, long timeout, int initMode)
 			throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 	void ackAsync(MessageQueue mq, long offset, String consumerGroup, String extraInfo, long timeOut, AckCallback callback)
-			throws MQClientException, RemotingException, MQBrokerException, InterruptedException; 
+			throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+
+	void statisticsMessages(MessageQueue mq, String consumerGroup, long timeout, StatisticsMessagesCallback callback)
+			throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 }
