@@ -820,7 +820,7 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner ,MQPopConsumer
 		throw new MQClientException("The broker[" + mq.getBrokerName() + "] not exist", null);
 	}
 	@Override
-	public void changeInvisibleTime(MessageQueue mq, long offset, String consumerGroup, String extraInfo, long invisibleTime)
+	public void changeInvisibleTimeAsync(MessageQueue mq, long offset, String consumerGroup, String extraInfo, long invisibleTime, long timeoutMillis, AckCallback callback)
 			throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
 		FindBrokerResult findBrokerResult = this.mQClientFactory.findBrokerAddressInSubscribe(mq.getBrokerName(), MixAll.MASTER_ID, true);
 		if (null == findBrokerResult) {
@@ -829,17 +829,21 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner ,MQPopConsumer
 		}
 		if (findBrokerResult != null) {
 			ChangeInvisibleTimeRequestHeader requestHeader = new ChangeInvisibleTimeRequestHeader();
-			requestHeader.setTopic(mq.getTopic());
+			if (extraInfo.contains(MixAll.RETRY_GROUP_TOPIC_PREFIX)) {
+				requestHeader.setTopic(extraInfo.substring(extraInfo.indexOf(MixAll.RETRY_GROUP_TOPIC_PREFIX), extraInfo.length()));
+			}else {
+				requestHeader.setTopic(mq.getTopic());
+			}			
 			requestHeader.setQueueId(mq.getQueueId());
 			requestHeader.setOffset(offset);
 			requestHeader.setConsumerGroup(consumerGroup);
 			requestHeader.setExtraInfo(extraInfo);
 			requestHeader.setInvisibleTime(invisibleTime);
 			String brokerAddr = findBrokerResult.getBrokerAddr();
-			this.mQClientFactory.getMQClientAPIImpl().changeInvisibleTime(brokerAddr, requestHeader);
+			this.mQClientFactory.getMQClientAPIImpl().changeInvisibleTimeAsync(brokerAddr, requestHeader, timeoutMillis, callback);
+			return ;
 		}
 		throw new MQClientException("The broker[" + mq.getBrokerName() + "] not exist", null);
-		
 	}
     public void registerFilterMessageHook(final FilterMessageHook hook) {
         this.filterMessageHookList.add(hook);

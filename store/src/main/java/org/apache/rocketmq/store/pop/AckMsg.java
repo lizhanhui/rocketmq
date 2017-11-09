@@ -6,6 +6,13 @@ public class AckMsg {
     private String consumerGroup;
     private String topic;
     private int queueId;
+    private long popTime;
+    public long getPopTime() {
+		return popTime;
+	}
+    public void setPopTime(long popTime) {
+		this.popTime = popTime;
+	}
     public void setQueueId(int queueId) {
 		this.queueId = queueId;
 	}

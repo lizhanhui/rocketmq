@@ -3,6 +3,8 @@ package org.apache.rocketmq.store.pop;
 public class PopCheckPoint {
 	Long startOffset;
 	Long reviveTime;
+	Long popTime;
+	Long invisibleTime;
 	Integer bitMap;
 	byte num;
 	byte queueId;
@@ -21,11 +23,20 @@ public class PopCheckPoint {
 	public void setStartOffset(Long startOffset) {
 		this.startOffset = startOffset;
 	}
-	public Long getReviveTime() {
-		return reviveTime;
+	public void setPopTime(Long popTime) {
+		this.popTime = popTime;
 	}
-	public void setReviveTime(Long reviveTime) {
-		this.reviveTime = reviveTime;
+	public void setInvisibleTime(Long invisibleTime) {
+		this.invisibleTime = invisibleTime;
+	}
+	public Long getPopTime() {
+		return popTime;
+	}
+	public Long getInvisibleTime() {
+		return invisibleTime;
+	}
+	public Long getReviveTime() {
+		return popTime + invisibleTime;
 	}
 	public Integer getBitMap() {
 		return bitMap;
@@ -57,6 +68,12 @@ public class PopCheckPoint {
 	}
 	public void setCid(String cid) {
 		this.cid = cid;
+	}
+
+	@Override
+	public String toString() {
+		return "PopCheckPoint [topic=" + topic + ", cid=" + cid + ", queueId=" + queueId + ", startOffset=" + startOffset + ", bitMap=" + bitMap + ", num=" + num + ", reviveTime=" + getReviveTime()
+				+ ", reviveOffset=" + reviveOffset + "]";
 	}
 
 }

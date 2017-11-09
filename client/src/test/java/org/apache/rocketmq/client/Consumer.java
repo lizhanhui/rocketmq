@@ -60,9 +60,35 @@ public class Consumer {
 				try {
 					//System.out.println(new Date()+"     "+popResult);
 					if (popResult.getPopStatus()==PopStatus.FOUND) {
-						for (MessageExt msg : popResult.getMsgFoundList()) {
-							System.out.println(new Date()+",delay time:"+(System.currentTimeMillis()-msg.getBornTimestamp())+" msg id:"+new String(msg.getBody())+",born time:"+ new Date(msg.getBornTimestamp())+",retry time:"+msg.getReconsumeTimes());
-							//pullConsumer.changeInvisibleTime(new MessageQueue(msg.getTopic(),brokerName,msg.getQueueId()), msg.getQueueOffset(), consumerGroup, msg.getProperty(MessageConst.PROPERTY_POP_CK), 30000);
+						for (final MessageExt msg : popResult.getMsgFoundList()) {
+							System.out.println(new Date()+",delay time:"+(System.currentTimeMillis()-msg.getBornTimestamp())+" msg id:"+new String(msg.getBody())+",born time:"+ new Date(msg.getBornTimestamp())+",retry time:"+msg.getReconsumeTimes()+",1st pop time:"+ msg.getProperty(MessageConst.PROPERTY_FIRST_POP_TIME));
+							/*pullConsumer.changeInvisibleTimeAsync(new MessageQueue(msg.getTopic(),brokerName,msg.getQueueId()), msg.getQueueOffset(), consumerGroup, msg.getProperty(MessageConst.PROPERTY_POP_CK), 30000, 1000, new AckCallback() {
+								
+								@Override
+								public void onSuccess(AckResult ackResult) {
+									System.out.println(ackResult);
+									try {
+										pullConsumer.ackMessage(new MessageQueue(msg.getTopic(),brokerName,msg.getQueueId()), msg.getQueueOffset(), consumerGroup, ackResult.getExtraInfo());
+									} catch (MQClientException e) {
+										// TODO Auto-generated catch block
+										e.printStackTrace();
+									} catch (RemotingException e) {
+										// TODO Auto-generated catch block
+										e.printStackTrace();
+									} catch (MQBrokerException e) {
+										// TODO Auto-generated catch block
+										e.printStackTrace();
+									} catch (InterruptedException e) {
+										// TODO Auto-generated catch block
+										e.printStackTrace();
+									}
+								}
+								
+								@Override
+								public void onException(Throwable e) {
+									e.printStackTrace();
+								}
+							});*/
 							pullConsumer.ackMessage(new MessageQueue(msg.getTopic(),brokerName,msg.getQueueId()), msg.getQueueOffset(), consumerGroup, msg.getProperty(MessageConst.PROPERTY_POP_CK));
 							
 							/*pullConsumer.ackMessageAsync(new MessageQueue(msg.getTopic(),brokerName,msg.getQueueId()),  msg.getQueueOffset(), consumerGroup, msg.getProperty(MessageConst.PROPERTY_POP_CK), 1000, new AckCallback() {

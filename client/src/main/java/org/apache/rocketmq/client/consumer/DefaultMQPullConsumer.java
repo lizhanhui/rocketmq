@@ -343,8 +343,8 @@ public class DefaultMQPullConsumer extends ClientConfig implements MQPullConsume
 		 this.defaultMQPullConsumerImpl.ackAsync(mq, offset, consumerGroup, extraInfo, timeOut, callback);
 	}
     @Override
-	public void  changeInvisibleTime(MessageQueue mq, long offset, String consumerGroup, String extraInfo, long invisibleTime) throws MQClientException, RemotingException, MQBrokerException, InterruptedException{
-		 this.defaultMQPullConsumerImpl.changeInvisibleTime(mq, offset, consumerGroup, extraInfo, invisibleTime);
+	public void  changeInvisibleTimeAsync(MessageQueue mq, long offset, String consumerGroup, String extraInfo, long invisibleTime, long timeoutMillis, AckCallback callback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException{
+		 this.defaultMQPullConsumerImpl.changeInvisibleTimeAsync(mq, offset, consumerGroup, extraInfo, invisibleTime, timeoutMillis, callback);
 	}	
 	
     public OffsetStore getOffsetStore() {

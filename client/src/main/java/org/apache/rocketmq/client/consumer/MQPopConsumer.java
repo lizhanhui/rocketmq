@@ -56,21 +56,6 @@ public interface MQPopConsumer {
 	void ack(final MessageQueue mq, final long offset, 
 			String consumerGroup , String extraInfo) throws MQClientException, RemotingException, MQBrokerException, InterruptedException; 
 	
-	/**
-	 * change invisibleTime of specified msg 
-	 * @param mq
-	 * @param offset
-	 * @param consumerGroup
-	 * @param extraInfo
-	 * @param invisibleTime, the new invisibleTime
-	 * @return
-	 * @throws MQClientException
-	 * @throws RemotingException
-	 * @throws MQBrokerException
-	 * @throws InterruptedException
-	 */
-	void changeInvisibleTime(final MessageQueue mq, final long offset, 
-			String consumerGroup , String extraInfo , final long invisibleTime) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 
 	void popAsync(MessageQueue mq, long invisibleTime, int maxNums, String consumerGroup, long timeout, PopCallback popCallback, boolean poll, int initMode)
 			throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
@@ -93,5 +78,22 @@ public interface MQPopConsumer {
 	PopResult pop(MessageQueue mq, long invisibleTime, int maxNums, String consumerGroup, long timeout, int initMode)
 			throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 	void ackAsync(MessageQueue mq, long offset, String consumerGroup, String extraInfo, long timeOut, AckCallback callback)
-			throws MQClientException, RemotingException, MQBrokerException, InterruptedException; 
+			throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+	/**
+	 * change invisibleTime of specified msg 
+	 * @param mq
+	 * @param offset
+	 * @param consumerGroup
+	 * @param extraInfo
+	 * @param invisibleTime
+	 * @param timeoutMillis
+	 * @param callback
+	 * @throws MQClientException
+	 * @throws RemotingException
+	 * @throws MQBrokerException
+	 * @throws InterruptedException
+	 */
+	void changeInvisibleTimeAsync(MessageQueue mq, long offset, String consumerGroup, String extraInfo, long invisibleTime, long timeoutMillis, AckCallback callback)
+			throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+
 }
