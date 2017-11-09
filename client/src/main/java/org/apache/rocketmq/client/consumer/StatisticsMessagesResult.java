@@ -31,6 +31,22 @@ public class StatisticsMessagesResult extends RemotingSerializable {
 		this.totalMessages = totalMessages;
 	}
 
+	public long getActiveMessages() {
+		return activeMessages;
+	}
+
+	public long getInactiveMessages() {
+		return inactiveMessages;
+	}
+
+	public long getDelayMessages() {
+		return delayMessages;
+	}
+
+	public long getTotalMessages() {
+		return totalMessages;
+	}
+
 	@Override
 	public String toString() {
 		return "StatisticsMessagesResult [activeMessages=" + activeMessages + ",inactiveMessages="
