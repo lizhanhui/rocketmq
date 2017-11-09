@@ -29,15 +29,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.rocketmq.client.ClientConfig;
-import org.apache.rocketmq.client.consumer.AckCallback;
-import org.apache.rocketmq.client.consumer.AckResult;
-import org.apache.rocketmq.client.consumer.AckStatus;
-import org.apache.rocketmq.client.consumer.PopCallback;
-import org.apache.rocketmq.client.consumer.PopResult;
-import org.apache.rocketmq.client.consumer.PopStatus;
-import org.apache.rocketmq.client.consumer.PullCallback;
-import org.apache.rocketmq.client.consumer.PullResult;
-import org.apache.rocketmq.client.consumer.PullStatus;
+import org.apache.rocketmq.client.consumer.*;
 import org.apache.rocketmq.client.exception.MQBrokerException;
 import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.client.hook.SendMessageContext;
@@ -135,6 +127,7 @@ import org.apache.rocketmq.common.protocol.header.UnregisterClientRequestHeader;
 import org.apache.rocketmq.common.protocol.header.UpdateConsumerOffsetRequestHeader;
 import org.apache.rocketmq.common.protocol.header.ViewBrokerStatsDataRequestHeader;
 import org.apache.rocketmq.common.protocol.header.ViewMessageRequestHeader;
+import org.apache.rocketmq.common.protocol.header.*;
 import org.apache.rocketmq.common.protocol.header.filtersrv.RegisterMessageFilterClassRequestHeader;
 import org.apache.rocketmq.common.protocol.header.namesrv.DeleteKVConfigRequestHeader;
 import org.apache.rocketmq.common.protocol.header.namesrv.GetKVConfigRequestHeader;
@@ -689,37 +682,37 @@ public class MQClientAPIImpl {
 	) throws RemotingException, MQBrokerException, InterruptedException {
 		final RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.ACK_MESSAGE, requestHeader);
 		this.remotingClient.invokeAsync(addr, request, timeOut, new InvokeCallback() {
-			
-			@Override
-			public void operationComplete(ResponseFuture responseFuture){
+
+            @Override
+            public void operationComplete(ResponseFuture responseFuture) {
 
                 RemotingCommand response = responseFuture.getResponseCommand();
                 if (response != null) {
                     try {
-                        AckResult ackResult=new AckResult();
-						if (ResponseCode.SUCCESS == response.getCode()) {
-							ackResult.setStatus(AckStatus.OK);
-						}else {
-							ackResult.setStatus(AckStatus.NO_EXIST);
-						}
+                        AckResult ackResult = new AckResult();
+                        if (ResponseCode.SUCCESS == response.getCode()) {
+                            ackResult.setStatus(AckStatus.OK);
+                        } else {
+                            ackResult.setStatus(AckStatus.NO_EXIST);
+                        }
                         assert ackResult != null;
                         ackCallback.onSuccess(ackResult);
                     } catch (Exception e) {
-                    	ackCallback.onException(e);
+                        ackCallback.onException(e);
                     }
                 } else {
                     if (!responseFuture.isSendRequestOK()) {
                         ackCallback.onException(new MQClientException("send request failed to " + addr + ". Request: " + request, responseFuture.getCause()));
                     } else if (responseFuture.isTimeout()) {
-                    	ackCallback.onException(new MQClientException("wait response from " + addr + " timeout :" + responseFuture.getTimeoutMillis() + "ms" + ". Request: " + request,
-                            responseFuture.getCause()));
+                        ackCallback.onException(new MQClientException("wait response from " + addr + " timeout :" + responseFuture.getTimeoutMillis() + "ms" + ". Request: " + request,
+                                responseFuture.getCause()));
                     } else {
-                    	ackCallback.onException(new MQClientException("unknown reason. addr: " + addr + ", timeoutMillis: " + timeOut + ". Request: " + request, responseFuture.getCause()));
+                        ackCallback.onException(new MQClientException("unknown reason. addr: " + addr + ", timeoutMillis: " + timeOut + ". Request: " + request, responseFuture.getCause()));
                     }
                 }
-				
-			}
-		});
+
+            }
+        });
 	}
 	public void changeInvisibleTimeAsync(//
 			final String addr, //
@@ -787,7 +780,7 @@ public class MQClientAPIImpl {
                         pullCallback.onException(new MQClientException("send request failed to " + addr + ". Request: " + request, responseFuture.getCause()));
                     } else if (responseFuture.isTimeout()) {
                         pullCallback.onException(new MQClientException("wait response from " + addr + " timeout :" + responseFuture.getTimeoutMillis() + "ms" + ". Request: " + request,
-                            responseFuture.getCause()));
+                                responseFuture.getCause()));
                     } else {
                         pullCallback.onException(new MQClientException("unknown reason. addr: " + addr + ", timeoutMillis: " + timeoutMillis + ". Request: " + request, responseFuture.getCause()));
                     }
@@ -1145,7 +1138,7 @@ public class MQClientAPIImpl {
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.QUERY_MESSAGE, requestHeader);
         request.addExtField(MixAll.UNIQUE_MSG_QUERY_FLAG, isUnqiueKey.toString());
         this.remotingClient.invokeAsync(MixAll.brokerVIPChannel(this.clientConfig.isVipChannelEnabled(), addr), request, timeoutMillis,
-            invokeCallback);
+                invokeCallback);
     }
 
     public boolean registerClient(final String addr, final HeartbeatData heartbeat, final long timeoutMillis)
@@ -2187,7 +2180,7 @@ public class MQClientAPIImpl {
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.GET_ALL_TOPIC_CONFIG, null);
 
         RemotingCommand response = this.remotingClient.invokeSync(MixAll.brokerVIPChannel(this.clientConfig.isVipChannelEnabled(), addr),
-            request, timeoutMillis);
+                request, timeoutMillis);
         assert response != null;
         switch (response.getCode()) {
             case ResponseCode.SUCCESS: {
@@ -2309,5 +2302,49 @@ public class MQClientAPIImpl {
         if (ResponseCode.SUCCESS != response.getCode()) {
             throw new MQClientException(response.getCode(), response.getRemark());
         }
+    }
+
+    public void statisticsMessagesAsync(final String addr, final StatisticsMessagesRequestHeader requestHeader,
+                                final long timeoutMillis, final StatisticsMessagesCallback callback) throws RemotingException, InterruptedException {
+        final RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.STATISTICS_MESSAGES, requestHeader);
+        this.remotingClient.invokeAsync(addr, request, timeoutMillis, new InvokeCallback() {
+            @Override
+            public void operationComplete(ResponseFuture responseFuture) {
+                RemotingCommand response = responseFuture.getResponseCommand();
+                if (response != null) {
+                    try {
+                        StatisticsMessagesResult result = processStatisticsMessagesResponse(response);
+                        assert request != null;
+                        callback.onSuccess(result);
+                    } catch (Exception e) {
+                        callback.onException(e);
+                    }
+                } else {
+                    if (!responseFuture.isSendRequestOK()) {
+                        callback.onException(new MQClientException("send request failed to " + addr + ". Request: " + request, responseFuture.getCause()));
+                    } else if (responseFuture.isTimeout()) {
+                        callback.onException(new MQClientException("wait response from " + addr + " timeout :" + responseFuture.getTimeoutMillis() + "ms" + ". Request: " + request,
+                                responseFuture.getCause()));
+                    } else {
+                        callback.onException(new MQClientException("unknown reason. addr: " + addr + ", timeoutMillis: " + timeoutMillis + ". Request: " + request, responseFuture.getCause()));
+                    }
+                }
+            }
+        });
+    }
+
+    private StatisticsMessagesResult processStatisticsMessagesResponse(final RemotingCommand response)
+            throws MQBrokerException, RemotingCommandException {
+        StatisticsMessagesResult result = null;
+        switch (response.getCode()) {
+            case ResponseCode.SUCCESS:
+                if (response.getBody() != null) {
+                    return StatisticsMessagesResult.decode(response.getBody(), StatisticsMessagesResult.class);
+                }
+                break;
+            default:
+                throw new MQBrokerException(response.getCode(), response.getRemark());
+        }
+        return result;
     }
 }

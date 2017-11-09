@@ -50,17 +50,7 @@ import org.apache.rocketmq.broker.offset.ConsumerOffsetManager;
 import org.apache.rocketmq.broker.out.BrokerOuterAPI;
 import org.apache.rocketmq.broker.plugin.MessageStoreFactory;
 import org.apache.rocketmq.broker.plugin.MessageStorePluginContext;
-import org.apache.rocketmq.broker.processor.AckMessageProcessor;
-import org.apache.rocketmq.broker.processor.AdminBrokerProcessor;
-import org.apache.rocketmq.broker.processor.ChangeInvisibleTimeProcessor;
-import org.apache.rocketmq.broker.processor.ClientManageProcessor;
-import org.apache.rocketmq.broker.processor.ConsumerManageProcessor;
-import org.apache.rocketmq.broker.processor.EndTransactionProcessor;
-import org.apache.rocketmq.broker.processor.PeekMessageProcessor;
-import org.apache.rocketmq.broker.processor.PopMessageProcessor;
-import org.apache.rocketmq.broker.processor.PullMessageProcessor;
-import org.apache.rocketmq.broker.processor.QueryMessageProcessor;
-import org.apache.rocketmq.broker.processor.SendMessageProcessor;
+import org.apache.rocketmq.broker.processor.*;
 import org.apache.rocketmq.broker.slave.SlaveSynchronize;
 import org.apache.rocketmq.broker.subscription.SubscriptionGroupManager;
 import org.apache.rocketmq.broker.topic.TopicConfigManager;
@@ -113,7 +103,7 @@ public class BrokerController {
     private final PopMessageProcessor popMessageProcessor;
     private final AckMessageProcessor ackMessageProcessor;
     private final ChangeInvisibleTimeProcessor changeInvisibleTimeProcessor;
-
+    private final StatisticsMessagesProcessor statisticsMessagesProcessor;
     
     private final PullRequestHoldService pullRequestHoldService;
     private final MessageArrivingListener messageArrivingListener;
@@ -167,7 +157,8 @@ public class BrokerController {
         this.popMessageProcessor=new PopMessageProcessor(this);
         this.ackMessageProcessor=new AckMessageProcessor(this);
         this.changeInvisibleTimeProcessor=new ChangeInvisibleTimeProcessor(this);
-        
+        this.statisticsMessagesProcessor = new StatisticsMessagesProcessor(this);
+
         this.pullRequestHoldService = new PullRequestHoldService(this);
         this.messageArrivingListener = new NotifyMessageArrivingListener(this.pullRequestHoldService,this.popMessageProcessor);
         this.consumerIdsChangeListener = new DefaultConsumerIdsChangeListener(this);
@@ -446,7 +437,10 @@ public class BrokerController {
          * ChangeInvisibleTimeProcessor
          */   
         this.remotingServer.registerProcessor(RequestCode.CHANGE_MESSAGE_INVISIBLETIME, this.changeInvisibleTimeProcessor, this.pullMessageExecutor);
-
+        /**
+         * PopMessageProcessor
+         */
+        this.remotingServer.registerProcessor(RequestCode.STATISTICS_MESSAGES, this.statisticsMessagesProcessor, this.pullMessageExecutor);
         
         /**
          * QueryMessageProcessor
