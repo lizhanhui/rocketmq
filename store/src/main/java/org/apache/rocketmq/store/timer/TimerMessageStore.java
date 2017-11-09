@@ -48,6 +48,7 @@ import org.apache.rocketmq.store.MappedFile;
 import org.apache.rocketmq.store.MessageExtBrokerInner;
 import org.apache.rocketmq.store.MessageStore;
 import org.apache.rocketmq.store.PutMessageResult;
+import org.apache.rocketmq.store.PutMessageStatus;
 import org.apache.rocketmq.store.SelectMappedBufferResult;
 import org.apache.rocketmq.store.config.BrokerRole;
 import org.apache.rocketmq.store.config.MessageStoreConfig;
@@ -179,6 +180,7 @@ public class TimerMessageStore {
         if (lastFlushPos < 0)
             lastFlushPos = 0;
         long processOffset = recoverAndRevise(lastFlushPos, true);
+        timerLog.getMappedFileQueue().setFlushedWhere(processOffset);
         //revise queue offset
         long queueOffset = reviseQueueOffset(processOffset);
         if (-1 == queueOffset) {
@@ -981,7 +983,7 @@ public class TimerMessageStore {
                                 MessageExtBrokerInner msg = convert(tr.getMsg(), tr.getEnqueueTime(), needRoll(tr.getMagic()));
                                 doRes  = PUT_NEED_RETRY !=  doPut(msg);
                                 while (!doRes && !isStopped() && isRunningDequeue()) {
-                                    doRes = PUT_NO_RETRY != doPut(msg);
+                                    doRes = PUT_NEED_RETRY != doPut(msg);
                                     Thread.sleep(50);
                                 }
                                 perfs.endTick("dequeue_put");

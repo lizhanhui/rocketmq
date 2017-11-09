@@ -590,11 +590,13 @@ public class BrokerController {
             this.fastRemotingServer.shutdown();
         }
 
-        if (this.messageStore != null) {
-            this.messageStore.shutdown();
-        }
+        //it is better to make sure the timerMessageStore shutdown firstly
         if (null != this.timerMessageStore) {
             this.timerMessageStore.shutdown();
+        }
+
+        if (this.messageStore != null) {
+            this.messageStore.shutdown();
         }
 
         this.scheduledExecutorService.shutdown();
