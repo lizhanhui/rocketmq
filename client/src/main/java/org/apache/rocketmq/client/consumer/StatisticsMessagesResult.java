@@ -22,16 +22,18 @@ public class StatisticsMessagesResult extends RemotingSerializable {
 	private long activeMessages;
 	private long inactiveMessages;
 	private long delayMessages;
+	private long totalMessages;
 
-	public StatisticsMessagesResult(long activeMessages, long delayMessages) {
+	public StatisticsMessagesResult(long activeMessages, long delayMessages, long totalMessages) {
 		this.activeMessages = activeMessages;
 		this.inactiveMessages = 0;
 		this.delayMessages = delayMessages;
+		this.totalMessages = totalMessages;
 	}
 
 	@Override
 	public String toString() {
 		return "StatisticsMessagesResult [activeMessages=" + activeMessages + ",inactiveMessages="
-				+ inactiveMessages + ",delayMessages=" + delayMessages + "]";
+				+ inactiveMessages + ",delayMessages=" + delayMessages + ",totalMessages=" + totalMessages + "]";
 	}
 }
