@@ -70,6 +70,7 @@ public class TimerMessageStore {
     public static final int MAGIC_DEFAULT = 1;
     public static final int MAGIC_ROLL = 1 << 1;
     public static final int MAGIC_DELETE = 1 << 2;
+    public boolean debug = false;
 
     private static final Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
     private final PerfCounter.Ticks perfs = new PerfCounter.Ticks(log);
@@ -191,6 +192,7 @@ public class TimerMessageStore {
         if (lastFlushPos < 0)
             lastFlushPos = 0;
         long processOffset = recoverAndRevise(lastFlushPos, true);
+
         timerLog.getMappedFileQueue().setFlushedWhere(processOffset);
         //revise queue offset
         long queueOffset = reviseQueueOffset(processOffset);
@@ -206,10 +208,16 @@ public class TimerMessageStore {
         if (currReadTimeMs < (System.currentTimeMillis() / 1000) * 1000 - ttlSecs * 1000 + TIME_BLANK) {
             currReadTimeMs = (System.currentTimeMillis() / 1000) * 1000 - ttlSecs * 1000 + TIME_BLANK;
         }
+        //the timer wheel may contain physical offset bigger than timerlog
+        //This will only happen when the timerlog is damaged
+        //hard to test
         long minFirst = timerWheel.checkPhyPos(currReadTimeMs / 1000, processOffset);
+        if (debug) {
+            minFirst = 0;
+        }
         if (minFirst < processOffset) {
             log.warn("Timer recheck because of minFirst:{} processOffset:{}", minFirst, processOffset);
-            recoverAndRevise(processOffset, false);
+            recoverAndRevise(minFirst, false);
         }
         log.info("Timer recover ok currReadTimerMs:{} currQueueOffset:{} checkQueueOffset:{} processOffset:{}",
             currReadTimeMs, currQueueOffset, timerCheckpoint.getLastTimerQueueOffset(), processOffset);
@@ -253,7 +261,8 @@ public class TimerMessageStore {
             index = 0;
         long checkOffset = mappedFiles.get(index).getFileFromOffset();
         for (; index < mappedFiles.size(); index++) {
-            SelectMappedBufferResult sbr = mappedFiles.get(index).selectMappedBuffer(0, mappedFiles.get(index).getFileSize());
+            MappedFile mappedFile = mappedFiles.get(index);
+            SelectMappedBufferResult sbr = mappedFile.selectMappedBuffer(0, checkTimerLog ? mappedFiles.get(index).getFileSize() : mappedFile.getReadPosition());
             ByteBuffer bf = sbr.getByteBuffer();
             int position = 0;
             boolean stopCheck = false;
@@ -263,6 +272,9 @@ public class TimerMessageStore {
                     int size = bf.getInt();//size
                     bf.getLong();//prev pos
                     int magic = bf.getInt();
+                    if (magic == TimerLog.BLANK_MAGIC_CODE) {
+                        break;
+                    }
                     if (checkTimerLog && (!isMagicOK(magic) || TimerLog.UNIT_SIZE != size)) {
                         stopCheck = true;
                         break;
@@ -272,6 +284,7 @@ public class TimerMessageStore {
                         timerWheel.reviseSlot(delayTime / 1000, TimerWheel.IGNORE, sbr.getStartOffset() + position, true);
                     }
                 } catch (Exception e) {
+                    log.error("Recover timerlog error", e);
                     stopCheck = true;
                     break;
                 }

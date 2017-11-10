@@ -26,8 +26,8 @@ import org.slf4j.LoggerFactory;
 
 public class TimerLog {
     private static Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
-    private final static int BLANK_MAGIC_CODE = 0xBBCCDDEE ^ 1880681586 + 8;
-    private final static int MIN_BLANK_LEN = 4 + 4;
+    public final static int BLANK_MAGIC_CODE = 0xBBCCDDEE ^ 1880681586 + 8;
+    private final static int MIN_BLANK_LEN = 4 + 8 + 4;
     public final static int UNIT_SIZE = 40;
     public final static int UNIT_PRE_SIZE = 28;
     private final MappedFileQueue mappedFileQueue;
@@ -57,8 +57,9 @@ public class TimerLog {
             return -1;
         }
         if (len + MIN_BLANK_LEN > mappedFile.getFileSize() - mappedFile.getWrotePosition()) {
-            ByteBuffer byteBuffer = ByteBuffer.allocate(8);
+            ByteBuffer byteBuffer = ByteBuffer.allocate(MIN_BLANK_LEN);
             byteBuffer.putInt(mappedFile.getFileSize() - mappedFile.getWrotePosition());
+            byteBuffer.putLong(0);
             byteBuffer.putInt(BLANK_MAGIC_CODE);
             if (mappedFile.appendMessage(byteBuffer.array())) {
                 //need to set the wrote position

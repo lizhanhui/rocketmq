@@ -78,7 +78,7 @@ public class TimerMessageStoreTest {
         bornHost = new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0);
         storeConfig = new MessageStoreConfig();
         storeConfig.setMapedFileSizeCommitLog(1024 * 100);
-        storeConfig.setMappedFileSizeTimerLog(1024 * 10);
+        storeConfig.setMappedFileSizeTimerLog(1024);
         storeConfig.setMapedFileSizeConsumeQueue(1024);
         storeConfig.setMaxHashSlotNum(100);
         storeConfig.setMaxIndexNum(100 * 10);
@@ -261,14 +261,26 @@ public class TimerMessageStoreTest {
             assertEquals(PutMessageStatus.PUT_OK, putMessageResult.getPutMessageStatus());
         }
         Thread.sleep(2000);
-        assertEquals(2, first.getTimerLog().getMappedFileQueue().getMappedFiles().size());
+        assertTrue(first.getTimerLog().getMappedFileQueue().getMappedFiles().size() > 10);
         assertEquals(msgNum, first.getQueueOffset());
         assertEquals(first.getCommitQueueOffset(), first.getCommitQueueOffset());
         assertEquals(first.getCurrReadTimeMs(), first.getCommitReadTimeMs());
         curr = (System.currentTimeMillis() / 1000) * 1000;
         assertTrue(first.getCurrReadTimeMs() == curr || first.getCurrReadTimeMs() == curr + 1000);
+        for (int i = 0; i <= first.getTimerLog().getMappedFileQueue().getMappedFiles().size() + 10; i++) {
+            first.getTimerLog().getMappedFileQueue().flush(0);
+            Thread.sleep(10);
+        }
+
+        //damage the timer wheel, trigger the check physical pos
+        Slot slot = first.getTimerWheel().getSlot((delayMs - 1000)/1000);
+        assertNotEquals(-1, slot.timeSecs);
+        first.getTimerWheel().putSlot(slot.timeSecs, -1, Long.MAX_VALUE, slot.num, slot.magic);
+        first.getTimerWheel().flush();
         first.shutdown();
+
         TimerMessageStore second = createTimerMessageStore(base);
+        second.debug = true;
         assertTrue(second.load());
         assertEquals(msgNum, second.getQueueOffset());
         assertEquals(second.getCommitQueueOffset(), second.getQueueOffset());

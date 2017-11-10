@@ -170,7 +170,8 @@ public class TimerWheel {
                 continue;
             }
             long first = localBuffer.get().getLong();
-            if (localBuffer.get().getLong() > maxOffset) {
+            long last = localBuffer.get().getLong();
+            if (last > maxOffset) {
                 if (first < minFirst) {
                     minFirst = first;
                 }
