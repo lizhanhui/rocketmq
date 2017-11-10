@@ -30,6 +30,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -48,7 +49,6 @@ import org.apache.rocketmq.store.MappedFile;
 import org.apache.rocketmq.store.MessageExtBrokerInner;
 import org.apache.rocketmq.store.MessageStore;
 import org.apache.rocketmq.store.PutMessageResult;
-import org.apache.rocketmq.store.PutMessageStatus;
 import org.apache.rocketmq.store.SelectMappedBufferResult;
 import org.apache.rocketmq.store.config.BrokerRole;
 import org.apache.rocketmq.store.config.MessageStoreConfig;
@@ -71,9 +71,9 @@ public class TimerMessageStore {
 
     private static final Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
     private final PerfCounter.Ticks perfs = new PerfCounter.Ticks(log);
-    private final BlockingQueue<TimerRequest> enqueueQueue = new DisruptorBlockingQueue<TimerRequest>(1024); //TO DO configture
-    private final BlockingQueue<List<TimerRequest>> dequeueGetQueue = new DisruptorBlockingQueue<List<TimerRequest>>(1024);
-    private final BlockingQueue<TimerRequest> dequeuePutQueue = new DisruptorBlockingQueue<TimerRequest>(1024); //TO DO configture
+    private final BlockingQueue<TimerRequest> enqueuePutQueue;
+    private final BlockingQueue<List<TimerRequest>> dequeueGetQueue;
+    private final BlockingQueue<TimerRequest> dequeuePutQueue;
 
     private final ByteBuffer timerLogBuffer = ByteBuffer.allocate(4 * 1024);
     private final ThreadLocal<ByteBuffer> bufferLocal;
@@ -145,11 +145,20 @@ public class TimerMessageStore {
         for (int i = 0; i < dequeueGetMessageServices.length; i++) {
             dequeueGetMessageServices[i] = new TimerDequeueGetMessageService();
         }
-        int putThreadNum = storeConfig.getTimerputMessageThreadNum();
+        int putThreadNum = storeConfig.getTimerPutMessageThreadNum();
         if (putThreadNum <= 0) putThreadNum = 1;
         dequeuePutMessaageServices = new TimerDequeuePutMessageService[putThreadNum];
         for (int i = 0; i < dequeuePutMessaageServices.length; i++) {
             dequeuePutMessaageServices[i] =  new TimerDequeuePutMessageService();
+        }
+        if (storeConfig.isTimerEnableDisruptor()) {
+            enqueuePutQueue = new DisruptorBlockingQueue<TimerRequest>(1024);
+            dequeueGetQueue = new DisruptorBlockingQueue<List<TimerRequest>>(1024);
+            dequeuePutQueue = new DisruptorBlockingQueue<TimerRequest>(1024);
+        } else {
+            enqueuePutQueue = new LinkedBlockingDeque<TimerRequest>(1024);
+            dequeueGetQueue = new LinkedBlockingDeque<List<TimerRequest>>(1024);
+            dequeuePutQueue = new LinkedBlockingDeque<TimerRequest>(1024);
         }
 
 
@@ -320,7 +329,8 @@ public class TimerMessageStore {
         timerLog.shutdown();
         timerCheckpoint.shutdown();
 
-        enqueueQueue.clear(); //avoid blocking
+        enqueuePutQueue.clear(); //avoid blocking
+        dequeueGetQueue.clear(); //avoid blocking
         dequeuePutQueue.clear(); //avoid blocking
 
         enqueueGetService.shutdown();
@@ -430,7 +440,7 @@ public class TimerMessageStore {
                         long delayedTime = Long.valueOf(msgExt.getProperty(TIMER_DELAY_MS));
                         TimerRequest timerRequest = new TimerRequest(offsetPy, sizePy, delayedTime, System.currentTimeMillis(), -1, msgExt);
                         while (true) {
-                            if (enqueueQueue.offer(timerRequest, 3, TimeUnit.SECONDS)) {
+                            if (enqueuePutQueue.offer(timerRequest, 3, TimeUnit.SECONDS)) {
                                 break;
                             }
                             if (!isRunningEnqueue()) {
@@ -866,10 +876,10 @@ public class TimerMessageStore {
 
         @Override public void run() {
             TimerMessageStore.log.info(this.getServiceName() + " service start");
-            while (!this.isStopped() || enqueueQueue.size() != 0) {
+            while (!this.isStopped() || enqueuePutQueue.size() != 0) {
                 try {
                     long tmpCommitQueueOffset = currQueueOffset;
-                    TimerRequest req = enqueueQueue.poll(10, TimeUnit.MILLISECONDS);
+                    TimerRequest req = enqueuePutQueue.poll(10, TimeUnit.MILLISECONDS);
                     boolean doRes =  false;
                     while (!isStopped() && !doRes) {
                         try {
@@ -901,7 +911,7 @@ public class TimerMessageStore {
                                     break;
                                 }
                                 if (doRes) {
-                                    if (enqueueQueue.size() == 0) {
+                                    if (enqueuePutQueue.size() == 0) {
                                         commitQueueOffset = tmpCommitQueueOffset;
                                     } else {
                                         commitQueueOffset = req.getMsg().getQueueOffset();
@@ -1132,8 +1142,9 @@ public class TimerMessageStore {
                         start = System.currentTimeMillis();
                         ConsumeQueue cq = messageStore.getConsumeQueue(TIMER_TOPIC, 0);
                         long maxOffsetInQueue = cq == null ? 0 : cq.getMaxOffsetInQueue();
-                        TimerMessageStore.log.info("[{}]Timer progress-time commitRead:[{}] currRead:[{}] preRead:[{}] currWrite:[{}] readBehind:{} enqSize:{} deqSize:{}",
-                            storeConfig.getBrokerRole(), format(commitReadTimeMs), (currReadTimeMs - commitReadTimeMs) / 1000, (preReadTimeMs - currReadTimeMs) / 1000, format(currWriteTimeMs), (System.currentTimeMillis() - currReadTimeMs) / 1000, enqueueQueue.size(), dequeuePutQueue.size());
+                        TimerMessageStore.log.info("[{}]Timer progress-time commitRead:[{}] currRead:[{}] preRead:[{}] currWrite:[{}] readBehind:{} enqPutQueue:{} deqGetQueue:{} deqPutQueue:{}",
+                            storeConfig.getBrokerRole(), format(commitReadTimeMs), (currReadTimeMs - commitReadTimeMs) / 1000, (preReadTimeMs - currReadTimeMs) / 1000, format(currWriteTimeMs),
+                            (System.currentTimeMillis() - currReadTimeMs) / 1000, enqueuePutQueue.size(), dequeueGetQueue.size(), dequeuePutQueue.size());
                         TimerMessageStore.log.info("[{}]Timer progress-offset commitOffset:{} currReadOffset:{} offsetBehind:{} behindMaster:{}",
                             storeConfig.getBrokerRole(), commitQueueOffset, currQueueOffset - commitQueueOffset, maxOffsetInQueue - currQueueOffset, timerCheckpoint.getMasterTimerQueueOffset() - currQueueOffset);
                     }

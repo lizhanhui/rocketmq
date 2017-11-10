@@ -155,6 +155,7 @@ public class MessageStoreConfig {
     private boolean timerWarmEnable = false;
     private boolean timerSkipUnknownError = false;
     private boolean timerInterceptDelayLevel = false;
+    private boolean timerEnableDisruptor = false;
 
 
     public boolean isDebugLockEnable() {
@@ -760,11 +761,20 @@ public class MessageStoreConfig {
         this.timerInterceptDelayLevel = timerInterceptDelayLevel;
     }
 
-    public int getTimerputMessageThreadNum() {
+    public int getTimerPutMessageThreadNum() {
         return timerPutMessageThreadNum;
     }
 
-    public void setTimerputMessageThreadNum(int timerputMessageThreadNum) {
-        this.timerPutMessageThreadNum = timerputMessageThreadNum;
+    public void setTimerPutMessageThreadNum(int timerPutMessageThreadNum) {
+        this.timerPutMessageThreadNum = timerPutMessageThreadNum;
     }
+
+    public boolean isTimerEnableDisruptor() {
+        return timerEnableDisruptor;
+    }
+
+    public void setTimerEnableDisruptor(boolean timerEnableDisruptor) {
+        this.timerEnableDisruptor = timerEnableDisruptor;
+    }
+
 }
