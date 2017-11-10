@@ -67,7 +67,7 @@ public class MappedFileQueue {
 
                 if (pre != null) {
                     if (cur.getFileFromOffset() - pre.getFileFromOffset() != this.mappedFileSize) {
-                        LOG_ERROR.error("[BUG]The mappedFile queue's data is damaged, the adjacent mappedFile's offset don't match. pre file {}, cur file {}",
+                        log.error("[BUG]The mappedFile queue's data is damaged, the adjacent mappedFile's offset don't match. pre file {}, cur file {}",
                             pre.getFileName(), cur.getFileName());
                     }
                 }
@@ -347,11 +347,17 @@ public class MappedFileQueue {
         int mfsLength = mfs.length - 1;
         int deleteCount = 0;
         List<MappedFile> files = new ArrayList<MappedFile>();
+        int skipFileNum = 0;
         if (null != mfs) {
+            //do check before deleting
+            checkSelf();
             for (int i = 0; i < mfsLength; i++) {
                 MappedFile mappedFile = (MappedFile) mfs[i];
                 long liveMaxTimestamp = mappedFile.getLastModifiedTimestamp() + expiredTime;
                 if (System.currentTimeMillis() >= liveMaxTimestamp || cleanImmediately) {
+                    if (skipFileNum > 0) {
+                        log.info("Delete CommitLog {} but skip {} files", mappedFile.getFileName(), skipFileNum);
+                    }
                     if (mappedFile.destroy(intervalForcibly)) {
                         files.add(mappedFile);
                         deleteCount++;
@@ -369,6 +375,8 @@ public class MappedFileQueue {
                     } else {
                         break;
                     }
+                } else {
+                    skipFileNum++;
                 }
             }
         }
