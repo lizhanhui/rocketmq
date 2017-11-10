@@ -62,7 +62,12 @@ public class TimerMetrics extends ConfigManager {
     }
 
     public long getTimingCount(String topic) {
-        return getPair(topic).getCount().get();
+        Metric pair = timingCount.get(topic);
+        if (null == pair) {
+            return 0;
+        } else {
+           return pair.getCount().get();
+        }
     }
 
     public Map<String, Metric> getTimingCount() {
