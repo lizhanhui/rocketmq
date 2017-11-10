@@ -304,7 +304,7 @@ public class DefaultMessageStore implements MessageStore {
             this.printTimes.set(0);
         }
 
-        if (msg.getTopic().length() > Byte.MAX_VALUE) {
+        if (msg.getTopic().length() > this.messageStoreConfig.getMaxTopicLength()) {
             log.warn("putMessage message topic length too long " + msg.getTopic().length());
             return new PutMessageResult(PutMessageStatus.MESSAGE_ILLEGAL, null);
         }
@@ -360,7 +360,7 @@ public class DefaultMessageStore implements MessageStore {
             this.printTimes.set(0);
         }
 
-        if (messageExtBatch.getTopic().length() > Byte.MAX_VALUE) {
+        if (messageExtBatch.getTopic().length() > this.messageStoreConfig.getMaxTopicLength()) {
             log.warn("PutMessages topic length too long " + messageExtBatch.getTopic().length());
             return new PutMessageResult(PutMessageStatus.MESSAGE_ILLEGAL, null);
         }
