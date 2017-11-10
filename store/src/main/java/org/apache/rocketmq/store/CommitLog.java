@@ -566,6 +566,9 @@ public class CommitLog {
             } else {
                 deliverMs = (deliverMs / 1000) * 1000;
             }
+            if (this.defaultMessageStore.getTimerMessageStore().isReject(deliverMs)) {
+                return new PutMessageResult(PutMessageStatus.OS_PAGECACHE_BUSY, null);
+            }
             MessageAccessor.putProperty(msg, MessageConst.PROPERTY_TIMER_OUT_MS, deliverMs + "");
             MessageAccessor.putProperty(msg, MessageConst.PROPERTY_REAL_TOPIC, msg.getTopic());
             MessageAccessor.putProperty(msg, MessageConst.PROPERTY_REAL_QUEUE_ID, String.valueOf(msg.getQueueId()));

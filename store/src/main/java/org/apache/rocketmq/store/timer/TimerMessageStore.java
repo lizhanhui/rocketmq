@@ -25,6 +25,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -57,11 +58,12 @@ import org.slf4j.LoggerFactory;
 
 public class TimerMessageStore {
     public static final String TIMER_TOPIC = MixAll.SYSTEM_TOPIC_PREFIX + "wheel_timer";
-    public static final String TIMER_DELAY_MS = MessageConst.PROPERTY_TIMER_OUT_MS;
+    public static final String TIMER_OUT_MS = MessageConst.PROPERTY_TIMER_OUT_MS;
     public static final String TIMER_ENQUEUE_MS = MessageConst.PROPERTY_TIMER_ENQUEUE_MS;
     public static final String TIMER_DEQUEUE_MS = MessageConst.PROPERTY_TIMER_DEQUEUE_MS;
     public static final String TIMER_ROLL_TIMES = MessageConst.PROPERTY_TIMER_ROLL_TIMES;
     public static final String TIMER_DELETE_UNIQKEY = MessageConst.PROPERTY_TIMER_DEL_UNIQKEY;
+    public static final Random random = new Random();
     public static final int PUT_OK = 0, PUT_NEED_RETRY = 1, PUT_NO_RETRY = 2;
     public static final int DAY_SECS = 24 * 3600;
     public static final int TIME_BLANK = 60 * 1000;
@@ -437,7 +439,7 @@ public class TimerMessageStore {
                     if (null == msgExt) {
                         perfs.getCounter("enqueue_get_miss");
                     } else {
-                        long delayedTime = Long.valueOf(msgExt.getProperty(TIMER_DELAY_MS));
+                        long delayedTime = Long.valueOf(msgExt.getProperty(TIMER_OUT_MS));
                         TimerRequest timerRequest = new TimerRequest(offsetPy, sizePy, delayedTime, System.currentTimeMillis(), -1, msgExt);
                         while (true) {
                             if (enqueuePutQueue.offer(timerRequest, 3, TimeUnit.SECONDS)) {
@@ -506,7 +508,7 @@ public class TimerMessageStore {
         tmpBuffer.putInt(sizePy);
         long ret = timerLog.append(tmpBuffer.array(), 0, TimerLog.UNIT_SIZE);
         if (-1 != ret) {
-            timerWheel.putSlot(delayedTime / 1000, slot.firstPos == -1 ? ret : slot.firstPos, ret);
+            timerWheel.putSlot(delayedTime / 1000, slot.firstPos == -1 ? ret : slot.firstPos, ret, slot.num + 1, slot.magic);
             addMetric(messageExt, 1);
         }
         return -1 != ret;
@@ -1142,9 +1144,9 @@ public class TimerMessageStore {
                         start = System.currentTimeMillis();
                         ConsumeQueue cq = messageStore.getConsumeQueue(TIMER_TOPIC, 0);
                         long maxOffsetInQueue = cq == null ? 0 : cq.getMaxOffsetInQueue();
-                        TimerMessageStore.log.info("[{}]Timer progress-time commitRead:[{}] currRead:[{}] preRead:[{}] currWrite:[{}] readBehind:{} enqPutQueue:{} deqGetQueue:{} deqPutQueue:{}",
+                        TimerMessageStore.log.info("[{}]Timer progress-time commitRead:[{}] currRead:[{}] preRead:[{}] currWrite:[{}] readBehind:{} enqPutQueue:{} deqGetQueue:{} deqPutQueue:{} allCongestNum:{}",
                             storeConfig.getBrokerRole(), format(commitReadTimeMs), (currReadTimeMs - commitReadTimeMs) / 1000, (preReadTimeMs - currReadTimeMs) / 1000, format(currWriteTimeMs),
-                            (System.currentTimeMillis() - currReadTimeMs) / 1000, enqueuePutQueue.size(), dequeueGetQueue.size(), dequeuePutQueue.size());
+                            (System.currentTimeMillis() - currReadTimeMs) / 1000, enqueuePutQueue.size(), dequeueGetQueue.size(), dequeuePutQueue.size(), getALlCongestNum());
                         TimerMessageStore.log.info("[{}]Timer progress-offset commitOffset:{} currReadOffset:{} offsetBehind:{} behindMaster:{}",
                             storeConfig.getBrokerRole(), commitQueueOffset, currQueueOffset - commitQueueOffset, maxOffsetInQueue - currQueueOffset, timerCheckpoint.getMasterTimerQueueOffset() - currQueueOffset);
                     }
@@ -1156,6 +1158,28 @@ public class TimerMessageStore {
             }
             TimerMessageStore.log.info(this.getServiceName() + " service end");
         }
+    }
+
+    public long getALlCongestNum() {
+        return timerWheel.getAllNum(currReadTimeMs/1000);
+    }
+
+    public long getCongestNum(long deliverTimeMs) {
+        return timerWheel.getNum(deliverTimeMs/1000);
+    }
+
+    public boolean isReject(long deliverTimeMs) {
+        long congestNum = timerWheel.getNum(deliverTimeMs/1000);
+        if (congestNum <= storeConfig.getTimerCongestNumEachSec()) {
+            return false;
+        }
+        if (congestNum >= storeConfig.getTimerCongestNumEachSec() * 2) {
+            return true;
+        }
+        if (random.nextInt(1000) > 1000 * (congestNum - storeConfig.getTimerCongestNumEachSec())/(storeConfig.getTimerCongestNumEachSec() + 0.1)) {
+            return true;
+        }
+        return false;
     }
 
     public void prepareTimerCheckPoint() {

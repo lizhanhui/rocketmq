@@ -99,6 +99,7 @@ public class TimerMessageStoreTest {
         TimerCheckpoint timerCheckpoint = new TimerCheckpoint(rootDir + File.separator + "config" + File.separator + "timercheck");
         TimerMetrics timerMetrics = new TimerMetrics(rootDir + File.separator + "config" + File.separator + "timermetrics");
         TimerMessageStore timerMessageStore = new TimerMessageStore(messageStore, storeConfig, timerCheckpoint, timerMetrics);
+        messageStore.setTimerMessageStore(timerMessageStore);
         baseDirs.add(rootDir);
         timerStores.add(timerMessageStore);
         return timerMessageStore;
@@ -138,6 +139,36 @@ public class TimerMessageStoreTest {
             Assert.assertEquals(0, timerMessageStore.getTimerMetrics().getTimingCount(topic + i));
         }
     }
+
+    @Test
+    public void testTimerFlowControl() throws Exception {
+        String topic = "TimerTest_testTimerFlowControl";
+        storeConfig.setTimerCongestNumEachSec(100);
+        TimerMessageStore timerMessageStore = createTimerMessageStore(null);
+        timerMessageStore.load();
+        timerMessageStore.start();
+        long curr = (System.currentTimeMillis() / 1000) * 1000;
+        long delayMs = curr + 10000;
+        int passFlowControlNum = 0;
+        for (int i = 0; i < 500; i++) {
+            long congestNum = timerMessageStore.getCongestNum(delayMs - 1000);
+            assertTrue(congestNum <= 220);
+            MessageExtBrokerInner inner = buildMessage(delayMs, topic, false);
+            PutMessageResult putMessageResult = messageStore.putMessage(inner);
+            if (congestNum < 100) {
+                assertEquals(PutMessageStatus.PUT_OK, putMessageResult.getPutMessageStatus());
+            } else  {
+                if (PutMessageStatus.PUT_OK == putMessageResult.getPutMessageStatus()) {
+                    passFlowControlNum++;
+                }
+            }
+            //wait reput
+            Thread.sleep(5);
+        }
+        assertTrue(passFlowControlNum > 80);
+        assertTrue(passFlowControlNum < 120);
+    }
+
 
     @Test
     public void testPutExpiredTimerMessage() throws Exception {

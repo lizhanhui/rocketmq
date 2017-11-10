@@ -157,6 +157,8 @@ public class MessageStoreConfig {
     private boolean timerInterceptDelayLevel = false;
     private boolean timerEnableDisruptor = false;
 
+    private int timerCongestNumEachSec = Integer.MAX_VALUE;
+
 
     public boolean isDebugLockEnable() {
         return debugLockEnable;
@@ -777,4 +779,11 @@ public class MessageStoreConfig {
         this.timerEnableDisruptor = timerEnableDisruptor;
     }
 
+    public int getTimerCongestNumEachSec() {
+        return timerCongestNumEachSec;
+    }
+
+    public void setTimerCongestNumEachSec(int timerCongestNumEachSec) {
+        this.timerCongestNumEachSec = timerCongestNumEachSec;
+    }
 }
