@@ -23,8 +23,12 @@ import java.nio.ByteBuffer;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
@@ -39,13 +43,16 @@ import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.common.ServiceThread;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
 import org.apache.rocketmq.common.TopicFilterType;
+import org.apache.rocketmq.common.UtilAll;
 import org.apache.rocketmq.common.constant.LoggerName;
+import org.apache.rocketmq.common.message.Message;
 import org.apache.rocketmq.common.message.MessageAccessor;
 import org.apache.rocketmq.common.message.MessageClientIDSetter;
 import org.apache.rocketmq.common.message.MessageConst;
 import org.apache.rocketmq.common.message.MessageDecoder;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.store.ConsumeQueue;
+import org.apache.rocketmq.store.DefaultMessageStore;
 import org.apache.rocketmq.store.MappedFile;
 import org.apache.rocketmq.store.MessageExtBrokerInner;
 import org.apache.rocketmq.store.MessageStore;
@@ -112,6 +119,7 @@ public class TimerMessageStore {
     private final MessageStoreConfig storeConfig;
     private volatile BrokerRole lastBrokerRole = BrokerRole.SLAVE;
     private TimerMetrics timerMetrics;
+    private long lastTimeOfCheckMetrics = System.currentTimeMillis();
     private AtomicInteger frequency = new AtomicInteger(0);
 
     public TimerMessageStore(final MessageStore messageStore, final MessageStoreConfig storeConfig,
@@ -228,7 +236,7 @@ public class TimerMessageStore {
     }
 
     public long reviseQueueOffset(long processOffset) {
-        SelectMappedBufferResult selectRes = timerLog.getTimerMessage(processOffset - (TimerLog.UNIT_SIZE - TimerLog.UNIT_PRE_SIZE));
+        SelectMappedBufferResult selectRes = timerLog.getTimerMessage(processOffset - (TimerLog.UNIT_SIZE - TimerLog.UNIT_PRE_SIZE_FOR_MSG));
         if (null == selectRes) {
             return -1;
         }
@@ -289,6 +297,7 @@ public class TimerMessageStore {
                     break;
                 }
             }
+            sbr.release();
             checkOffset = mappedFiles.get(index).getFileFromOffset() + position;
             if (stopCheck) {
                 break;
@@ -329,6 +338,30 @@ public class TimerMessageStore {
                 }
             }
         }, 30, 30, TimeUnit.SECONDS);
+
+        scheduler.scheduleAtFixedRate(new Runnable() {
+            @Override public void run() {
+                try {
+                    if (storeConfig.isTimerEnableCheckMetrics()) {
+                        String when = storeConfig.getTimerCheckMetricsWhen();
+                        if (!UtilAll.isItTimeToDo(when)) {
+                            return;
+                        };
+                        long curr = System.currentTimeMillis();
+                        if (curr - lastTimeOfCheckMetrics > 70 * 60 * 1000) {
+                            lastTimeOfCheckMetrics = curr;
+                            checkAndReviseMetrics();
+                            log.info("Timer do check timer metrics cost {} ms", System.currentTimeMillis() - curr);
+                        }
+                    }
+                } catch (Exception e) {
+                    log.error("Error in cleaning timerlog", e);
+                }
+            }
+        }, 45, 45, TimeUnit.MINUTES);
+
+
+
         state = RUNNING;
         log.info("Timer start ok currReadTimerMs:[{}] queueOffset:[{}]", new Timestamp(currReadTimeMs), currQueueOffset);
     }
@@ -491,13 +524,6 @@ public class TimerMessageStore {
 
     public boolean doEnqueue(long offsetPy, int sizePy, long delayedTime, MessageExt messageExt) {
         log.debug("Do enqueue [{}] [{}]", new Timestamp(delayedTime), messageExt);
-        int size = 4  //size
-            + 8 //prev pos
-            + 4 //magic value
-            + 8 //curr write time, for trace
-            + 4 //delayed time, for check
-            + 8 //offsetPy
-            + 4; //sizePy
         boolean needRoll = delayedTime - currWriteTimeMs >= timerRollWindowSec * 1000;
         int magic = MAGIC_DEFAULT;
         if (needRoll) {
@@ -508,17 +534,20 @@ public class TimerMessageStore {
         if (isDelete) {
             magic = magic | MAGIC_DELETE;
         }
+        String realTopic = messageExt.getProperty(MessageConst.PROPERTY_REAL_TOPIC);
 
         Slot slot = timerWheel.getSlot(delayedTime / 1000);
         ByteBuffer tmpBuffer = timerLogBuffer;
         tmpBuffer.clear();
-        tmpBuffer.putInt(size);
-        tmpBuffer.putLong(slot.lastPos);
-        tmpBuffer.putInt(magic);
-        tmpBuffer.putLong(currWriteTimeMs);
-        tmpBuffer.putInt((int) (delayedTime - currWriteTimeMs));
-        tmpBuffer.putLong(offsetPy);
-        tmpBuffer.putInt(sizePy);
+        tmpBuffer.putInt(TimerLog.UNIT_SIZE); //size
+        tmpBuffer.putLong(slot.lastPos); //prev pos
+        tmpBuffer.putInt(magic); //magic
+        tmpBuffer.putLong(currWriteTimeMs); //currWriteTime
+        tmpBuffer.putInt((int) (delayedTime - currWriteTimeMs)); //delayTime
+        tmpBuffer.putLong(offsetPy); //offset
+        tmpBuffer.putInt(sizePy); //size
+        tmpBuffer.putInt(hashTopicForMetrics(realTopic)); //hashcode of real topic
+        tmpBuffer.putLong(0); //reserved value, just set to 0 now
         long ret = timerLog.append(tmpBuffer.array(), 0, TimerLog.UNIT_SIZE);
         if (-1 != ret) {
             timerWheel.putSlot(delayedTime / 1000, slot.firstPos == -1 ? ret : slot.firstPos, ret, slot.num + 1, slot.magic);
@@ -569,7 +598,7 @@ public class TimerMessageStore {
                     timeSbr.getByteBuffer().position(position);
                     timeSbr.getByteBuffer().getInt(); //size
                     prevPos = timeSbr.getByteBuffer().getLong();
-                    timeSbr.getByteBuffer().position(position + 20);
+                    timeSbr.getByteBuffer().position(position + TimerLog.UNIT_PRE_SIZE_FOR_MSG);
                     long offsetPy = timeSbr.getByteBuffer().getLong();
                     int sizePy = timeSbr.getByteBuffer().getInt();
                     if (null == msgSbr || msgSbr.getStartOffset() > offsetPy) {
@@ -860,6 +889,126 @@ public class TimerMessageStore {
             MessageAccessor.clearProperty(msgInner, MessageConst.PROPERTY_REAL_QUEUE_ID);
         }
         return msgInner;
+    }
+
+    public int hashTopicForMetrics(String topic) {
+        return null == topic ? 0 : topic.hashCode();
+    }
+
+    public void checkAndReviseMetrics() {
+        Map<String, TimerMetrics.Metric> smallOnes = new HashMap<>();
+        Map<String, TimerMetrics.Metric> bigOnes = new HashMap<>();
+        Map<Integer, String> smallHashs = new HashMap<>();
+        Set<Integer> smallHashCollisions = new HashSet<>();
+        for (Map.Entry<String, TimerMetrics.Metric> entry : timerMetrics.getTimingCount().entrySet()) {
+            if (entry.getValue().getCount().get() < 100) {
+                smallOnes.put(entry.getKey(), entry.getValue());
+                int hash = hashTopicForMetrics(entry.getKey());
+                if (smallHashs.containsKey(hash)) {
+                    log.warn("Metric hash collision between small-small code:{} small topic:{}{} small topic:{}{}", hash,
+                        entry.getKey(), entry.getValue(),
+                        smallHashs.get(hash), smallOnes.get(smallHashs.get(hash)));
+                    smallHashCollisions.add(hash);
+                }
+                smallHashs.put(hash, entry.getKey());
+            } else {
+                bigOnes.put(entry.getKey(), entry.getValue());
+            }
+        }
+        //check the hash collision between small ons and big ons
+        for (Map.Entry<String, TimerMetrics.Metric> bjgEntry : bigOnes.entrySet()) {
+            if (smallHashs.containsKey(hashTopicForMetrics(bjgEntry.getKey()))) {
+                Iterator<Map.Entry<String, TimerMetrics.Metric>> smalllIt = smallOnes.entrySet().iterator();
+                while (smalllIt.hasNext()) {
+                    Map.Entry<String, TimerMetrics.Metric> smallEntry = smalllIt.next();
+                    if (hashTopicForMetrics(smallEntry.getKey()) == hashTopicForMetrics(bjgEntry.getKey())) {
+                        log.warn("Metric hash collision between small-big code:{} small topic:{}{} big topic:{}{}", hashTopicForMetrics(smallEntry.getKey()),
+                            smallEntry.getKey(), smallEntry.getValue(),
+                            bjgEntry.getKey(), bjgEntry.getValue());
+                        smalllIt.remove();
+                    }
+                }
+            }
+        }
+        //refresh
+        smallHashs.clear();
+        Map<String, TimerMetrics.Metric> newSmallOnes = new HashMap<>();
+        for (String topic: smallOnes.keySet()) {
+            newSmallOnes.put(topic, new TimerMetrics.Metric());
+            smallHashs.put(hashTopicForMetrics(topic), topic);
+        }
+
+        //travel the timer log
+        long readTimeMs = currReadTimeMs;
+        long currOffsetPy = timerWheel.checkPhyPos(readTimeMs, 0);
+        LinkedList<SelectMappedBufferResult> sbrs = new LinkedList<>();
+        boolean hasError = false;
+        try {
+            while (true) {
+                SelectMappedBufferResult timeSbr = timerLog.getWholeBuffer(currOffsetPy);
+                if (timeSbr == null) {
+                    break;
+                } else {
+                    sbrs.add(timeSbr);
+                }
+                ByteBuffer bf = timeSbr.getByteBuffer();
+                for (int position = 0 ; position < timeSbr.getSize(); position += TimerLog.UNIT_SIZE) {
+                    bf.position(position);
+                    bf.getInt();//size
+                    bf.getLong();//prev pos
+                    bf.getInt(); //magic
+                    long enqueueTime = bf.getLong();
+                    long delayedTime = bf.getInt() + enqueueTime;
+                    long offsetPy = bf.getLong();
+                    int sizePy = bf.getInt();
+                    int hashCode = bf.getInt();
+                    if (delayedTime < readTimeMs) {
+                        continue;
+                    }
+                    if (!smallHashs.containsKey(hashCode)) {
+                        continue;
+                    }
+                    String topic = null;
+                    if (smallHashCollisions.contains(hashCode)) {
+                        MessageExt messageExt = getMessageByCommitOffset(offsetPy, sizePy);
+                        if (null != messageExt) {
+                            topic =  messageExt.getProperty(MessageConst.PROPERTY_REAL_TOPIC);
+                        }
+                    } else {
+                        topic = smallHashs.get(hashCode);
+                    }
+                    if (null != topic && newSmallOnes.containsKey(topic)) {
+                        newSmallOnes.get(topic).getCount().addAndGet(1);
+                    } else {
+                        log.warn("Unexpected topic in checking timer metrics topic:{} code:{} offsetPy:{} size:{}", topic, hashCode, offsetPy, sizePy);
+                    }
+                }
+                if (timeSbr.getSize() < timerLogFileSize) {
+                    break;
+                } else {
+                    currOffsetPy =  currOffsetPy + timerLogFileSize;
+                }
+            }
+
+        } catch (Exception e) {
+            hasError = true;
+            log.error("Unknown error in checkAndReviseMetrics and abort", e);
+        }  finally {
+            for (SelectMappedBufferResult sbr : sbrs) {
+                if (null != sbr) {
+                    sbr.release();
+                }
+            }
+        }
+
+        if (!hasError) {
+            //update
+            for (String topic : newSmallOnes.keySet()) {
+                log.info("Revise metric for topic {} from {} to {}", topic, smallOnes.get(topic), newSmallOnes.get(topic));
+            }
+            timerMetrics.getTimingCount().putAll(newSmallOnes);
+        }
+
     }
 
     class TimerEnqueueGetService extends ServiceThread {

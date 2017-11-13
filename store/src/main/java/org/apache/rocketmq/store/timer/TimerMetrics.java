@@ -16,7 +16,6 @@
  */
 package org.apache.rocketmq.store.timer;
 
-import java.io.File;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -155,6 +154,10 @@ public class TimerMetrics extends ConfigManager {
 
         public void setTimeStamp(long timeStamp) {
             this.timeStamp = timeStamp;
+        }
+        @Override
+        public String toString() {
+            return String.format("[%d,%d]", count.get(), timeStamp);
         }
     }
 

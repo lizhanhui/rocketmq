@@ -156,6 +156,8 @@ public class MessageStoreConfig {
     private boolean timerSkipUnknownError = false;
     private boolean timerInterceptDelayLevel = false;
     private boolean timerEnableDisruptor = false;
+    private String timerCheckMetricsWhen = "05";
+    private boolean timerEnableCheckMetrics = true;
 
     private int timerCongestNumEachSec = Integer.MAX_VALUE;
 
@@ -785,5 +787,21 @@ public class MessageStoreConfig {
 
     public void setTimerCongestNumEachSec(int timerCongestNumEachSec) {
         this.timerCongestNumEachSec = timerCongestNumEachSec;
+    }
+
+    public String getTimerCheckMetricsWhen() {
+        return timerCheckMetricsWhen;
+    }
+
+    public void setTimerCheckMetricsWhen(String timerCheckMetricsWhen) {
+        this.timerCheckMetricsWhen = timerCheckMetricsWhen;
+    }
+
+    public boolean isTimerEnableCheckMetrics() {
+        return timerEnableCheckMetrics;
+    }
+
+    public void setTimerEnableCheckMetrics(boolean timerEnableCheckMetrics) {
+        this.timerEnableCheckMetrics = timerEnableCheckMetrics;
     }
 }

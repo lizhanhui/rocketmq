@@ -449,7 +449,7 @@ public class MappedFileQueue {
                         result.getByteBuffer().getLong(); //prev pos
                         int magic = result.getByteBuffer().getInt();
                         if (size == unitSize && TimerMessageStore.isMagicOK(magic)) {
-                            result.getByteBuffer().position(position + TimerLog.UNIT_PRE_SIZE);
+                            result.getByteBuffer().position(position + TimerLog.UNIT_PRE_SIZE_FOR_MSG);
                             long maxOffsetPy = result.getByteBuffer().getLong();
                             destroy = maxOffsetPy < offset;
                             if (destroy) {
