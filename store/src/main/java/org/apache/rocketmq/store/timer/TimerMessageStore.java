@@ -1056,7 +1056,7 @@ public class TimerMessageStore {
                                     while (!doRes && !isStopped() && isMaster()) {
                                         doRes =  PUT_NEED_RETRY != doPut(msg, false);
                                         if (!doRes) {
-                                            Thread.sleep(50);
+                                            Thread.sleep(500);
                                         }
                                         maybeMoveWriteTime();
                                     }
@@ -1156,7 +1156,7 @@ public class TimerMessageStore {
                                 doRes  = PUT_NEED_RETRY !=  doPut(msg, needRoll(tr.getMagic()));
                                 while (!doRes && !isStopped() && isRunningDequeue()) {
                                     doRes = PUT_NEED_RETRY != doPut(msg, needRoll(tr.getMagic()));
-                                    Thread.sleep(50);
+                                    Thread.sleep(500);
                                 }
                                 perfs.endTick("dequeue_put");
                             } catch (Throwable t) {
