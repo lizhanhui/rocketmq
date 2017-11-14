@@ -731,6 +731,7 @@ public class MQClientAPIImpl {
                         AckResult ackResult=new AckResult();
 						if (ResponseCode.SUCCESS == response.getCode()) {
 							ackResult.setStatus(AckStatus.OK);
+							ackResult.setPopTime(responseHeader.getPopTime());
 							ackResult.setExtraInfo(requestHeader.getOffset() + MessageConst.KEY_SEPARATOR + responseHeader.getPopTime() + MessageConst.KEY_SEPARATOR + responseHeader.getInvisibleTime()
 							+ MessageConst.KEY_SEPARATOR + responseHeader.getReviveQid() + MessageConst.KEY_SEPARATOR  + requestHeader.getTopic());
 						}else {

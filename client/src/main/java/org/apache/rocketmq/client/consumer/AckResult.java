@@ -20,6 +20,14 @@ package org.apache.rocketmq.client.consumer;
 public class AckResult {
 	private AckStatus status;
 	private String extraInfo;
+	private long popTime;
+	
+	public void setPopTime(long popTime) {
+		this.popTime = popTime;
+	}
+	public long getPopTime() {
+		return popTime;
+	}
 	public AckStatus getStatus() {
 		return status;
 	}

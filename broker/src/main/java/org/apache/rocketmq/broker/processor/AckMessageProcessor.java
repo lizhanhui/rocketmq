@@ -23,7 +23,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 
@@ -35,6 +34,7 @@ import org.apache.rocketmq.common.TopicConfig;
 import org.apache.rocketmq.common.TopicFilterType;
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.common.help.FAQUrl;
+import org.apache.rocketmq.common.message.MessageAccessor;
 import org.apache.rocketmq.common.message.MessageConst;
 import org.apache.rocketmq.common.message.MessageDecoder;
 import org.apache.rocketmq.common.message.MessageExt;
@@ -72,6 +72,7 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 					try {
 						Thread.sleep(5000L);
 						TopicConfig topicConfig = brokerController.getTopicConfigManager().selectTopicConfig(reviveTopic);
+						POP_LOGGER.info("start revive topic:{}",reviveTopic);
 						for (int i = 0; i < topicConfig.getReadQueueNums(); i++) {
 							try {
 
@@ -81,7 +82,7 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 								long startTime = 0;
 								long endTime = 0;
 								long oldOffset = brokerController.getConsumerOffsetManager().queryOffset(PopAckConstants.REVIVE_GROUP, reviveTopic, i);
-								POP_LOGGER.error("topic is {}, queueId is {}, old offset is {} ", reviveTopic,i,oldOffset);
+								POP_LOGGER.info("reviveQueueId={}, old offset is {} ",i,oldOffset);
 								long offset = oldOffset + 1;
 								while (true) {
 									List<MessageExt> messageExts = getReviveMessage(offset, i);
@@ -89,17 +90,19 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 										if (endTime != 0 && (System.currentTimeMillis() - endTime > 10 * PopAckConstants.ackTimeInterval)) {
 											endTime = System.currentTimeMillis();
 										}
-										POP_LOGGER.info("topic is {}, queueId is {}, offset is {}, can not get new msg  ", reviveTopic, i, offset);
+										POP_LOGGER.info("reviveQueueId={}, offset is {}, can not get new msg  ", i, offset);
 										break;
 									}
 									if (System.currentTimeMillis() - startScanTime > PopAckConstants.scanTime) {
-										POP_LOGGER.info("topic is {}, queueId is {}, scan timeout  ", reviveTopic,i);
+										POP_LOGGER.info("reviveQueueId={}, scan timeout  ",i);
 										break;
 									}
 									for (MessageExt messageExt : messageExts) {
 										long deliverTime = Long.valueOf(messageExt.getUserProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS));
 										if (PopAckConstants.CK_TAG.equals(messageExt.getTags())) {
-											PopCheckPoint point = JSON.parseObject(new String(messageExt.getBody(), DataConverter.charset), PopCheckPoint.class);
+											String raw = new String(messageExt.getBody(), DataConverter.charset);
+											POP_LOGGER.info("reviveQueueId={},find ck, offset:{}, raw : {}", messageExt.getQueueId(), messageExt.getQueueOffset(), raw);
+											PopCheckPoint point = JSON.parseObject(raw, PopCheckPoint.class);
 											if (point.getTopic() == null || point.getCid() == null) {
 												continue;
 											}
@@ -108,9 +111,10 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 												startTime = deliverTime;
 											}
 											point.setReviveOffset(messageExt.getQueueOffset());
-											POP_LOGGER.info("find ck: {}" ,point);
 										} else if (PopAckConstants.ACK_TAG.equals(messageExt.getTags())) {
-											AckMsg ackMsg = JSON.parseObject(new String(messageExt.getBody(), DataConverter.charset), AckMsg.class);
+											String raw = new String(messageExt.getBody(), DataConverter.charset);
+											POP_LOGGER.info("reviveQueueId={},find ack, offset:{}, raw : {}", messageExt.getQueueId(), messageExt.getQueueOffset(), raw);
+											AckMsg ackMsg = JSON.parseObject(raw, AckMsg.class);
 											PopCheckPoint point = map.get(ackMsg.getTopic() + ackMsg.getConsumerGroup() + ackMsg.getQueueId() + ackMsg.getStartOffset() + ackMsg.getPopTime());
 											if (point != null) {
 												point.setBitMap(DataConverter.setBit(point.getBitMap(), (int) (ackMsg.getAckOffset() - ackMsg.getStartOffset()), true));
@@ -129,6 +133,11 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 										return (int) (o1.getReviveOffset() - o2.getReviveOffset());
 									}
 								});
+								POP_LOGGER.info("reviveQueueId={},ck list size={}", i, sortList.size());
+								if (sortList.size()!=0) {
+									POP_LOGGER.info("reviveQueueId={}, 1st ck, startOffset={}, reviveOffset={} ; last ck, startOffset={}, reviveOffset={}",i, sortList.get(0).getStartOffset(),
+											sortList.get(0).getReviveOffset(), sortList.get(sortList.size() - 1).getStartOffset(), sortList.get(sortList.size() - 1).getReviveOffset());
+								}
 								long newOffset = oldOffset;
 								for (PopCheckPoint popCheckPoint : sortList) {
 									if (endTime - popCheckPoint.getReviveTime() > PopAckConstants.ackTimeInterval) {
@@ -144,7 +153,11 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 												}
 												msgInner.setBody(messageExt.getBody());
 												msgInner.setQueueId(0);
-												msgInner.setTags(messageExt.getTags());
+												if (messageExt.getTags() != null) {
+													msgInner.setTags(messageExt.getTags());
+												}else {
+													MessageAccessor.setProperties(msgInner, new HashMap<String, String>());
+												}
 												msgInner.setBornTimestamp(messageExt.getBornTimestamp());
 												msgInner.setBornHost(brokerController.getStoreHost());
 												msgInner.setStoreHost(brokerController.getStoreHost());
@@ -156,9 +169,9 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 												msgInner.setPropertiesString(MessageDecoder.messageProperties2String(msgInner.getProperties()));
 												addRetryTopicIfNoExit(msgInner.getTopic());
 												PutMessageResult putMessageResult = brokerController.getMessageStore().putMessage(msgInner);
-												POP_LOGGER.info("retry msg , topic {}, cid {}, queueId {}, offset {}, result is {}",popCheckPoint.getTopic(),popCheckPoint.getCid(),messageExt.getQueueId(),messageExt.getQueueOffset(),putMessageResult);
+												POP_LOGGER.info("reviveQueueId={},retry msg , topic {}, cid {}, msg queueId {}, offset {}, result is {}",i,popCheckPoint.getTopic(),popCheckPoint.getCid(),messageExt.getQueueId(),messageExt.getQueueOffset(),putMessageResult);
 												if (putMessageResult.getAppendMessageResult().getStatus()!=AppendMessageStatus.PUT_OK) {
-													throw new Exception("revive error ,msg is :"+msgInner);
+													throw new Exception("reviveQueueId=" + i + "revive error ,msg is :"+msgInner);
 												}
 											}
 										}
@@ -167,13 +180,13 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 									}
 									newOffset = popCheckPoint.getReviveOffset();
 								}
-								POP_LOGGER.info("revive finish, topic is {}, queueId is {}, old offset is {}, new offset is {}  ", reviveTopic, i, oldOffset, newOffset);
+								POP_LOGGER.info("reviveQueueId={},revive finish,old offset is {}, new offset is {}  ", i, oldOffset, newOffset);
 								if (newOffset > oldOffset) {
 									brokerController.getConsumerOffsetManager().commitOffset(PopAckConstants.LOCAL_HOST, PopAckConstants.REVIVE_GROUP, reviveTopic, i, newOffset);
 								}
 							
 							} catch (Exception e) {
-								POP_LOGGER.error("revive error , queueId is "+i, e);
+								POP_LOGGER.error("reviveQueueId=" + i + ",revive error", e);
 							}
 						}
 
