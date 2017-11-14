@@ -16,8 +16,6 @@
  */
 package org.apache.rocketmq.client.consumer;
 
-import java.util.HashSet;
-import java.util.Set;
 import org.apache.rocketmq.client.ClientConfig;
 import org.apache.rocketmq.client.QueryResult;
 import org.apache.rocketmq.client.consumer.rebalance.AllocateMessageQueueAveragely;
@@ -32,6 +30,10 @@ import org.apache.rocketmq.common.message.MessageQueue;
 import org.apache.rocketmq.common.protocol.heartbeat.MessageModel;
 import org.apache.rocketmq.remoting.RPCHook;
 import org.apache.rocketmq.remoting.exception.RemotingException;
+
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Default pulling consumer
@@ -73,7 +75,7 @@ public class DefaultMQPullConsumer extends ClientConfig implements MQPullConsume
     /**
      * Topic set you want to register
      */
-    private Set<String> registerTopics = new HashSet<String>();
+    private Set<String> registerTopics = Collections.synchronizedSet(new HashSet<String>());
     /**
      * Queue allocation algorithm
      */
@@ -204,6 +206,10 @@ public class DefaultMQPullConsumer extends ClientConfig implements MQPullConsume
         return registerTopics;
     }
 
+    public void removeRegisterTopic(final String topic) {
+        this.registerTopics.remove(topic);
+    }
+
     public void setRegisterTopics(Set<String> registerTopics) {
         this.registerTopics = registerTopics;
     }
@@ -315,41 +321,53 @@ public class DefaultMQPullConsumer extends ClientConfig implements MQPullConsume
         throws RemotingException, MQBrokerException, InterruptedException, MQClientException {
         this.defaultMQPullConsumerImpl.sendMessageBack(msg, delayLevel, brokerName, consumerGroup);
     }
+
     @Override
-	public PopResult peekMessage(MessageQueue mq, int maxNums, long timeout) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
-		return this.defaultMQPullConsumerImpl.peek(mq, maxNums, timeout);
-	}
+    public PopResult peekMessage(MessageQueue mq, int maxNums, long timeout) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+        registerTopics.add(mq.getTopic());
+        return this.defaultMQPullConsumerImpl.peek(mq, maxNums, timeout);
+    }
+
     @Override
-	public PopResult pop(MessageQueue mq, long invisibleTime, int maxNums, String consumerGroup, long timeout, int initMode) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
-		registerTopics.add(mq.getTopic());
-    	return this.defaultMQPullConsumerImpl.pop(mq, invisibleTime, maxNums, consumerGroup, timeout, initMode);
-	}
+    public PopResult pop(MessageQueue mq, long invisibleTime, int maxNums, String consumerGroup, long timeout, int initMode) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+        registerTopics.add(mq.getTopic());
+        return this.defaultMQPullConsumerImpl.pop(mq, invisibleTime, maxNums, consumerGroup, timeout, initMode);
+    }
+
     @Override
-	public void popAsync(MessageQueue mq, long invisibleTime, int maxNums, String consumerGroup, long timeout,PopCallback popCallback, boolean poll, int initMode) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
-		registerTopics.add(mq.getTopic());
-    	this.defaultMQPullConsumerImpl.popAsync(mq, invisibleTime, maxNums, consumerGroup, timeout, popCallback, poll, initMode);
-	}
+    public void popAsync(MessageQueue mq, long invisibleTime, int maxNums, String consumerGroup, long timeout, PopCallback popCallback, boolean poll, int initMode) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+        registerTopics.add(mq.getTopic());
+        this.defaultMQPullConsumerImpl.popAsync(mq, invisibleTime, maxNums, consumerGroup, timeout, popCallback, poll, initMode);
+    }
+
     @Override
-	public void peekAsync(MessageQueue mq, int maxNums, String consumerGroup, long timeout,PopCallback popCallback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
-		registerTopics.add(mq.getTopic());
-    	this.defaultMQPullConsumerImpl.peekAsync(mq, maxNums, consumerGroup, timeout, popCallback);
-	}
+    public void peekAsync(MessageQueue mq, int maxNums, String consumerGroup, long timeout, PopCallback popCallback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+        registerTopics.add(mq.getTopic());
+        this.defaultMQPullConsumerImpl.peekAsync(mq, maxNums, consumerGroup, timeout, popCallback);
+    }
+
     @Override
-	public void ackMessage(MessageQueue mq, long offset, String consumerGroup, String extraInfo) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
-		 this.defaultMQPullConsumerImpl.ack(mq, offset, consumerGroup, extraInfo);
-	}
+    public void ackMessage(MessageQueue mq, long offset, String consumerGroup, String extraInfo) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+        registerTopics.add(mq.getTopic());
+        this.defaultMQPullConsumerImpl.ack(mq, offset, consumerGroup, extraInfo);
+    }
+
     @Override
-	public void ackMessageAsync(MessageQueue mq, long offset, String consumerGroup, String extraInfo,long timeOut,AckCallback callback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
-		 this.defaultMQPullConsumerImpl.ackAsync(mq, offset, consumerGroup, extraInfo, timeOut, callback);
-	}
+    public void ackMessageAsync(MessageQueue mq, long offset, String consumerGroup, String extraInfo, long timeOut, AckCallback callback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+        registerTopics.add(mq.getTopic());
+        this.defaultMQPullConsumerImpl.ackAsync(mq, offset, consumerGroup, extraInfo, timeOut, callback);
+    }
+
     @Override
-	public void  changeInvisibleTimeAsync(MessageQueue mq, long offset, String consumerGroup, String extraInfo, long invisibleTime, long timeoutMillis, AckCallback callback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException{
-		 this.defaultMQPullConsumerImpl.changeInvisibleTimeAsync(mq, offset, consumerGroup, extraInfo, invisibleTime, timeoutMillis, callback);
-	}	
-	
+    public void changeInvisibleTimeAsync(MessageQueue mq, long offset, String consumerGroup, String extraInfo, long invisibleTime, long timeoutMillis, AckCallback callback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+        registerTopics.add(mq.getTopic());
+        this.defaultMQPullConsumerImpl.changeInvisibleTimeAsync(mq, offset, consumerGroup, extraInfo, invisibleTime, timeoutMillis, callback);
+    }
+
     @Override
     public void statisticsMessages(MessageQueue mq, String consumerGroup, long timeout, StatisticsMessagesCallback callback)
-            throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+        throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+        registerTopics.add(mq.getTopic());
         this.defaultMQPullConsumerImpl.statisticsMessages(mq, consumerGroup, timeout, callback);
     }
 
