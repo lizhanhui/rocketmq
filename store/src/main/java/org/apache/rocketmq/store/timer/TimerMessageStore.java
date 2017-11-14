@@ -45,14 +45,12 @@ import org.apache.rocketmq.common.ThreadFactoryImpl;
 import org.apache.rocketmq.common.TopicFilterType;
 import org.apache.rocketmq.common.UtilAll;
 import org.apache.rocketmq.common.constant.LoggerName;
-import org.apache.rocketmq.common.message.Message;
 import org.apache.rocketmq.common.message.MessageAccessor;
 import org.apache.rocketmq.common.message.MessageClientIDSetter;
 import org.apache.rocketmq.common.message.MessageConst;
 import org.apache.rocketmq.common.message.MessageDecoder;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.store.ConsumeQueue;
-import org.apache.rocketmq.store.DefaultMessageStore;
 import org.apache.rocketmq.store.MappedFile;
 import org.apache.rocketmq.store.MessageExtBrokerInner;
 import org.apache.rocketmq.store.MessageStore;
@@ -351,7 +349,7 @@ public class TimerMessageStore {
                         if (curr - lastTimeOfCheckMetrics > 70 * 60 * 1000) {
                             lastTimeOfCheckMetrics = curr;
                             checkAndReviseMetrics();
-                            log.info("Timer do check timer metrics cost {} ms", System.currentTimeMillis() - curr);
+                            log.info("[CheckAndReviseMetrics]Timer do check timer metrics cost {} ms", System.currentTimeMillis() - curr);
                         }
                     }
                 } catch (Exception e) {
@@ -820,12 +818,12 @@ public class TimerMessageStore {
     }
 
     //0 succ; 1 fail, need retry; 2 fail, do not retry;
-    private int doPut(MessageExtBrokerInner message) throws Exception {
+    private int doPut(MessageExtBrokerInner message, boolean roll) throws Exception {
         if (lastBrokerRole == BrokerRole.SLAVE) {
             log.warn("Trying do put timer msg in slave, [{}]", message);
             return PUT_NO_RETRY;
         }
-        if (null != message.getProperty(MessageConst.PROPERTY_TIMER_DEL_UNIQKEY)) {
+        if (!roll && null != message.getProperty(MessageConst.PROPERTY_TIMER_DEL_UNIQKEY)) {
             log.warn("Trying do put delete timer msg [{}]", message);
             return PUT_NO_RETRY;
         }
@@ -905,7 +903,7 @@ public class TimerMessageStore {
                 smallOnes.put(entry.getKey(), entry.getValue());
                 int hash = hashTopicForMetrics(entry.getKey());
                 if (smallHashs.containsKey(hash)) {
-                    log.warn("Metric hash collision between small-small code:{} small topic:{}{} small topic:{}{}", hash,
+                    log.warn("[CheckAndReviseMetrics]Metric hash collision between small-small code:{} small topic:{}{} small topic:{}{}", hash,
                         entry.getKey(), entry.getValue(),
                         smallHashs.get(hash), smallOnes.get(smallHashs.get(hash)));
                     smallHashCollisions.add(hash);
@@ -922,7 +920,7 @@ public class TimerMessageStore {
                 while (smalllIt.hasNext()) {
                     Map.Entry<String, TimerMetrics.Metric> smallEntry = smalllIt.next();
                     if (hashTopicForMetrics(smallEntry.getKey()) == hashTopicForMetrics(bjgEntry.getKey())) {
-                        log.warn("Metric hash collision between small-big code:{} small topic:{}{} big topic:{}{}", hashTopicForMetrics(smallEntry.getKey()),
+                        log.warn("[CheckAndReviseMetrics]Metric hash collision between small-big code:{} small topic:{}{} big topic:{}{}", hashTopicForMetrics(smallEntry.getKey()),
                             smallEntry.getKey(), smallEntry.getValue(),
                             bjgEntry.getKey(), bjgEntry.getValue());
                         smalllIt.remove();
@@ -980,7 +978,7 @@ public class TimerMessageStore {
                     if (null != topic && newSmallOnes.containsKey(topic)) {
                         newSmallOnes.get(topic).getCount().addAndGet(1);
                     } else {
-                        log.warn("Unexpected topic in checking timer metrics topic:{} code:{} offsetPy:{} size:{}", topic, hashCode, offsetPy, sizePy);
+                        log.warn("[CheckAndReviseMetrics]Unexpected topic in checking timer metrics topic:{} code:{} offsetPy:{} size:{}", topic, hashCode, offsetPy, sizePy);
                     }
                 }
                 if (timeSbr.getSize() < timerLogFileSize) {
@@ -992,7 +990,7 @@ public class TimerMessageStore {
 
         } catch (Exception e) {
             hasError = true;
-            log.error("Unknown error in checkAndReviseMetrics and abort", e);
+            log.error("[CheckAndReviseMetrics]Unknown error in checkAndReviseMetrics and abort", e);
         }  finally {
             for (SelectMappedBufferResult sbr : sbrs) {
                 if (null != sbr) {
@@ -1004,7 +1002,7 @@ public class TimerMessageStore {
         if (!hasError) {
             //update
             for (String topic : newSmallOnes.keySet()) {
-                log.info("Revise metric for topic {} from {} to {}", topic, smallOnes.get(topic), newSmallOnes.get(topic));
+                log.info("[CheckAndReviseMetrics]Revise metric for topic {} from {} to {}", topic, smallOnes.get(topic), newSmallOnes.get(topic));
             }
             timerMetrics.getTimingCount().putAll(newSmallOnes);
         }
@@ -1056,7 +1054,7 @@ public class TimerMessageStore {
                                 if (isMaster() && req.getDelayTime() < currWriteTimeMs) {
                                     MessageExtBrokerInner msg = convert(req.getMsg(), System.currentTimeMillis(), false);
                                     while (!doRes && !isStopped() && isMaster()) {
-                                        doRes =  PUT_NEED_RETRY != doPut(msg);
+                                        doRes =  PUT_NEED_RETRY != doPut(msg, false);
                                         if (!doRes) {
                                             Thread.sleep(50);
                                         }
@@ -1155,9 +1153,9 @@ public class TimerMessageStore {
                                 perfs.startTick("dequeue_put");
                                 addMetric(tr.getMsg(), -1);
                                 MessageExtBrokerInner msg = convert(tr.getMsg(), tr.getEnqueueTime(), needRoll(tr.getMagic()));
-                                doRes  = PUT_NEED_RETRY !=  doPut(msg);
+                                doRes  = PUT_NEED_RETRY !=  doPut(msg, needRoll(tr.getMagic()));
                                 while (!doRes && !isStopped() && isRunningDequeue()) {
-                                    doRes = PUT_NEED_RETRY != doPut(msg);
+                                    doRes = PUT_NEED_RETRY != doPut(msg, needRoll(tr.getMagic()));
                                     Thread.sleep(50);
                                 }
                                 perfs.endTick("dequeue_put");
