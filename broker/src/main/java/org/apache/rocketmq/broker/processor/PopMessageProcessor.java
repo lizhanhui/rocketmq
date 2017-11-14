@@ -343,6 +343,13 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 			}
 			getMessageTmpResult = this.brokerController.getMessageStore().getMessage(requestHeader.getConsumerGroup(), topic, queueId, offset,
 					requestHeader.getMaxMsgNums() - getMessageResult.getMessageMapedList().size(), null);
+			// maybe store offset is not correct.
+			if (GetMessageStatus.OFFSET_TOO_SMALL.equals(getMessageTmpResult.getStatus())
+					|| GetMessageStatus.OFFSET_OVERFLOW_BADLY.equals(getMessageTmpResult.getStatus())) {
+				getMessageTmpResult = this.brokerController.getMessageStore().getMessage(requestHeader.getConsumerGroup(), topic, queueId, getMessageTmpResult.getNextBeginOffset(),
+						requestHeader.getMaxMsgNums() - getMessageResult.getMessageMapedList().size(), null);
+			}
+
 			restNum = getMessageTmpResult.getMaxOffset() - getMessageTmpResult.getNextBeginOffset() + restNum;
 			if (!getMessageTmpResult.getMessageMapedList().isEmpty()) {
 				appendCheckPoint(channel, requestHeader, topic,reviveQid, queueId, offset, getMessageTmpResult,popTime);
@@ -364,7 +371,8 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 			if (ConsumeInitMode.MIN == requestHeader.getInitMode()) {
 				offset = this.brokerController.getMessageStore().getMinOffsetInQueue(topic, queueId);
 			} else {
-				offset = this.brokerController.getMessageStore().getMaxOffsetInQueue(topic, queueId);
+				// pop last one,then commit offset.
+				offset = this.brokerController.getMessageStore().getMaxOffsetInQueue(topic, queueId) - 1;
 			}
 		}
 		return offset;

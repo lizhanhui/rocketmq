@@ -24,10 +24,49 @@ public class StatisticsMessagesResult extends RemotingSerializable {
 	private long delayMessages;
 	private long totalMessages;
 
+	public StatisticsMessagesResult() {
+		this.activeMessages = 0;
+		this.inactiveMessages = 0;
+		this.delayMessages = 0;
+		this.totalMessages = 0;
+	}
+
 	public StatisticsMessagesResult(long activeMessages, long delayMessages, long totalMessages) {
 		this.activeMessages = activeMessages;
 		this.inactiveMessages = 0;
 		this.delayMessages = delayMessages;
+		this.totalMessages = totalMessages;
+	}
+
+	public long getActiveMessages() {
+		return activeMessages;
+	}
+
+	public void setActiveMessages(long activeMessages) {
+		this.activeMessages = activeMessages;
+	}
+
+	public long getInactiveMessages() {
+		return inactiveMessages;
+	}
+
+	public void setInactiveMessages(long inactiveMessages) {
+		this.inactiveMessages = inactiveMessages;
+	}
+
+	public long getDelayMessages() {
+		return delayMessages;
+	}
+
+	public void setDelayMessages(long delayMessages) {
+		this.delayMessages = delayMessages;
+	}
+
+	public long getTotalMessages() {
+		return totalMessages;
+	}
+
+	public void setTotalMessages(long totalMessages) {
 		this.totalMessages = totalMessages;
 	}
 
