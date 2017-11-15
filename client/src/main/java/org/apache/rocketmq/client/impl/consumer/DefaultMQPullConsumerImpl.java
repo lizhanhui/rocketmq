@@ -134,6 +134,12 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner ,MQPopConsumer
 
     public Set<MessageQueue> fetchSubscribeMessageQueues(String topic) throws MQClientException {
         this.makeSureStateOK();
+        // check if has info in memory, otherwise invoke api.
+        Set<MessageQueue> result = this.rebalanceImpl.getTopicSubscribeInfoTable().get(topic);
+        if (null != result) {
+            return result;
+        }
+
         return this.mQClientFactory.getMQAdminImpl().fetchSubscribeMessageQueues(topic);
     }
 
@@ -329,6 +335,25 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner ,MQPopConsumer
         if (subTable != null) {
             if (subTable.containsKey(topic)) {
                 this.rebalanceImpl.getTopicSubscribeInfoTable().put(topic, info);
+            }
+        }
+    }
+
+    @Override
+    public void removeTopicSubscribeInfo(String topic) {
+        this.defaultMQPullConsumer.removeRegisterTopic(topic);
+        Map<String, SubscriptionData> subTable = this.rebalanceImpl.getSubscriptionInner();
+        if (subTable != null) {
+            SubscriptionData prev = subTable.remove(topic);
+            if (prev != null) {
+                log.info("removeTopicSubscribeInfo remove SubscriptionInner: {}, {}", topic, prev);
+            }
+        }
+        ConcurrentMap<String, Set<MessageQueue>> subInfoTable = this.rebalanceImpl.getTopicSubscribeInfoTable();
+        if (subInfoTable != null) {
+            Set<MessageQueue> prev = subInfoTable.remove(topic);
+            if (prev != null) {
+                log.info("removeTopicSubscribeInfo remove TopicSubscribeInfoTable: {}, {}", topic, prev);
             }
         }
     }
@@ -745,6 +770,7 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner ,MQPopConsumer
 	}	
 	@Override
 	public PopResult peek(MessageQueue mq, int maxNums, long timeout) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+        this.subscriptionAutomatically(mq.getTopic());
 		FindBrokerResult findBrokerResult = this.mQClientFactory.findBrokerAddressInSubscribe(mq.getBrokerName(), MixAll.MASTER_ID, true);
 		if (null == findBrokerResult) {
 			this.mQClientFactory.updateTopicRouteInfoFromNameServer(mq.getTopic());
@@ -764,6 +790,7 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner ,MQPopConsumer
 
 	@Override
 	public void ack(MessageQueue mq, long offset, String consumerGroup, String extraInfo) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+        this.subscriptionAutomatically(mq.getTopic());
 		FindBrokerResult findBrokerResult = this.mQClientFactory.findBrokerAddressInSubscribe(mq.getBrokerName(), MixAll.MASTER_ID, true);
 		if (null == findBrokerResult) {
 			this.mQClientFactory.updateTopicRouteInfoFromNameServer(mq.getTopic());
@@ -788,6 +815,7 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner ,MQPopConsumer
 	}
 	@Override
 	public void ackAsync(MessageQueue mq, long offset, String consumerGroup, String extraInfo,long timeOut,AckCallback callback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+        this.subscriptionAutomatically(mq.getTopic());
 		FindBrokerResult findBrokerResult = this.mQClientFactory.findBrokerAddressInSubscribe(mq.getBrokerName(), MixAll.MASTER_ID, true);
 		if (null == findBrokerResult) {
 			this.mQClientFactory.updateTopicRouteInfoFromNameServer(mq.getTopic());
@@ -813,6 +841,7 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner ,MQPopConsumer
 	@Override
 	public void changeInvisibleTimeAsync(MessageQueue mq, long offset, String consumerGroup, String extraInfo, long invisibleTime, long timeoutMillis, AckCallback callback)
 			throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+        this.subscriptionAutomatically(mq.getTopic());
 		FindBrokerResult findBrokerResult = this.mQClientFactory.findBrokerAddressInSubscribe(mq.getBrokerName(), MixAll.MASTER_ID, true);
 		if (null == findBrokerResult) {
 			this.mQClientFactory.updateTopicRouteInfoFromNameServer(mq.getTopic());
@@ -844,6 +873,7 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner ,MQPopConsumer
     @Override
     public void statisticsMessages(MessageQueue mq, String consumerGroup, long timeout, StatisticsMessagesCallback callback)
             throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+        this.subscriptionAutomatically(mq.getTopic());
         FindBrokerResult findBrokerResult = this.mQClientFactory.findBrokerAddressInSubscribe(mq.getBrokerName(), MixAll.MASTER_ID, true);
         if (null == findBrokerResult) {
             this.mQClientFactory.updateTopicRouteInfoFromNameServer(mq.getTopic());

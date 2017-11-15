@@ -338,6 +338,14 @@ public class DefaultMQProducerImpl implements MQProducerInner {
     }
 
     @Override
+    public void removeTopicPublishInfo(String topic) {
+        TopicPublishInfo prev = this.topicPublishInfoTable.remove(topic);
+        if (prev != null) {
+            log.info("removeTopicPublishInfo {}, {}", topic, prev);
+        }
+    }
+
+    @Override
     public boolean isUnitMode() {
         return this.defaultMQProducer.isUnitMode();
     }
@@ -568,12 +576,12 @@ public class DefaultMQProducerImpl implements MQProducerInner {
     private TopicPublishInfo tryToFindTopicPublishInfo(final String topic) {
         TopicPublishInfo topicPublishInfo = this.topicPublishInfoTable.get(topic);
         if (null == topicPublishInfo || !topicPublishInfo.ok()) {
-            this.topicPublishInfoTable.putIfAbsent(topic, new TopicPublishInfo());
+//            this.topicPublishInfoTable.putIfAbsent(topic, new TopicPublishInfo());
             this.mQClientFactory.updateTopicRouteInfoFromNameServer(topic);
             topicPublishInfo = this.topicPublishInfoTable.get(topic);
         }
 
-        if (topicPublishInfo.isHaveTopicRouterInfo() || topicPublishInfo.ok()) {
+        if (topicPublishInfo != null && (topicPublishInfo.isHaveTopicRouterInfo() || topicPublishInfo.ok())) {
             return topicPublishInfo;
         } else {
             this.mQClientFactory.updateTopicRouteInfoFromNameServer(topic, true, this.defaultMQProducer);
