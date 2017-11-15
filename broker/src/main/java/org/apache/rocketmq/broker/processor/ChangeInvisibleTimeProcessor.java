@@ -125,6 +125,7 @@ public class ChangeInvisibleTimeProcessor implements NettyRequestProcessor {
 		msgInner.setBornHost(this.brokerController.getStoreHost());
 		msgInner.setStoreHost(this.brokerController.getStoreHost());
 		msgInner.putUserProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS, String.valueOf(Long.valueOf(extraInfo[1]) + Long.valueOf(extraInfo[2])));
+		msgInner.setPropertiesString(MessageDecoder.messageProperties2String(msgInner.getProperties()));
 		PutMessageResult putMessageResult = this.brokerController.getMessageStore().putMessage(msgInner);
 		if (putMessageResult.getPutMessageStatus() != PutMessageStatus.PUT_OK 
 				&& putMessageResult.getPutMessageStatus() != PutMessageStatus.FLUSH_DISK_TIMEOUT
@@ -162,6 +163,7 @@ public class ChangeInvisibleTimeProcessor implements NettyRequestProcessor {
 		msgInner.setBornHost(this.brokerController.getStoreHost());
 		msgInner.setStoreHost(this.brokerController.getStoreHost());
 		msgInner.putUserProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS, String.valueOf(ck.getReviveTime()-PopAckConstants.ackTimeInterval));
+		msgInner.setPropertiesString(MessageDecoder.messageProperties2String(msgInner.getProperties()));
 		PutMessageResult putMessageResult = this.brokerController.getMessageStore().putMessage(msgInner);
 		POP_LOGGER.info("change Invisible , appendCheckPoint, topic {}, queueId {},reviveId {}, cid {}, startOffset {}, result {}", requestHeader.getTopic(), queueId, reviveQid, requestHeader.getConsumerGroup(), offset,
 				putMessageResult);

@@ -299,6 +299,7 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 		msgInner.setBornHost(this.brokerController.getStoreHost());
 		msgInner.setStoreHost(this.brokerController.getStoreHost());
 		msgInner.putUserProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS, String.valueOf(Long.valueOf(extraInfo[1]) + Long.valueOf(extraInfo[2])));
+		msgInner.setPropertiesString(MessageDecoder.messageProperties2String(msgInner.getProperties()));
 		PutMessageResult putMessageResult = this.brokerController.getMessageStore().putMessage(msgInner);
 		if (putMessageResult.getPutMessageStatus() != PutMessageStatus.PUT_OK 
 				&& putMessageResult.getPutMessageStatus() != PutMessageStatus.FLUSH_DISK_TIMEOUT
