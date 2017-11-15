@@ -390,6 +390,18 @@ public class DefaultMQAdminExtImpl implements MQAdminExt, MQAdminExtInner {
     }
 
     @Override
+    public void registerTopicToNameServer(Set<String> addrs, String topic, List<QueueData> queueDatas)
+        throws RemotingException, MQBrokerException, InterruptedException, MQClientException {
+        if (addrs == null) {
+            String ns = this.mqClientInstance.getMQClientAPIImpl().fetchNameServerAddr();
+            addrs = new HashSet(Arrays.asList(ns.split(";")));
+        }
+        for (String addr : addrs) {
+            this.mqClientInstance.getMQClientAPIImpl().registerTopicToNameServer(addr, topic, queueDatas, timeoutMillis);
+        }
+    }
+
+    @Override
     public void deleteSubscriptionGroup(String addr,
         String groupName) throws RemotingException, MQBrokerException, InterruptedException,
         MQClientException {

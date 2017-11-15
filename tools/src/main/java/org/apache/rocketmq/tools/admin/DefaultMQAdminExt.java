@@ -46,6 +46,7 @@ import org.apache.rocketmq.common.protocol.body.QueueTimeSpan;
 import org.apache.rocketmq.common.protocol.body.SubscriptionGroupWrapper;
 import org.apache.rocketmq.common.protocol.body.TopicConfigSerializeWrapper;
 import org.apache.rocketmq.common.protocol.body.TopicList;
+import org.apache.rocketmq.common.protocol.route.QueueData;
 import org.apache.rocketmq.common.protocol.route.TopicRouteData;
 import org.apache.rocketmq.common.subscription.SubscriptionGroupConfig;
 import org.apache.rocketmq.remoting.RPCHook;
@@ -282,6 +283,12 @@ public class DefaultMQAdminExt extends ClientConfig implements MQAdminExt {
         String topic) throws RemotingException, MQBrokerException, InterruptedException,
         MQClientException {
         defaultMQAdminExtImpl.deleteTopicInNameServer(addrs, topic);
+    }
+
+    @Override
+    public void registerTopicToNameServer(Set<String> addrs, String topic, List<QueueData> queueDatas)
+        throws RemotingException, MQBrokerException, InterruptedException, MQClientException {
+        defaultMQAdminExtImpl.registerTopicToNameServer(addrs, topic, queueDatas);
     }
 
     @Override

@@ -346,7 +346,8 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 			// maybe store offset is not correct.
 			if (GetMessageStatus.OFFSET_TOO_SMALL.equals(getMessageTmpResult.getStatus())
 					|| GetMessageStatus.OFFSET_OVERFLOW_BADLY.equals(getMessageTmpResult.getStatus())) {
-				getMessageTmpResult = this.brokerController.getMessageStore().getMessage(requestHeader.getConsumerGroup(), topic, queueId, getMessageTmpResult.getNextBeginOffset(),
+				offset = getMessageTmpResult.getNextBeginOffset();
+				getMessageTmpResult = this.brokerController.getMessageStore().getMessage(requestHeader.getConsumerGroup(), topic, queueId, offset,
 						requestHeader.getMaxMsgNums() - getMessageResult.getMessageMapedList().size(), null);
 			}
 

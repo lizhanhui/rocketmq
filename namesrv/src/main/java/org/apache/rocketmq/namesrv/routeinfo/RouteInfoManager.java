@@ -70,6 +70,34 @@ public class RouteInfoManager {
         return clusterInfoSerializeWrapper.encode();
     }
 
+    public void registerTopic(final String topic, List<QueueData> queueDatas) {
+        if (queueDatas == null || queueDatas.isEmpty()) {
+            return;
+        }
+        try {
+            try {
+                this.lock.writeLock().lockInterruptibly();
+                if (this.topicQueueTable.containsKey(topic)) {
+                    log.info("Topic route already exist.{}, {}", topic, this.topicQueueTable.get(topic));
+                } else {
+                    // check
+                    for (QueueData queueData : queueDatas) {
+                        if (!this.brokerAddrTable.containsKey(queueData.getBrokerName())) {
+                            log.warn("Register topic contains illegal broker, {}, {}", topic, queueData);
+                            return;
+                        }
+                    }
+                    this.topicQueueTable.put(topic, queueDatas);
+                    log.info("Register topic route:{}, {}", topic, queueDatas);
+                }
+            } finally {
+                this.lock.writeLock().unlock();
+            }
+        } catch (Exception e) {
+            log.error("registerTopic Exception", e);
+        }
+    }
+
     public void deleteTopic(final String topic) {
         try {
             try {

@@ -41,6 +41,7 @@ import org.apache.rocketmq.common.protocol.header.namesrv.GetRouteInfoRequestHea
 import org.apache.rocketmq.common.protocol.header.namesrv.PutKVConfigRequestHeader;
 import org.apache.rocketmq.common.protocol.header.namesrv.RegisterBrokerRequestHeader;
 import org.apache.rocketmq.common.protocol.header.namesrv.RegisterBrokerResponseHeader;
+import org.apache.rocketmq.common.protocol.header.namesrv.RegisterTopicRequestHeader;
 import org.apache.rocketmq.common.protocol.header.namesrv.UnRegisterBrokerRequestHeader;
 import org.apache.rocketmq.common.protocol.header.namesrv.WipeWritePermOfBrokerRequestHeader;
 import org.apache.rocketmq.common.protocol.header.namesrv.WipeWritePermOfBrokerResponseHeader;
@@ -98,6 +99,8 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
                 return getAllTopicListFromNameserver(ctx, request);
             case RequestCode.DELETE_TOPIC_IN_NAMESRV:
                 return deleteTopicInNamesrv(ctx, request);
+            case RequestCode.REGISTER_TOPIC_IN_NAMESRV:
+                return registerTopicToNamesrv(ctx, request);
             case RequestCode.GET_KVLIST_BY_NAMESPACE:
                 return this.getKVListByNamespace(ctx, request);
             case RequestCode.GET_TOPICS_BY_CLUSTER:
@@ -339,6 +342,22 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         byte[] body = this.namesrvController.getRouteInfoManager().getAllTopicList();
 
         response.setBody(body);
+        response.setCode(ResponseCode.SUCCESS);
+        response.setRemark(null);
+        return response;
+    }
+
+    private RemotingCommand registerTopicToNamesrv(ChannelHandlerContext ctx, RemotingCommand request) throws RemotingCommandException {
+        final RemotingCommand response = RemotingCommand.createResponseCommand(null);
+
+        final RegisterTopicRequestHeader requestHeader =
+            (RegisterTopicRequestHeader) request.decodeCommandCustomHeader(RegisterTopicRequestHeader.class);
+
+        TopicRouteData topicRouteData = TopicRouteData.decode(request.getBody(), TopicRouteData.class);
+        if (topicRouteData != null && topicRouteData.getQueueDatas() != null && !topicRouteData.getQueueDatas().isEmpty()) {
+            this.namesrvController.getRouteInfoManager().registerTopic(requestHeader.getTopic(), topicRouteData.getQueueDatas());
+        }
+
         response.setCode(ResponseCode.SUCCESS);
         response.setRemark(null);
         return response;

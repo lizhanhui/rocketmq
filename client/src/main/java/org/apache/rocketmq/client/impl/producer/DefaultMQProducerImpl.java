@@ -573,7 +573,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
             null).setResponseCode(ClientErrorCode.NOT_FOUND_TOPIC_EXCEPTION);
     }
 
-    private TopicPublishInfo tryToFindTopicPublishInfo(final String topic) {
+    private TopicPublishInfo tryToFindTopicPublishInfo(final String topic) throws MQClientException {
         TopicPublishInfo topicPublishInfo = this.topicPublishInfoTable.get(topic);
         if (null == topicPublishInfo || !topicPublishInfo.ok()) {
 //            this.topicPublishInfoTable.putIfAbsent(topic, new TopicPublishInfo());
@@ -584,9 +584,13 @@ public class DefaultMQProducerImpl implements MQProducerInner {
         if (topicPublishInfo != null && (topicPublishInfo.isHaveTopicRouterInfo() || topicPublishInfo.ok())) {
             return topicPublishInfo;
         } else {
-            this.mQClientFactory.updateTopicRouteInfoFromNameServer(topic, true, this.defaultMQProducer);
-            topicPublishInfo = this.topicPublishInfoTable.get(topic);
-            return topicPublishInfo;
+            if (defaultMQProducer.isUseDefaultTopicIfNotFound()) {
+                this.mQClientFactory.updateTopicRouteInfoFromNameServer(topic, true, this.defaultMQProducer);
+                topicPublishInfo = this.topicPublishInfoTable.get(topic);
+                return topicPublishInfo;
+            } else {
+                throw new MQClientException(ResponseCode.TOPIC_NOT_EXIST, "Topic " + topic + " not exist!");
+            }
         }
     }
 

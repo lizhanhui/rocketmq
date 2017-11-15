@@ -44,6 +44,7 @@ import org.apache.rocketmq.common.protocol.body.QueueTimeSpan;
 import org.apache.rocketmq.common.protocol.body.SubscriptionGroupWrapper;
 import org.apache.rocketmq.common.protocol.body.TopicConfigSerializeWrapper;
 import org.apache.rocketmq.common.protocol.body.TopicList;
+import org.apache.rocketmq.common.protocol.route.QueueData;
 import org.apache.rocketmq.common.protocol.route.TopicRouteData;
 import org.apache.rocketmq.common.subscription.SubscriptionGroupConfig;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
@@ -130,6 +131,9 @@ public interface MQAdminExt extends MQAdmin {
     void deleteTopicInNameServer(final Set<String> addrs,
         final String topic) throws RemotingException, MQBrokerException,
         InterruptedException, MQClientException;
+
+    void registerTopicToNameServer(final Set<String> addrs, final String topic, List<QueueData> queueDatas)
+        throws RemotingException, MQBrokerException, InterruptedException, MQClientException;
 
     void deleteSubscriptionGroup(final String addr, String groupName) throws RemotingException, MQBrokerException,
         InterruptedException, MQClientException;
