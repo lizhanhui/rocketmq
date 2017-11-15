@@ -522,11 +522,18 @@ public class TimerMessageStore {
 
     public boolean doEnqueue(long offsetPy, int sizePy, long delayedTime, MessageExt messageExt) {
         log.debug("Do enqueue [{}] [{}]", new Timestamp(delayedTime), messageExt);
-        boolean needRoll = delayedTime - currWriteTimeMs >= timerRollWindowSec * 1000;
+        //copy the value first, avoid concurrent problem
+        long tmpWriteTimeMs = currWriteTimeMs;
+        boolean needRoll = delayedTime - tmpWriteTimeMs >= timerRollWindowSec * 1000;
         int magic = MAGIC_DEFAULT;
         if (needRoll) {
             magic = magic | MAGIC_ROLL;
-            delayedTime = currWriteTimeMs + timerRollWindowSec * 1000;
+            if (delayedTime - tmpWriteTimeMs - timerRollWindowSec * 1000 < timerRollWindowSec / 3 * 1000) {
+                //give enough time to next roll
+                delayedTime = tmpWriteTimeMs + (timerRollWindowSec / 2) * 1000;
+            } else {
+                delayedTime = tmpWriteTimeMs + timerRollWindowSec * 1000;
+            }
         }
         boolean isDelete = messageExt.getProperty(TIMER_DELETE_UNIQKEY) != null;
         if (isDelete) {
@@ -540,8 +547,8 @@ public class TimerMessageStore {
         tmpBuffer.putInt(TimerLog.UNIT_SIZE); //size
         tmpBuffer.putLong(slot.lastPos); //prev pos
         tmpBuffer.putInt(magic); //magic
-        tmpBuffer.putLong(currWriteTimeMs); //currWriteTime
-        tmpBuffer.putInt((int) (delayedTime - currWriteTimeMs)); //delayTime
+        tmpBuffer.putLong(tmpWriteTimeMs); //currWriteTime
+        tmpBuffer.putInt((int) (delayedTime - tmpWriteTimeMs)); //delayTime
         tmpBuffer.putLong(offsetPy); //offset
         tmpBuffer.putInt(sizePy); //size
         tmpBuffer.putInt(hashTopicForMetrics(realTopic)); //hashcode of real topic
@@ -824,7 +831,7 @@ public class TimerMessageStore {
             return PUT_NO_RETRY;
         }
         if (!roll && null != message.getProperty(MessageConst.PROPERTY_TIMER_DEL_UNIQKEY)) {
-            log.warn("Trying do put delete timer msg [{}]", message);
+            log.warn("Trying do put delete timer msg:[{}] roll:[{}]", message, roll);
             return PUT_NO_RETRY;
         }
         PutMessageResult putMessageResult = messageStore.putMessage(message);
@@ -1302,13 +1309,15 @@ public class TimerMessageStore {
                     timerLog.getMappedFileQueue().flush(0);
                     if (System.currentTimeMillis() - start > storeConfig.getTimerProgressLogIntervalMs()) {
                         start = System.currentTimeMillis();
+                        long tmpQueueOffset = currQueueOffset;
                         ConsumeQueue cq = messageStore.getConsumeQueue(TIMER_TOPIC, 0);
                         long maxOffsetInQueue = cq == null ? 0 : cq.getMaxOffsetInQueue();
-                        TimerMessageStore.log.info("[{}]Timer progress-time commitRead:[{}] currRead:[{}] preRead:[{}] currWrite:[{}] readBehind:{} enqPutQueue:{} deqGetQueue:{} deqPutQueue:{} allCongestNum:{}",
-                            storeConfig.getBrokerRole(), format(commitReadTimeMs), (currReadTimeMs - commitReadTimeMs) / 1000, (preReadTimeMs - currReadTimeMs) / 1000, format(currWriteTimeMs),
-                            (System.currentTimeMillis() - currReadTimeMs) / 1000, enqueuePutQueue.size(), dequeueGetQueue.size(), dequeuePutQueue.size(), getALlCongestNum());
-                        TimerMessageStore.log.info("[{}]Timer progress-offset commitOffset:{} currReadOffset:{} offsetBehind:{} behindMaster:{}",
-                            storeConfig.getBrokerRole(), commitQueueOffset, currQueueOffset - commitQueueOffset, maxOffsetInQueue - currQueueOffset, timerCheckpoint.getMasterTimerQueueOffset() - currQueueOffset);
+                        TimerMessageStore.log.info("[{}]Timer progress-check commitRead:[{}] currRead:[{}] currWrite:[{}] readBehind:{} currReadOffset:{} offsetBehind:{} behindMaster:{} " +
+                                "enqPutQueue:{} deqGetQueue:{} deqPutQueue:{} allCongestNum:{}",
+                            storeConfig.getBrokerRole(),
+                            format(commitReadTimeMs), format(currReadTimeMs), format(currWriteTimeMs), (System.currentTimeMillis() - currReadTimeMs) / 1000,
+                            tmpQueueOffset, maxOffsetInQueue - tmpQueueOffset, timerCheckpoint.getMasterTimerQueueOffset() - tmpQueueOffset,
+                            enqueuePutQueue.size(), dequeueGetQueue.size(), dequeuePutQueue.size(), getALlCongestNum());
                     }
                     timerMetrics.persist();
                     waitForRunning(storeConfig.getTimerFlushIntervalMs());
