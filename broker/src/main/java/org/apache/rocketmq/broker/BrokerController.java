@@ -231,7 +231,6 @@ public class BrokerController {
             }
         }
         result = result && this.messageStore.load();
-        result = result && this.timerMessageStore.load();
 
         if (messageStoreConfig.isTimerWheelEnable()) {
             result = result && this.timerMessageStore.load();
