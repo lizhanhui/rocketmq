@@ -341,19 +341,25 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner ,MQPopConsumer
 
     @Override
     public void removeTopicSubscribeInfo(String topic) {
-        this.defaultMQPullConsumer.removeRegisterTopic(topic);
-        Map<String, SubscriptionData> subTable = this.rebalanceImpl.getSubscriptionInner();
-        if (subTable != null) {
-            SubscriptionData prev = subTable.remove(topic);
-            if (prev != null) {
-                log.info("removeTopicSubscribeInfo remove SubscriptionInner: {}, {}", topic, prev);
-            }
+        if (!this.defaultMQPullConsumer.isAutoCleanTopicRouteNotFound()) {
+            return;
         }
+
         ConcurrentMap<String, Set<MessageQueue>> subInfoTable = this.rebalanceImpl.getTopicSubscribeInfoTable();
         if (subInfoTable != null) {
             Set<MessageQueue> prev = subInfoTable.remove(topic);
             if (prev != null) {
                 log.info("removeTopicSubscribeInfo remove TopicSubscribeInfoTable: {}, {}", topic, prev);
+                for (MessageQueue mq : prev) {
+                    this.rebalanceImpl.removeProcessQueue(mq);
+                }
+            }
+        }
+        Map<String, SubscriptionData> subTable = this.rebalanceImpl.getSubscriptionInner();
+        if (subTable != null) {
+            SubscriptionData prev = subTable.remove(topic);
+            if (prev != null) {
+                log.info("removeTopicSubscribeInfo remove SubscriptionInner: {}, {}", topic, prev);
             }
         }
     }

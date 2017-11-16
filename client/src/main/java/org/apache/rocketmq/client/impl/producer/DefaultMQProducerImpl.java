@@ -339,6 +339,9 @@ public class DefaultMQProducerImpl implements MQProducerInner {
 
     @Override
     public void removeTopicPublishInfo(String topic) {
+        if (!this.defaultMQProducer.isAutoCleanTopicRouteNotFound()) {
+            return;
+        }
         TopicPublishInfo prev = this.topicPublishInfoTable.remove(topic);
         if (prev != null) {
             log.info("removeTopicPublishInfo {}, {}", topic, prev);

@@ -340,6 +340,12 @@ public class MQClientInstance {
                             topicList.add(subData.getTopic());
                         }
                     }
+                    if (impl instanceof DefaultMQPullConsumerImpl) {
+                        DefaultMQPullConsumerImpl consumer = (DefaultMQPullConsumerImpl) impl;
+                        if (consumer.getDefaultMQPullConsumer().isAutoUpdateTopicRoute()) {
+                            topicList.addAll(consumer.getRebalanceImpl().getSubscriptionInner().keySet());
+                        }
+                    }
                 }
             }
         }

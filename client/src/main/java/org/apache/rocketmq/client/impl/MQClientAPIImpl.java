@@ -1539,7 +1539,7 @@ public class MQClientAPIImpl {
         TopicRouteData topicRouteData = new TopicRouteData();
         topicRouteData.setQueueDatas(queueDatas);
 
-        RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.DELETE_TOPIC_IN_NAMESRV, requestHeader);
+        RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.REGISTER_TOPIC_IN_NAMESRV, requestHeader);
         request.setBody(topicRouteData.encode());
 
         RemotingCommand response = this.remotingClient.invokeSync(addr, request, timeoutMillis);

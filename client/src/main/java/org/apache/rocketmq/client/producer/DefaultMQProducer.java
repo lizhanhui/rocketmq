@@ -118,6 +118,17 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     private int maxMessageSize = 1024 * 1024 * 4; // 4M
 
     /**
+     * Whether auto clean the related info when topic route is not exist.
+     * 1. Clean topic publish route.
+     */
+    private boolean autoCleanTopicRouteNotFound = false;
+
+    /**
+     * If topic route not found when sending message, whether use the default topic route.
+     */
+    private boolean useDefaultTopicIfNotFound = true;
+
+    /**
      * Default constructor.
      */
     public DefaultMQProducer() {
@@ -760,5 +771,21 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
 
     public void setRetryTimesWhenSendAsyncFailed(final int retryTimesWhenSendAsyncFailed) {
         this.retryTimesWhenSendAsyncFailed = retryTimesWhenSendAsyncFailed;
+    }
+
+    public boolean isAutoCleanTopicRouteNotFound() {
+        return autoCleanTopicRouteNotFound;
+    }
+
+    public void setAutoCleanTopicRouteNotFound(boolean autoCleanTopicRouteNotFound) {
+        this.autoCleanTopicRouteNotFound = autoCleanTopicRouteNotFound;
+    }
+
+    public boolean isUseDefaultTopicIfNotFound() {
+        return useDefaultTopicIfNotFound;
+    }
+
+    public void setUseDefaultTopicIfNotFound(boolean useDefaultTopicIfNotFound) {
+        this.useDefaultTopicIfNotFound = useDefaultTopicIfNotFound;
     }
 }

@@ -44,7 +44,6 @@ public class ClientConfig {
     private boolean unitMode = false;
     private String unitName;
     private boolean vipChannelEnabled = Boolean.parseBoolean(System.getProperty(SEND_MESSAGE_WITH_VIP_CHANNEL_PROPERTY, "true"));
-    private boolean useDefaultTopicIfNotFound = true;
 
     public String buildMQClientId() {
         StringBuilder sb = new StringBuilder();
@@ -93,7 +92,6 @@ public class ClientConfig {
         this.unitMode = cc.unitMode;
         this.unitName = cc.unitName;
         this.vipChannelEnabled = cc.vipChannelEnabled;
-        this.useDefaultTopicIfNotFound = cc.useDefaultTopicIfNotFound;
     }
 
     public ClientConfig cloneClientConfig() {
@@ -108,7 +106,6 @@ public class ClientConfig {
         cc.unitMode = unitMode;
         cc.unitName = unitName;
         cc.vipChannelEnabled = vipChannelEnabled;
-        cc.useDefaultTopicIfNotFound = useDefaultTopicIfNotFound;
         return cc;
     }
 
@@ -176,20 +173,12 @@ public class ClientConfig {
         this.vipChannelEnabled = vipChannelEnabled;
     }
 
-    public boolean isUseDefaultTopicIfNotFound() {
-        return useDefaultTopicIfNotFound;
-    }
-
-    public void setUseDefaultTopicIfNotFound(boolean useDefaultTopicIfNotFound) {
-        this.useDefaultTopicIfNotFound = useDefaultTopicIfNotFound;
-    }
-
     @Override
     public String toString() {
         return "ClientConfig [namesrvAddr=" + namesrvAddr + ", clientIP=" + clientIP + ", instanceName=" + instanceName
             + ", clientCallbackExecutorThreads=" + clientCallbackExecutorThreads + ", pollNameServerInterval=" + pollNameServerInterval
             + ", heartbeatBrokerInterval=" + heartbeatBrokerInterval + ", persistConsumerOffsetInterval="
             + persistConsumerOffsetInterval + ", unitMode=" + unitMode + ", unitName=" + unitName + ", vipChannelEnabled="
-            + vipChannelEnabled + ", useDefaultTopicIfNotFound=" + useDefaultTopicIfNotFound + "]";
+            + vipChannelEnabled + "]";
     }
 }
