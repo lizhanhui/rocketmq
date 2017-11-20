@@ -28,6 +28,7 @@ import org.apache.rocketmq.common.protocol.ResponseCode;
 import org.apache.rocketmq.common.protocol.body.CheckClientRequestBody;
 import org.apache.rocketmq.common.protocol.header.UnregisterClientRequestHeader;
 import org.apache.rocketmq.common.protocol.header.UnregisterClientResponseHeader;
+import org.apache.rocketmq.common.protocol.heartbeat.ConsumeType;
 import org.apache.rocketmq.common.protocol.heartbeat.ConsumerData;
 import org.apache.rocketmq.common.protocol.heartbeat.HeartbeatData;
 import org.apache.rocketmq.common.protocol.heartbeat.ProducerData;
@@ -82,6 +83,13 @@ public class ClientManageProcessor implements NettyRequestProcessor {
         );
 
         for (ConsumerData data : heartbeatData.getConsumerDataSet()) {
+            //Reject the PullConsumer
+            if (brokerController.getBrokerConfig().isRejectPullConsumerEnable()) {
+                if (ConsumeType.CONSUME_ACTIVELY == data.getConsumeType()) {
+                    continue;
+                }
+            }
+
             SubscriptionGroupConfig subscriptionGroupConfig =
                 this.brokerController.getSubscriptionGroupManager().findSubscriptionGroupConfig(
                     data.getGroupName());

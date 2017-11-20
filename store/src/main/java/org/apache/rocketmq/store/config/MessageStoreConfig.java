@@ -165,6 +165,9 @@ public class MessageStoreConfig {
     private boolean timerStopDequeue = false;
 
 
+    @ImportantField
+    private boolean wakeCommitWhenPutMessage = true;
+
     public boolean isDebugLockEnable() {
         return debugLockEnable;
     }
@@ -822,5 +825,12 @@ public class MessageStoreConfig {
 
     public void setTimerStopDequeue(boolean timerStopDequeue) {
         this.timerStopDequeue = timerStopDequeue;
+    }
+    public boolean isWakeCommitWhenPutMessage() {
+        return wakeCommitWhenPutMessage;
+    }
+
+    public void setWakeCommitWhenPutMessage(boolean wakeCommitWhenPutMessage) {
+        this.wakeCommitWhenPutMessage = wakeCommitWhenPutMessage;
     }
 }

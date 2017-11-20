@@ -74,7 +74,12 @@ public class PullAPIWrapper {
         this.updatePullFromWhichNode(mq, pullResultExt.getSuggestWhichBrokerId());
         if (PullStatus.FOUND == pullResult.getPullStatus()) {
             ByteBuffer byteBuffer = ByteBuffer.wrap(pullResultExt.getMessageBinary());
-            List<MessageExt> msgList = MessageDecoder.decodes(byteBuffer);
+            List<MessageExt> msgList = MessageDecoder.decodesBatch(
+                byteBuffer,
+                this.mQClientFactory.getClientConfig().isDecodeReadBody(),
+                this.mQClientFactory.getClientConfig().isDecodeDecompressBody(),
+                true
+            );
 
             List<MessageExt> msgListFilterAgain = msgList;
             if (!subscriptionData.getTagsSet().isEmpty() && !subscriptionData.isClassFilterMode()) {
@@ -147,7 +152,8 @@ public class PullAPIWrapper {
         final long brokerSuspendMaxTimeMillis,
         final long timeoutMillis,
         final CommunicationMode communicationMode,
-        final PullCallback pullCallback
+        final PullCallback pullCallback,
+        final String subProperties
     ) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
         FindBrokerResult findBrokerResult =
             this.mQClientFactory.findBrokerAddressInSubscribe(mq.getBrokerName(),
@@ -185,6 +191,7 @@ public class PullAPIWrapper {
             requestHeader.setSuspendTimeoutMillis(brokerSuspendMaxTimeMillis);
             requestHeader.setSubscription(subExpression);
             requestHeader.setSubVersion(subVersion);
+            requestHeader.setSubProperties(subProperties);
             requestHeader.setExpressionType(expressionType);
 
             String brokerAddr = findBrokerResult.getBrokerAddr();
@@ -216,7 +223,8 @@ public class PullAPIWrapper {
         final long brokerSuspendMaxTimeMillis,
         final long timeoutMillis,
         final CommunicationMode communicationMode,
-        final PullCallback pullCallback
+        final PullCallback pullCallback,
+        final String subProperties
     ) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
         return pullKernelImpl(
             mq,
@@ -229,7 +237,8 @@ public class PullAPIWrapper {
             brokerSuspendMaxTimeMillis,
             timeoutMillis,
             communicationMode,
-            pullCallback
+            pullCallback,
+            subProperties
         );
     }
 

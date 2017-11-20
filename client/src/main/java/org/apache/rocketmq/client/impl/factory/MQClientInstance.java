@@ -127,6 +127,7 @@ public class MQClientInstance {
         this.instanceIndex = instanceIndex;
         this.nettyClientConfig = new NettyClientConfig();
         this.nettyClientConfig.setClientCallbackExecutorThreads(clientConfig.getClientCallbackExecutorThreads());
+        this.nettyClientConfig.setUseTLS(clientConfig.isUseTLS());
         this.clientRemotingProcessor = new ClientRemotingProcessor(this);
         this.mQClientAPIImpl = new MQClientAPIImpl(this.nettyClientConfig, this.clientRemotingProcessor, rpcHook, clientConfig);
 
@@ -1215,5 +1216,9 @@ public class MQClientInstance {
 
     public NettyClientConfig getNettyClientConfig() {
         return nettyClientConfig;
+    }
+
+    public ClientConfig getClientConfig() {
+        return clientConfig;
     }
 }

@@ -18,6 +18,10 @@
 package org.apache.rocketmq.client.consumer;
 
 import org.apache.rocketmq.common.filter.ExpressionType;
+import org.apache.rocketmq.common.message.MessageDecoder;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Message selector: select message at server.
@@ -40,6 +44,10 @@ public class MessageSelector {
      * expression content.
      */
     private String expression;
+    /**
+     * self define properties, just an extend point.
+     */
+    private Map<String, String> properties = new HashMap<String, String>(4);
 
     private MessageSelector(String type, String expression) {
         this.type = type;
@@ -70,5 +78,32 @@ public class MessageSelector {
 
     public String getExpression() {
         return expression;
+    }
+
+    public void putProperty(String key, String value) {
+        if (key == null || value == null || key.trim() == "" || value.trim() == "") {
+            throw new IllegalArgumentException(
+                "Key and Value can not be null or empty string!"
+            );
+        }
+        this.properties.put(key, value);
+    }
+
+    public void putAllProperties(Map<String, String> puts) {
+        if (puts == null || puts.isEmpty()) {
+            return;
+        }
+        this.properties.putAll(puts);
+    }
+
+    public Map<String, String> getProperties() {
+        return properties;
+    }
+
+    public String getPropertiesStr() {
+        if (this.properties == null || this.properties.isEmpty()) {
+            return null;
+        }
+        return MessageDecoder.messageProperties2String(this.properties);
     }
 }

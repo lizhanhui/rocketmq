@@ -367,6 +367,22 @@ public class MessageDecoder {
         return decodes(byteBuffer, true);
     }
 
+    public static List<MessageExt> decodesBatch(java.nio.ByteBuffer byteBuffer,
+                                                final boolean readBody,
+                                                final boolean decompressBody,
+                                                final boolean isClient) {
+        List<MessageExt> msgExts = new ArrayList<MessageExt>();
+        while (byteBuffer.hasRemaining()) {
+            MessageExt msgExt = decode(byteBuffer, readBody, decompressBody, isClient);
+            if (null != msgExt) {
+                msgExts.add(msgExt);
+            } else {
+                break;
+            }
+        }
+        return msgExts;
+    }
+
     public static List<MessageExt> decodes(java.nio.ByteBuffer byteBuffer, final boolean readBody) {
         List<MessageExt> msgExts = new ArrayList<MessageExt>();
         while (byteBuffer.hasRemaining()) {
