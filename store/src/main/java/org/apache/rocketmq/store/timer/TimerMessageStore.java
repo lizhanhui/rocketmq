@@ -851,7 +851,6 @@ public class TimerMessageStore {
             return PUT_NO_RETRY;
         }
         PutMessageResult putMessageResult = messageStore.putMessage(message);
-        log.warn("de queue msg :{}, put result is {} , pstr {} ",message,putMessageResult,message.getPropertiesString());
         int retryNum = 0;
         while (retryNum < 3) {
             if (null == putMessageResult || null == putMessageResult.getPutMessageStatus()) {
