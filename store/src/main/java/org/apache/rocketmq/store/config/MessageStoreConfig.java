@@ -161,6 +161,9 @@ public class MessageStoreConfig {
 
     private int timerCongestNumEachSec = Integer.MAX_VALUE;
 
+    private boolean timerStopEnqueue = false;
+    private boolean timerStopDequeue = false;
+
 
     public boolean isDebugLockEnable() {
         return debugLockEnable;
@@ -803,5 +806,21 @@ public class MessageStoreConfig {
 
     public void setTimerEnableCheckMetrics(boolean timerEnableCheckMetrics) {
         this.timerEnableCheckMetrics = timerEnableCheckMetrics;
+    }
+
+    public boolean isTimerStopEnqueue() {
+        return timerStopEnqueue;
+    }
+
+    public void setTimerStopEnqueue(boolean timerStopEnqueue) {
+        this.timerStopEnqueue = timerStopEnqueue;
+    }
+
+    public boolean isTimerStopDequeue() {
+        return timerStopDequeue;
+    }
+
+    public void setTimerStopDequeue(boolean timerStopDequeue) {
+        this.timerStopDequeue = timerStopDequeue;
     }
 }

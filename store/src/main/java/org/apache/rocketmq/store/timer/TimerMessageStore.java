@@ -119,6 +119,10 @@ public class TimerMessageStore {
     private TimerMetrics timerMetrics;
     private long lastTimeOfCheckMetrics = System.currentTimeMillis();
     private AtomicInteger frequency = new AtomicInteger(0);
+    //the dequeue is an asynchronous process, use this flag to track if the status has changed
+    private boolean dequeueStatusChangeFlag = false;
+
+
 
     public TimerMessageStore(final MessageStore messageStore, final MessageStoreConfig storeConfig,
         TimerCheckpoint timerCheckpoint, TimerMetrics timerMetrics) throws IOException {
@@ -459,6 +463,9 @@ public class TimerMessageStore {
 
     }
     public boolean enqueue(int queueId) {
+        if (storeConfig.isTimerStopEnqueue()) {
+            return false;
+        }
         if (!isRunningEnqueue()) {
             return false;
         }
@@ -680,6 +687,9 @@ public class TimerMessageStore {
     }
 
     public int dequeue() throws Exception {
+        if (storeConfig.isTimerStopDequeue()) {
+            return -1;
+        }
         if (!isRunningDequeue())
             return -1;
         if (currReadTimeMs >= currWriteTimeMs) {
@@ -692,6 +702,9 @@ public class TimerMessageStore {
             return 0;
         }
         try {
+            //clear the flag
+            dequeueStatusChangeFlag = false;
+
             long currOffsetPy = slot.lastPos;
             Set<String> deleteUniqKeys = new ConcurrentSkipListSet<>();
             LinkedList<TimerRequest> normalMsgStack = new LinkedList<>();
@@ -757,6 +770,9 @@ public class TimerMessageStore {
             }
             checkDequeueLatch(normalLatch, currReadTimeMs);
             // if master -> slave -> master, then the read time move forward, and messages will be lossed
+            if (dequeueStatusChangeFlag) {
+                return -1;
+            }
             if (!isRunningDequeue()) {
                 return -1;
             }
@@ -1155,13 +1171,21 @@ public class TimerMessageStore {
                     setState(StateService.RUNNING);
                     boolean doRes = false;
                     try {
-                        while (!isStopped() && !doRes && isRunningDequeue()) {
+                        while (!isStopped() && !doRes) {
+                            if (!isRunningDequeue()) {
+                                dequeueStatusChangeFlag = true;
+                                break;
+                            }
                             try {
                                 perfs.startTick("dequeue_put");
                                 addMetric(tr.getMsg(), -1);
                                 MessageExtBrokerInner msg = convert(tr.getMsg(), tr.getEnqueueTime(), needRoll(tr.getMagic()));
                                 doRes  = PUT_NEED_RETRY !=  doPut(msg, needRoll(tr.getMagic()));
-                                while (!doRes && !isStopped() && isRunningDequeue()) {
+                                while (!doRes && !isStopped()) {
+                                    if (!isRunningDequeue()) {
+                                        dequeueStatusChangeFlag = true;
+                                        break;
+                                    }
                                     doRes = PUT_NEED_RETRY != doPut(msg, needRoll(tr.getMagic()));
                                     Thread.sleep(500);
                                 }
