@@ -55,7 +55,7 @@ public class SendTimerMessageIT extends BaseConf {
 
     @After
     public void tearDown() {
-        super.shutDown();
+        shutdown();
     }
 
     @Test

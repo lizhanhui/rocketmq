@@ -18,10 +18,15 @@ package org.apache.rocketmq.client.impl.consumer;
 
 import org.apache.rocketmq.client.QueryResult;
 import org.apache.rocketmq.client.Validators;
+import org.apache.rocketmq.client.consumer.AckCallback;
 import org.apache.rocketmq.client.consumer.DefaultMQPullConsumer;
+import org.apache.rocketmq.client.consumer.MQPopConsumer;
+import org.apache.rocketmq.client.consumer.PopCallback;
+import org.apache.rocketmq.client.consumer.PopResult;
 import org.apache.rocketmq.client.consumer.PullCallback;
 import org.apache.rocketmq.client.consumer.PullMessageSelector;
 import org.apache.rocketmq.client.consumer.PullResult;
+import org.apache.rocketmq.client.consumer.StatisticsMessagesCallback;
 import org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyStatus;
 import org.apache.rocketmq.client.consumer.store.LocalFileOffsetStore;
 import org.apache.rocketmq.client.consumer.store.OffsetStore;
@@ -67,7 +72,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
-public class DefaultMQPullConsumerImpl implements MQConsumerInner {
+public class DefaultMQPullConsumerImpl implements MQConsumerInner, MQPopConsumer{
     private final Logger log = ClientLogger.getLog();
     private final DefaultMQPullConsumer defaultMQPullConsumer;
     private final long consumerStartTimestamp = System.currentTimeMillis();

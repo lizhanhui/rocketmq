@@ -63,7 +63,7 @@ public interface MQPopConsumer {
 
 	void peekAsync(MessageQueue mq, int maxNums, String consumerGroup, long timeout, PopCallback popCallback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
     /**
-     * pop message in the specified timeout， broker maintains the consume offset.
+     * pop message in the specified timeout,  broker maintains the consume offset.
      * @param if mq queueId is -1,  pop message in any queue from broker; else pop message in the specified queue from broker.
      * @param invisibleTime
      * @param maxNums
