@@ -148,7 +148,7 @@ public class MQClientInstance {
         this.defaultMQProducer.resetClientConfig(clientConfig);
 
         this.consumerStatsManager = new ConsumerStatsManager(this.scheduledExecutorService);
-
+        this.mQClientAPIImpl.setConsumerStatsManager(consumerStatsManager);
         log.info("created a new client Instance, FactoryIndex: {} ClinetID: {} {} {}, serializeType={}",
             this.instanceIndex,
             this.clientId,

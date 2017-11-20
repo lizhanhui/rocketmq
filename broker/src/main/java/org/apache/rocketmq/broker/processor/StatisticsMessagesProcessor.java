@@ -19,6 +19,7 @@ package org.apache.rocketmq.broker.processor;
 import io.netty.channel.*;
 import org.apache.rocketmq.broker.BrokerController;
 import org.apache.rocketmq.client.consumer.StatisticsMessagesResult;
+import org.apache.rocketmq.common.KeyBuilder;
 import org.apache.rocketmq.common.TopicConfig;
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.common.protocol.ResponseCode;
@@ -68,11 +69,27 @@ public class StatisticsMessagesProcessor implements NettyRequestProcessor {
             response.setRemark(remark);
             return response;
         }
-        long delayMessages = this.brokerController.getMessageStore().getTimingMessageCount(topicName);
+        StatisticsMessagesResult result = new StatisticsMessagesResult();
 
+        getDelayMessages(topicName, consumerGroup, result);
+        getMessages(topicName, consumerGroup, topicConfig.getReadQueueNums(), result);
+        getMessages(KeyBuilder.buildPopRetryTopic(topicName, consumerGroup), consumerGroup, 1, result);
+        
+        response.setCode(ResponseCode.SUCCESS);
+        response.setRemark(null);
+        response.setBody(result.encode());
+        return response;
+    }
+
+    private void getDelayMessages(String topicName, String consumerGroup, StatisticsMessagesResult result) {
+        long delayMessages = this.brokerController.getMessageStore().getTimingMessageCount(topicName);
+        result.setDelayMessages(result.getDelayMessages() + delayMessages);
+    }
+
+    private void getMessages(String topicName, String consumerGroup, int queueNum, StatisticsMessagesResult result) {
         long activeMessages = 0;
         long totalMessages = 0;
-        for (int i = 0; i < topicConfig.getReadQueueNums(); i++) {
+        for (int i = 0; i < queueNum; i++) {
             long maxOffset = this.brokerController.getMessageStore().getMaxOffsetInQueue(topicName, i);
             if (maxOffset < 0) {
                 maxOffset = 0;
@@ -88,10 +105,7 @@ public class StatisticsMessagesProcessor implements NettyRequestProcessor {
             activeMessages += maxOffset - consumerOffset;
             totalMessages += maxOffset - minOffset;
         }
-
-        response.setCode(ResponseCode.SUCCESS);
-        response.setRemark(null);
-        response.setBody(new StatisticsMessagesResult(activeMessages, delayMessages, totalMessages).encode());
-        return response;
+        result.setActiveMessages(result.getActiveMessages() + activeMessages);
+        result.setTotalMessages(result.getTotalMessages() + totalMessages);
     }
 }
