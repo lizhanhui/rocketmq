@@ -525,9 +525,6 @@ public class CommitLog {
     }
 
     private boolean checkIfTimerMessage(MessageExtBrokerInner msg) {
-        if (!this.defaultMessageStore.getMessageStoreConfig().isTimerWheelEnable()) {
-            return false;
-        }
         //double check
         if (TimerMessageStore.TIMER_TOPIC.equals(msg.getTopic()) || null != msg.getProperty(MessageConst.PROPERTY_TIMER_OUT_MS)) {
             return false;
@@ -555,11 +552,11 @@ public class CommitLog {
                 deliverMs = Long.valueOf(msg.getProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS));
             }
         } catch (Exception e) {
-            return new PutMessageResult(PutMessageStatus.MESSAGE_ILLEGAL, null);
+            return new PutMessageResult(PutMessageStatus.WHEEL_TIMER_MSG_ILLEGAL, null);
         }
         if (deliverMs > System.currentTimeMillis()) {
             if (msg.getDelayTimeLevel() <= 0 && deliverMs - System.currentTimeMillis() > this.defaultMessageStore.getMessageStoreConfig().getTimerMaxDelaySec() * 1000) {
-                return new PutMessageResult(PutMessageStatus.MESSAGE_ILLEGAL, null);
+                return new PutMessageResult(PutMessageStatus.WHEEL_TIMER_MSG_ILLEGAL, null);
             }
             if (deliverMs % 1000 == 0) {
                 deliverMs = deliverMs - 1000;
@@ -567,7 +564,7 @@ public class CommitLog {
                 deliverMs = (deliverMs / 1000) * 1000;
             }
             if (this.defaultMessageStore.getTimerMessageStore().isReject(deliverMs)) {
-                return new PutMessageResult(PutMessageStatus.OS_PAGECACHE_BUSY, null);
+                return new PutMessageResult(PutMessageStatus.WHEEL_TIMER_FLOW_CONTROL, null);
             }
             MessageAccessor.putProperty(msg, MessageConst.PROPERTY_TIMER_OUT_MS, deliverMs + "");
             MessageAccessor.putProperty(msg, MessageConst.PROPERTY_REAL_TOPIC, msg.getTopic());
@@ -575,6 +572,8 @@ public class CommitLog {
             msg.setPropertiesString(MessageDecoder.messageProperties2String(msg.getProperties()));
             msg.setTopic(TimerMessageStore.TIMER_TOPIC);
             msg.setQueueId(0);
+        } else  if (null != msg.getProperty(MessageConst.PROPERTY_TIMER_DEL_UNIQKEY)) {
+            return new PutMessageResult(PutMessageStatus.WHEEL_TIMER_MSG_ILLEGAL, null);
         }
         return null;
     }
@@ -610,6 +609,10 @@ public class CommitLog {
             || tranType == MessageSysFlag.TRANSACTION_COMMIT_TYPE) {
             if (!isRolledTimerMessage(msg)) {
                 if (checkIfTimerMessage(msg)) {
+                    if (!this.defaultMessageStore.getMessageStoreConfig().isTimerWheelEnable()) {
+                        //wheel timer is not enabled, reject the message
+                        return new PutMessageResult(PutMessageStatus.WHEEL_TIMER_NOT_ENABLE, null);
+                    }
                     PutMessageResult tranformRes = transformTimerMessage(msg);
                     if (null != tranformRes) {
                         return tranformRes;

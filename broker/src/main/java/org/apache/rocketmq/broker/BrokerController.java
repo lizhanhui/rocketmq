@@ -375,6 +375,18 @@ public class BrokerController {
                         }
                     }
                 }, 1000 * 10, 1000 * 60, TimeUnit.MILLISECONDS);
+                this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
+
+                    @Override
+                    public void run() {
+                        try {
+                            //timer checkpoint, latency-sensitive, so sync it more frequently
+                            BrokerController.this.slaveSynchronize.syncTimerCheckPoint();
+                        } catch (Throwable e) {
+                            log.error("ScheduledTask syncAll slave exception", e);
+                        }
+                    }
+                }, 1000 * 3, 1000 * 3, TimeUnit.MILLISECONDS);
             } else {
                 this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 

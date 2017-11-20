@@ -157,7 +157,9 @@ public class TimerMessageStoreTest {
             PutMessageResult putMessageResult = messageStore.putMessage(inner);
             if (congestNum < 100) {
                 assertEquals(PutMessageStatus.PUT_OK, putMessageResult.getPutMessageStatus());
-            } else  {
+            } else {
+                Assert.assertTrue(PutMessageStatus.PUT_OK == putMessageResult.getPutMessageStatus()
+                    || PutMessageStatus.WHEEL_TIMER_FLOW_CONTROL == putMessageResult.getPutMessageStatus());
                 if (PutMessageStatus.PUT_OK == putMessageResult.getPutMessageStatus()) {
                     passFlowControlNum++;
                 }
@@ -243,6 +245,11 @@ public class TimerMessageStoreTest {
             assertTrue(System.currentTimeMillis() - delayMs < 1000);
         }
         assertNull(getOneMessage(topic, 0, 5, 1000));
+        //test put expired delete msg
+        MessageExtBrokerInner expiredInner = buildMessage(System.currentTimeMillis() - 100, topic, false);
+        MessageAccessor.putProperty(expiredInner, TimerMessageStore.TIMER_DELETE_UNIQKEY, "XXX");
+        assertEquals(PutMessageStatus.WHEEL_TIMER_MSG_ILLEGAL, messageStore.putMessage(expiredInner).getPutMessageStatus());
+
     }
 
     @Test
@@ -303,9 +310,9 @@ public class TimerMessageStoreTest {
         long curr = (System.currentTimeMillis() / 1000) * 1000;
         long delaySec = storeConfig.getTimerMaxDelaySec() + 2;
         MessageExtBrokerInner absolute = buildMessage(curr + delaySec  * 1000, topic, false);
-        assertEquals(PutMessageStatus.MESSAGE_ILLEGAL, messageStore.putMessage(absolute).getPutMessageStatus());
+        assertEquals(PutMessageStatus.WHEEL_TIMER_MSG_ILLEGAL, messageStore.putMessage(absolute).getPutMessageStatus());
         MessageExtBrokerInner relative = buildMessage(delaySec  * 1000, topic, true);
-        assertEquals(PutMessageStatus.MESSAGE_ILLEGAL, messageStore.putMessage(relative).getPutMessageStatus());
+        assertEquals(PutMessageStatus.WHEEL_TIMER_MSG_ILLEGAL, messageStore.putMessage(relative).getPutMessageStatus());
     }
 
     @Test
@@ -315,13 +322,8 @@ public class TimerMessageStoreTest {
         TimerMessageStore first = createTimerMessageStore(null);
         first.load();
         first.start();
-        long start = System.currentTimeMillis();
-        long delaySec = storeConfig.getTimerMaxDelaySec() + 2;
-        MessageExtBrokerInner relative = buildMessage(delaySec  * 1000, topic, true);
-        assertEquals(PutMessageStatus.PUT_OK, messageStore.putMessage(relative).getPutMessageStatus());
-        ByteBuffer msgBuff = getOneMessage(topic, 0, 0, 1000);
-        assertNotNull(msgBuff);
-        assertTrue(System.currentTimeMillis() - start < 1000);
+        MessageExtBrokerInner relative = buildMessage(System.currentTimeMillis() + 3000, topic, true);
+        assertEquals(PutMessageStatus.WHEEL_TIMER_NOT_ENABLE, messageStore.putMessage(relative).getPutMessageStatus());
         storeConfig.setTimerWheelEnable(true);
     }
 

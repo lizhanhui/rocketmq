@@ -52,9 +52,9 @@ public class SlaveSynchronize {
         this.syncConsumerOffset();
         this.syncDelayOffset();
         this.syncSubscriptionGroupConfig();
-        this.syncTimerCheckPoint();
         this.syncTimerMetrics();
     }
+
 
     private void syncTopicConfig() {
         String masterAddrBak = this.masterAddr;
@@ -147,7 +147,7 @@ public class SlaveSynchronize {
     }
 
 
-    private void syncTimerCheckPoint() {
+    public void syncTimerCheckPoint() {
         String masterAddrBak = this.masterAddr;
         if (masterAddrBak != null) {
             try {

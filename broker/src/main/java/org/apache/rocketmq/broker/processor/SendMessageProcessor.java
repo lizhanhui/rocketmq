@@ -406,6 +406,18 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
                 response.setRemark(
                     "service not available now, maybe disk full, " + diskUtil() + ", maybe your broker machine memory too small.");
                 break;
+            case WHEEL_TIMER_NOT_ENABLE:
+                response.setCode(ResponseCode.SYSTEM_ERROR);
+                response.setRemark("Wheel timer is not enabled");
+                break;
+            case WHEEL_TIMER_FLOW_CONTROL:
+                response.setCode(ResponseCode.SYSTEM_ERROR);
+                response.setRemark("Wheel timer is busy, start flow control for a while");
+                break;
+            case WHEEL_TIMER_MSG_ILLEGAL:
+                response.setCode(ResponseCode.MESSAGE_ILLEGAL);
+                response.setRemark("Wheel timer message illegal, the delay time should not be bigger than the max delay; or if set del msg, the delay time should bigger than the current time");
+                break;
             case OS_PAGECACHE_BUSY:
                 response.setCode(ResponseCode.SYSTEM_ERROR);
                 response.setRemark("[PC_SYNCHRONIZED]broker busy, start flow control for a while");
