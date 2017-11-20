@@ -17,14 +17,26 @@
 package org.apache.rocketmq.store.timer;
 
 public class Slot {
-    public static final short SIZE = 24;
+    public static final short SIZE = 32;
     public final long timeSecs;
     public final long firstPos;
     public final long lastPos;
+    public final int num;
+    public final int magic; //no use now, just keep it
 
     public Slot(long timeSecs, long firstPos, long lastPos) {
         this.timeSecs = timeSecs;
         this.firstPos = firstPos;
         this.lastPos = lastPos;
+        this.num = 0;
+        this.magic = 0;
+    }
+
+    public Slot(long timeSecs, long firstPos, long lastPos, int num, int magic) {
+        this.timeSecs = timeSecs;
+        this.firstPos = firstPos;
+        this.lastPos = lastPos;
+        this.num = num;
+        this.magic = magic;
     }
 }

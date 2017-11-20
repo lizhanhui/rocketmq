@@ -68,6 +68,10 @@ public class ConsumerGroupInfo {
         return subscriptionTable;
     }
 
+    public ClientChannelInfo findChannel(final Channel channel) {
+        return this.channelInfoTable.get(channel);
+    }
+
     public ConcurrentMap<Channel, ClientChannelInfo> getChannelInfoTable() {
         return channelInfoTable;
     }

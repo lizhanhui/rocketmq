@@ -32,22 +32,24 @@ public class TimerLogTest {
     public void testAppendRollSelectDelete() throws Exception {
         TimerLog timerLog = createTimerLog(null);
         ByteBuffer byteBuffer = ByteBuffer.allocate(TimerLog.UNIT_SIZE);
-        byteBuffer.putInt(40);
+        byteBuffer.putInt(TimerLog.UNIT_SIZE);
         byteBuffer.putLong(Long.MAX_VALUE);
         byteBuffer.putInt(0);
         byteBuffer.putLong(Long.MAX_VALUE);
         byteBuffer.putInt(0);
         byteBuffer.putLong(1000);
         byteBuffer.putInt(10);
+        byteBuffer.putInt(123);
+        byteBuffer.putInt(0);
         long ret = -1;
         for (int i = 0; i < 10; i++) {
-            ret = timerLog.append(byteBuffer.array());
+            ret = timerLog.append(byteBuffer.array(), 0, TimerLog.UNIT_SIZE);
             assertEquals(i * TimerLog.UNIT_SIZE, ret);
         }
         for (int i = 0; i < 100; i++) {
             timerLog.append(byteBuffer.array());
         }
-        assertEquals(5, timerLog.getMappedFileQueue().getMappedFiles().size());
+        assertEquals(6, timerLog.getMappedFileQueue().getMappedFiles().size());
         SelectMappedBufferResult sbr = timerLog.getTimerMessage(ret);
         assertNotNull(sbr);
         assertEquals(TimerLog.UNIT_SIZE, sbr.getByteBuffer().getInt());

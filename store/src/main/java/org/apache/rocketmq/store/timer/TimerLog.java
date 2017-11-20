@@ -26,10 +26,19 @@ import org.slf4j.LoggerFactory;
 
 public class TimerLog {
     private static Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
-    private final static int BLANK_MAGIC_CODE = 0xBBCCDDEE ^ 1880681586 + 8;
-    private final static int MIN_BLANK_LEN = 4 + 4;
-    public final static int UNIT_SIZE = 40;
-    public final static int UNIT_PRE_SIZE = 28;
+    public final static int BLANK_MAGIC_CODE = 0xBBCCDDEE ^ 1880681586 + 8;
+    private final static int MIN_BLANK_LEN = 4 + 8 + 4;
+    public final static int UNIT_SIZE = 4  //size
+        + 8 //prev pos
+        + 4 //magic value
+        + 8 //curr write time, for trace
+        + 4 //delayed time, for check
+        + 8 //offsetPy
+        + 4 //sizePy
+        + 4 //hash code of real topic
+        + 8; //reserved value, just in case of
+    public final static int UNIT_PRE_SIZE_FOR_MSG = 28;
+    public final static int UNIT_PRE_SIZE_FOR_METRIC = 40;
     private final MappedFileQueue mappedFileQueue;
 
     private final int fileSize;
@@ -57,8 +66,9 @@ public class TimerLog {
             return -1;
         }
         if (len + MIN_BLANK_LEN > mappedFile.getFileSize() - mappedFile.getWrotePosition()) {
-            ByteBuffer byteBuffer = ByteBuffer.allocate(8);
+            ByteBuffer byteBuffer = ByteBuffer.allocate(MIN_BLANK_LEN);
             byteBuffer.putInt(mappedFile.getFileSize() - mappedFile.getWrotePosition());
+            byteBuffer.putLong(0);
             byteBuffer.putInt(BLANK_MAGIC_CODE);
             if (mappedFile.appendMessage(byteBuffer.array())) {
                 //need to set the wrote position

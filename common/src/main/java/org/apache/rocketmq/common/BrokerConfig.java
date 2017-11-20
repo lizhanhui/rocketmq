@@ -114,6 +114,10 @@ public class BrokerConfig {
     // 1. Calculate filter bit map when construct queue.
     // 2. Filter bit map will be saved to consume queue extend file if allowed.
     private boolean enableCalcFilterBitMap = false;
+    private boolean useLockFreeProducerManager = false;
+
+    //Reject the pull consumer instance to pull messages from broker.
+    private boolean rejectPullConsumerEnable = false;
 
     // Expect num of consumers will use filter.
     private int expectConsumerNumUseFilter = 32;
@@ -568,4 +572,20 @@ public class BrokerConfig {
     public int getPopPollingSize() {
 		return popPollingSize;
 	}
+
+    public boolean isUseLockFreeProducerManager() {
+        return useLockFreeProducerManager;
+    }
+
+    public void setUseLockFreeProducerManager(boolean useLockFreeProducerManager) {
+        this.useLockFreeProducerManager = useLockFreeProducerManager;
+    }
+
+    public boolean isRejectPullConsumerEnable() {
+        return rejectPullConsumerEnable;
+    }
+
+    public void setRejectPullConsumerEnable(final boolean rejectPullConsumerEnable) {
+        this.rejectPullConsumerEnable = rejectPullConsumerEnable;
+    }
 }

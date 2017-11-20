@@ -119,7 +119,7 @@ public class TimerWheel {
     public Slot getRawSlot(long timeSecs) {
         int slotIndex = (int) (timeSecs % (ttlSecs * 2));
         localBuffer.get().position(slotIndex * Slot.SIZE);
-        return new Slot(localBuffer.get().getLong(), localBuffer.get().getLong(), localBuffer.get().getLong());
+        return new Slot(localBuffer.get().getLong(), localBuffer.get().getLong(), localBuffer.get().getLong(), localBuffer.get().getInt(), localBuffer.get().getInt());
     }
 
     public void putSlot(long timeSecs, long firstPos, long lastPos) {
@@ -128,6 +128,15 @@ public class TimerWheel {
         localBuffer.get().putLong(timeSecs);
         localBuffer.get().putLong(firstPos);
         localBuffer.get().putLong(lastPos);
+    }
+    public void putSlot(long timeSecs, long firstPos, long lastPos, int num, int magic) {
+        int slotIndex = (int) (timeSecs % (ttlSecs * 2));
+        localBuffer.get().position(slotIndex * Slot.SIZE);
+        localBuffer.get().putLong(timeSecs);
+        localBuffer.get().putLong(firstPos);
+        localBuffer.get().putLong(lastPos);
+        localBuffer.get().putInt(num);
+        localBuffer.get().putInt(magic);
     }
 
     public void reviseSlot(long timeSecs, long firstPos, long lastPos, boolean force) {
@@ -150,22 +159,43 @@ public class TimerWheel {
         }
     }
 
-    public long checkPhyPos(long timeSecs, long maxOffset) {
+    //check the timerwheel to see if its stored offset > maxOffset in timerlog
+    public long checkPhyPos(long timeStartSecs, long maxOffset) {
         long minFirst = Long.MAX_VALUE;
-        int slotIndex = (int) (timeSecs % (ttlSecs * 2));
+        int firstSlotIndex = (int) (timeStartSecs % (ttlSecs * 2));
         for (int i = 0; i < ttlSecs * 2; i++) {
-            slotIndex = (slotIndex + i) % (ttlSecs * 2);
+            int slotIndex = (firstSlotIndex + i) % (ttlSecs * 2);
             localBuffer.get().position(slotIndex * Slot.SIZE);
-            if ((timeSecs + i) != localBuffer.get().getLong()) {
+            if ((timeStartSecs + i) != localBuffer.get().getLong()) {
                 continue;
             }
             long first = localBuffer.get().getLong();
-            if (localBuffer.get().getLong() > maxOffset) {
+            long last = localBuffer.get().getLong();
+            if (last > maxOffset) {
                 if (first < minFirst) {
                     minFirst = first;
                 }
             }
         }
         return minFirst;
+    }
+
+    public long getNum(long timeSecs) {
+        return getSlot(timeSecs).num;
+    }
+
+    public long getAllNum(long timeStartSecs) {
+        int allNum = 0;
+        int firstSlotIndex = (int) (timeStartSecs % (ttlSecs * 2));
+        for (int i = 0; i < ttlSecs * 2; i++) {
+            int slotIndex = (firstSlotIndex + i) % (ttlSecs * 2);
+            localBuffer.get().position(slotIndex * Slot.SIZE);
+            if ((timeStartSecs + i) == localBuffer.get().getLong()) {
+                localBuffer.get().getLong(); //first pos
+                localBuffer.get().getLong(); //last pos
+                allNum = allNum + localBuffer.get().getInt();
+            }
+        }
+        return allNum;
     }
 }

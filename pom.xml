@@ -18,7 +18,7 @@
 
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
-<parent>
+    <parent>
         <groupId>com.taobao</groupId>
         <artifactId>parent</artifactId>
         <version>1.0.3</version>
@@ -28,41 +28,40 @@
     <inceptionYear>2012</inceptionYear>
     <groupId>org.apache.rocketmq</groupId>
     <artifactId>rocketmq-all</artifactId>
-    <version>4.2.0-incubating4smq-SNAPSHOT</version>
+    <version>4.1.7-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>Apache RocketMQ ${project.version}</name>
-    <url>http://rocketmq.incubator.apache.org/</url>
+    <url>http://rocketmq.apache.org/</url>
 
     <prerequisites>
         <maven>3.2.5</maven>
     </prerequisites>
 
     <scm>
-        <url>https://git-wip-us.apache.org/repos/asf/incubator-rocketmq.git</url>
-        <connection>scm:git:https://git-wip-us.apache.org/repos/asf/incubator-rocketmq.git</connection>
-        <developerConnection>scm:git:https://git-wip-us.apache.org/repos/asf/incubator-rocketmq.git
-        </developerConnection>
+        <url>https://github.com/apache/rocketmq.git</url>
+        <connection>scm:git:https://github.com/apache/rocketmq.git</connection>
+        <developerConnection>scm:git:https://github.com/apache/rocketmq.git</developerConnection>
         <tag>HEAD</tag>
     </scm>
 
     <mailingLists>
         <mailingList>
             <name>Development List</name>
-            <subscribe>dev-subscribe@rocketmq.incubator.apache.org</subscribe>
-            <unsubscribe>dev-unsubscribe@rocketmq.incubator.apache.org</unsubscribe>
-            <post>dev@rocketmq.incubator.apache.org</post>
+            <subscribe>dev-subscribe@rocketmq.apache.org</subscribe>
+            <unsubscribe>dev-unsubscribe@rocketmq.apache.org</unsubscribe>
+            <post>dev@rocketmq.apache.org</post>
         </mailingList>
         <mailingList>
             <name>User List</name>
-            <subscribe>users-subscribe@rocketmq.incubator.apache.org</subscribe>
-            <unsubscribe>users-unsubscribe@rocketmq.incubator.apache.org</unsubscribe>
-            <post>users@rocketmq.incubator.apache.org</post>
+            <subscribe>users-subscribe@rocketmq.apache.org</subscribe>
+            <unsubscribe>users-unsubscribe@rocketmq.apache.org</unsubscribe>
+            <post>users@rocketmq.apache.org</post>
         </mailingList>
         <mailingList>
             <name>Commits List</name>
-            <subscribe>commits-subscribe@rocketmq.incubator.apache.org</subscribe>
-            <unsubscribe>commits-unsubscribe@rocketmq.incubator.apache.org</unsubscribe>
-            <post>commits@rocketmq.incubator.apache.org</post>
+            <subscribe>commits-subscribe@rocketmq.apache.org</subscribe>
+            <unsubscribe>commits-unsubscribe@rocketmq.apache.org</unsubscribe>
+            <post>commits@rocketmq.apache.org</post>
         </mailingList>
     </mailingLists>
 
@@ -224,6 +223,26 @@
                 </executions>
             </plugin>
             <plugin>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <version>2.17</version>
+                <executions>
+                    <execution>
+                        <id>verify</id>
+                        <phase>verify</phase>
+                        <configuration>
+                            <configLocation>style/rmq_checkstyle.xml</configLocation>
+                            <encoding>UTF-8</encoding>
+                            <consoleOutput>true</consoleOutput>
+                            <failsOnError>true</failsOnError>
+                            <includeTestSourceDirectory>false</includeTestSourceDirectory>
+                        </configuration>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
                 <groupId>org.apache.rat</groupId>
                 <artifactId>apache-rat-plugin</artifactId>
                 <version>0.12</version>
@@ -232,6 +251,7 @@
                         <exclude>.travis.yml</exclude>
                         <exclude>CONTRIBUTING.md</exclude>
                         <exclude>bin/README.md</exclude>
+                        <exclude>PULL_REQUEST_TEMPLATE.md</exclude>
                     </excludes>
                 </configuration>
             </plugin>
@@ -507,6 +527,11 @@
                 <version>${project.version}</version>
             </dependency>
             <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>rocketmq-openmessaging</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
                 <version>1.7.7</version>
@@ -529,7 +554,7 @@
             <dependency>
                 <groupId>io.netty</groupId>
                 <artifactId>netty-all</artifactId>
-                <version>4.0.36.Final</version>
+                <version>4.0.42.Final</version>
             </dependency>
             <dependency>
                 <groupId>com.alibaba</groupId>

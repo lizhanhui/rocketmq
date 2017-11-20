@@ -27,11 +27,46 @@ public class TimerWheelTest {
         assertEquals(-1, first.timeSecs);
         assertEquals(-1, first.firstPos);
         assertEquals(-1, first.lastPos);
-        timerWheel.putSlot(delayedTime / 1000, 1, 2);
+        timerWheel.putSlot(delayedTime / 1000, 1, 2, 3, 4);
         Slot second = timerWheel.getSlot(delayedTime / 1000);
         assertEquals(delayedTime / 1000, second.timeSecs);
         assertEquals(1, second.firstPos);
         assertEquals(2, second.lastPos);
+        assertEquals(3, second.num);
+        assertEquals(4, second.magic);
+    }
+
+    @Test
+    public void testGetNum() {
+        long delayedTime = defaultDelay + 1000;
+        timerWheel.putSlot(delayedTime / 1000, 1, 2, 3, 4);
+        assertEquals(3, timerWheel.getNum(delayedTime/1000));
+        assertEquals(3, timerWheel.getAllNum(delayedTime/1000));
+        timerWheel.putSlot(delayedTime / 1000 + 5, 5, 6, 7, 8);
+        assertEquals(7, timerWheel.getNum(delayedTime/1000 + 5));
+        assertEquals(10, timerWheel.getAllNum(delayedTime/1000));
+
+    }
+
+    @Test
+    public void testCheckPhyPos() {
+        long delayedTime = defaultDelay + 1000;
+        timerWheel.putSlot(delayedTime / 1000, 1, 100, 1, 0);
+        timerWheel.putSlot(delayedTime / 1000 + 5, 2, 200, 2, 0);
+        timerWheel.putSlot(delayedTime / 1000 + 10, 3, 300, 3, 0);
+
+        assertEquals(1, timerWheel.checkPhyPos(delayedTime/1000, 50));
+        assertEquals(2, timerWheel.checkPhyPos(delayedTime/1000, 100));
+        assertEquals(3, timerWheel.checkPhyPos(delayedTime/1000, 200));
+        assertEquals(Long.MAX_VALUE, timerWheel.checkPhyPos(delayedTime/1000, 300));
+        assertEquals(Long.MAX_VALUE, timerWheel.checkPhyPos(delayedTime/1000, 400));
+
+        assertEquals(2, timerWheel.checkPhyPos(delayedTime/1000 + 5, 50));
+        assertEquals(2, timerWheel.checkPhyPos(delayedTime/1000 + 5, 100));
+        assertEquals(3, timerWheel.checkPhyPos(delayedTime/1000 + 5, 200));
+        assertEquals(Long.MAX_VALUE, timerWheel.checkPhyPos(delayedTime/1000 + 5, 300));
+        assertEquals(Long.MAX_VALUE, timerWheel.checkPhyPos(delayedTime/1000 + 5, 400));
+
     }
 
     @Test
@@ -61,13 +96,15 @@ public class TimerWheelTest {
     @Test
     public void testRecoveryData() throws Exception {
         long delayedTime = System.currentTimeMillis() + 5000;
-        timerWheel.putSlot(delayedTime / 1000, 1, 2);
+        timerWheel.putSlot(delayedTime / 1000, 1, 2, 3, 4);
         timerWheel.flush();
         TimerWheel tmpWheel = new TimerWheel(BASE_DIR, TTL_SECS);
         Slot slot = tmpWheel.getSlot(delayedTime / 1000);
         assertEquals(delayedTime / 1000, slot.timeSecs);
         assertEquals(1, slot.firstPos);
         assertEquals(2, slot.lastPos);
+        assertEquals(3, slot.num);
+        assertEquals(4, slot.magic);
         tmpWheel.shutdown();
     }
 
@@ -86,4 +123,6 @@ public class TimerWheelTest {
             StoreTestUtils.deleteFile(BASE_DIR);
         }
     }
+
+
 }

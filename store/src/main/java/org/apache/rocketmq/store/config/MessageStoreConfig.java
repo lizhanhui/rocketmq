@@ -153,11 +153,22 @@ public class MessageStoreConfig {
     private int timerFlushIntervalMs = 1000;
     private int timerProgressLogIntervalMs = 10 * 1000;
     private int timerGetMessageThreadNum = 3;
-    private int timerputMessageThreadNum = 3;
+    private int timerPutMessageThreadNum = 3;
     private boolean timerWarmEnable = false;
     private boolean timerSkipUnknownError = false;
     private boolean timerInterceptDelayLevel = false;
+    private boolean timerEnableDisruptor = false;
+    private String timerCheckMetricsWhen = "05";
+    private boolean timerEnableCheckMetrics = true;
 
+    private int timerCongestNumEachSec = Integer.MAX_VALUE;
+
+    private boolean timerStopEnqueue = false;
+    private boolean timerStopDequeue = false;
+
+
+    @ImportantField
+    private boolean wakeCommitWhenPutMessage = true;
 
     public boolean isDebugLockEnable() {
         return debugLockEnable;
@@ -770,11 +781,66 @@ public class MessageStoreConfig {
         this.timerInterceptDelayLevel = timerInterceptDelayLevel;
     }
 
-    public int getTimerputMessageThreadNum() {
-        return timerputMessageThreadNum;
+    public int getTimerPutMessageThreadNum() {
+        return timerPutMessageThreadNum;
     }
 
-    public void setTimerputMessageThreadNum(int timerputMessageThreadNum) {
-        this.timerputMessageThreadNum = timerputMessageThreadNum;
+    public void setTimerPutMessageThreadNum(int timerPutMessageThreadNum) {
+        this.timerPutMessageThreadNum = timerPutMessageThreadNum;
+    }
+
+    public boolean isTimerEnableDisruptor() {
+        return timerEnableDisruptor;
+    }
+
+    public void setTimerEnableDisruptor(boolean timerEnableDisruptor) {
+        this.timerEnableDisruptor = timerEnableDisruptor;
+    }
+
+    public int getTimerCongestNumEachSec() {
+        return timerCongestNumEachSec;
+    }
+
+    public void setTimerCongestNumEachSec(int timerCongestNumEachSec) {
+        this.timerCongestNumEachSec = timerCongestNumEachSec;
+    }
+
+    public String getTimerCheckMetricsWhen() {
+        return timerCheckMetricsWhen;
+    }
+
+    public void setTimerCheckMetricsWhen(String timerCheckMetricsWhen) {
+        this.timerCheckMetricsWhen = timerCheckMetricsWhen;
+    }
+
+    public boolean isTimerEnableCheckMetrics() {
+        return timerEnableCheckMetrics;
+    }
+
+    public void setTimerEnableCheckMetrics(boolean timerEnableCheckMetrics) {
+        this.timerEnableCheckMetrics = timerEnableCheckMetrics;
+    }
+
+    public boolean isTimerStopEnqueue() {
+        return timerStopEnqueue;
+    }
+
+    public void setTimerStopEnqueue(boolean timerStopEnqueue) {
+        this.timerStopEnqueue = timerStopEnqueue;
+    }
+
+    public boolean isTimerStopDequeue() {
+        return timerStopDequeue;
+    }
+
+    public void setTimerStopDequeue(boolean timerStopDequeue) {
+        this.timerStopDequeue = timerStopDequeue;
+    }
+    public boolean isWakeCommitWhenPutMessage() {
+        return wakeCommitWhenPutMessage;
+    }
+
+    public void setWakeCommitWhenPutMessage(boolean wakeCommitWhenPutMessage) {
+        this.wakeCommitWhenPutMessage = wakeCommitWhenPutMessage;
     }
 }

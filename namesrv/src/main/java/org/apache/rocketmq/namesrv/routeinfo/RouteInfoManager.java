@@ -156,7 +156,18 @@ public class RouteInfoManager {
                     brokerData = new BrokerData(clusterName, brokerName, new HashMap<Long, String>());
                     this.brokerAddrTable.put(brokerName, brokerData);
                 }
-                String oldAddr = brokerData.getBrokerAddrs().put(brokerId, brokerAddr);
+
+                Map<Long, String> brokerAddrsMap = brokerData.getBrokerAddrs();
+                //Switch slave to master: first remove <1, IP:PORT> in namesrv, then add <0, IP:PORT>
+                //The same IP:PORT must only have one record in brokerAddrTable
+                Iterator<Entry<Long, String>> it = brokerAddrsMap.entrySet().iterator();
+                while (it.hasNext()) {
+                    Entry<Long, String> item = it.next();
+                    if (null != brokerAddr && brokerAddr.equals(item.getValue()) && brokerId != item.getKey()) {
+                        it.remove();
+                    }
+                }
+                String oldAddr = brokerAddrsMap.put(brokerId, brokerAddr);
                 registerFirst = registerFirst || (null == oldAddr);
 
                 if (null != topicConfigWrapper
@@ -180,7 +191,7 @@ public class RouteInfoManager {
                         channel,
                         haServerAddr));
                 if (null == prevBrokerLiveInfo) {
-                    log.info("new broker registerd, {} HAServer: {}", brokerAddr, haServerAddr);
+                    log.info("new broker registered, {} HAServer: {}", brokerAddr, haServerAddr);
                 }
 
                 if (filterServerList != null) {
@@ -233,7 +244,7 @@ public class RouteInfoManager {
             queueDataList = new LinkedList<QueueData>();
             queueDataList.add(queueData);
             this.topicQueueTable.put(topicConfig.getTopicName(), queueDataList);
-            log.info("new topic registerd, {} {}", topicConfig.getTopicName(), queueData);
+            log.info("new topic registered, {} {}", topicConfig.getTopicName(), queueData);
         } else {
             boolean addNewOne = true;
 

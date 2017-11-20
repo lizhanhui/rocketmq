@@ -16,7 +16,6 @@
  */
 package org.apache.rocketmq.store.timer;
 
-import java.io.File;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -41,8 +40,8 @@ public class TimerMetrics extends ConfigManager {
 
     private final String configPath;
 
-    public TimerMetrics(String rootDir) {
-        configPath =  rootDir + File.separator + "timermetrics";
+    public TimerMetrics(String configPath) {
+        this.configPath =  configPath;
     }
 
     public long addAndGet(String topic, int value) {
@@ -62,7 +61,12 @@ public class TimerMetrics extends ConfigManager {
     }
 
     public long getTimingCount(String topic) {
-        return getPair(topic).getCount().get();
+        Metric pair = timingCount.get(topic);
+        if (null == pair) {
+            return 0;
+        } else {
+           return pair.getCount().get();
+        }
     }
 
     public Map<String, Metric> getTimingCount() {
@@ -150,6 +154,10 @@ public class TimerMetrics extends ConfigManager {
 
         public void setTimeStamp(long timeStamp) {
             this.timeStamp = timeStamp;
+        }
+        @Override
+        public String toString() {
+            return String.format("[%d,%d]", count.get(), timeStamp);
         }
     }
 
