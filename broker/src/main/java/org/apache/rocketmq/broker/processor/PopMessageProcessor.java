@@ -248,8 +248,13 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 		boolean needRetry=(randomQ % 5 == 0);
 		long popTime=System.currentTimeMillis();
 		if (needRetry) {
-			int queueId = 0;
-			restNum = popMsgFromQueue(true, getMessageResult, requestHeader, queueId, restNum, reviveQid, channel,popTime);
+			TopicConfig retryTopicConfig = this.brokerController.getTopicConfigManager().selectTopicConfig(KeyBuilder.buildPopRetryTopic(requestHeader.getTopic(), requestHeader.getConsumerGroup()));
+			if (retryTopicConfig != null) {
+				for (int i = 0; i < retryTopicConfig.getReadQueueNums(); i++) {
+					int queueId = (randomQ + i) % retryTopicConfig.getReadQueueNums();
+					restNum = popMsgFromQueue(true, getMessageResult, requestHeader, queueId, restNum, reviveQid, channel, popTime);
+				}
+			}
 		}
 		if (requestHeader.getQueueId() < 0) {
 			// read all queue
@@ -263,8 +268,13 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 		}
 		// if not full , fetch retry again
 		if (!needRetry && getMessageResult.getMessageMapedList().size() < requestHeader.getMaxMsgNums()) {
-			int queueId = 0;
-			restNum = popMsgFromQueue(true, getMessageResult, requestHeader, queueId, restNum, reviveQid, channel,popTime);
+			TopicConfig retryTopicConfig = this.brokerController.getTopicConfigManager().selectTopicConfig(KeyBuilder.buildPopRetryTopic(requestHeader.getTopic(), requestHeader.getConsumerGroup()));
+			if (retryTopicConfig != null) {
+				for (int i = 0; i < retryTopicConfig.getReadQueueNums(); i++) {
+					int queueId = (randomQ + i) % retryTopicConfig.getReadQueueNums();
+					restNum = popMsgFromQueue(true, getMessageResult, requestHeader, queueId, restNum, reviveQid, channel, popTime);
+				}
+			}
 		}
 		if (!getMessageResult.getMessageBufferList().isEmpty()) {
             response.setCode(ResponseCode.SUCCESS);
@@ -329,8 +339,8 @@ public class PopMessageProcessor implements NettyRequestProcessor {
         }
         return response;
     }
-    private long popMsgFromQueue(boolean isTry,GetMessageResult getMessageResult,PopMessageRequestHeader requestHeader,int queueId,long restNum,int reviveQid, Channel channel,long popTime){
-		String topic = isTry ? KeyBuilder.buildPopRetryTopic(requestHeader.getTopic(), requestHeader.getConsumerGroup()) : requestHeader.getTopic();
+    private long popMsgFromQueue(boolean isRetry,GetMessageResult getMessageResult,PopMessageRequestHeader requestHeader,int queueId,long restNum,int reviveQid, Channel channel,long popTime){
+		String topic = isRetry ? KeyBuilder.buildPopRetryTopic(requestHeader.getTopic(), requestHeader.getConsumerGroup()) : requestHeader.getTopic();
 		if (!LockManager.tryLock(LockManager.buildKey(topic, requestHeader.getConsumerGroup(), queueId), PopAckConstants.lockTime)) {
 			return restNum;
 		}

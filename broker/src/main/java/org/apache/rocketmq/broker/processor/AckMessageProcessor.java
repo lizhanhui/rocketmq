@@ -203,8 +203,8 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 					return true;
 				}
 				topicConfig=new TopicConfig(topic);
-				topicConfig.setReadQueueNums(1);
-				topicConfig.setWriteQueueNums(1);
+				topicConfig.setReadQueueNums(PopAckConstants.retryQueueNum);
+				topicConfig.setWriteQueueNums(PopAckConstants.retryQueueNum);
 				topicConfig.setTopicFilterType(TopicFilterType.SINGLE_TAG);
 				topicConfig.setPerm(6);
 				topicConfig.setTopicSysFlag(0);
