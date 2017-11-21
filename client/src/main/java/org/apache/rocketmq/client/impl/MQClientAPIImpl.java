@@ -2391,52 +2391,52 @@ public class MQClientAPIImpl {
     private void incSmqPopRT(final String addr, final PopMessageRequestHeader requestHeader, ResponseFuture responseFuture) {
         if(this.consumerStatsManager != null && responseFuture != null) {
             long popRT = System.currentTimeMillis() - responseFuture.getBeginTimestamp();
-            this.consumerStatsManager.incSmqPopRT(addr, requestHeader.getTopic(), requestHeader.getConsumerGroup(), popRT);
+            this.consumerStatsManager.incSmqPopRT(addr, "", requestHeader.getTopic(), popRT);
         }
     }
 
     private void incSmqPopQPS(final String addr, final PopMessageRequestHeader requestHeader) {
         if(this.consumerStatsManager != null) {
-            this.consumerStatsManager.incSmqPopQPS(addr, requestHeader.getTopic(), requestHeader.getConsumerGroup());
+            this.consumerStatsManager.incSmqPopQPS(addr, "", requestHeader.getTopic());
         }
     }
 
     private void incSmqPeekRT(final String addr, final PeekMessageRequestHeader requestHeader, ResponseFuture responseFuture) {
         if(this.consumerStatsManager != null && responseFuture != null) {
-            long popRT = System.currentTimeMillis() - responseFuture.getBeginTimestamp();
-            this.consumerStatsManager.incSmqPeekRT(addr, requestHeader.getTopic(), requestHeader.getConsumerGroup(), popRT);
+            long peekRT = System.currentTimeMillis() - responseFuture.getBeginTimestamp();
+            this.consumerStatsManager.incSmqPeekRT(addr, "", requestHeader.getTopic(), peekRT);
         }
     }
 
     private void incSmqPeekQPS(final String addr, final PeekMessageRequestHeader requestHeader) {
         if(this.consumerStatsManager != null) {
-            this.consumerStatsManager.incSmqPeekQPS(addr, requestHeader.getTopic(), requestHeader.getConsumerGroup());
+            this.consumerStatsManager.incSmqPeekQPS(addr, "", requestHeader.getTopic());
         }
     }
 
     private void incSmqAckRT(final String addr, final AckMessageRequestHeader requestHeader, ResponseFuture responseFuture) {
         if(this.consumerStatsManager != null && responseFuture != null) {
-            long popRT = System.currentTimeMillis() - responseFuture.getBeginTimestamp();
-            this.consumerStatsManager.incSmqAckRT(addr, requestHeader.getTopic(), requestHeader.getConsumerGroup(), popRT);
+            long ackRT = System.currentTimeMillis() - responseFuture.getBeginTimestamp();
+            this.consumerStatsManager.incSmqAckRT(addr, "", requestHeader.getTopic(), ackRT);
         }
     }
 
     private void incSmqAckQPS(final String addr, final AckMessageRequestHeader requestHeader) {
         if(this.consumerStatsManager != null) {
-            this.consumerStatsManager.incSmqAckQPS(addr, requestHeader.getTopic(), requestHeader.getConsumerGroup());
+            this.consumerStatsManager.incSmqAckQPS(addr, "", requestHeader.getTopic());
         }
     }
 
     private void incSmqChangeRT(final String addr, final ChangeInvisibleTimeRequestHeader requestHeader, ResponseFuture responseFuture) {
         if(this.consumerStatsManager != null && responseFuture != null) {
-            long popRT = System.currentTimeMillis() - responseFuture.getBeginTimestamp();
-            this.consumerStatsManager.incSmqChangeRT(addr, requestHeader.getTopic(), requestHeader.getConsumerGroup(), popRT);
+            long changeRT = System.currentTimeMillis() - responseFuture.getBeginTimestamp();
+            this.consumerStatsManager.incSmqChangeRT(addr, "", requestHeader.getTopic(), changeRT);
         }
     }
 
     private void incSmqChangeQPS(final String addr, final ChangeInvisibleTimeRequestHeader requestHeader) {
         if(this.consumerStatsManager != null) {
-            this.consumerStatsManager.incSmqChangeQPS(addr, requestHeader.getTopic(), requestHeader.getConsumerGroup());
+            this.consumerStatsManager.incSmqChangeQPS(addr, "", requestHeader.getTopic());
         }
     }
 }
