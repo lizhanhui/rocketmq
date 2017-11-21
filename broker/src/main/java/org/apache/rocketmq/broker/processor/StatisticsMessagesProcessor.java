@@ -73,8 +73,12 @@ public class StatisticsMessagesProcessor implements NettyRequestProcessor {
 
         getDelayMessages(topicName, consumerGroup, result);
         getMessages(topicName, consumerGroup, topicConfig.getReadQueueNums(), result);
-        getMessages(KeyBuilder.buildPopRetryTopic(topicName, consumerGroup), consumerGroup, 1, result);
-        
+
+        String retryTopicName = KeyBuilder.buildPopRetryTopic(topicName, consumerGroup);
+        TopicConfig retryTopicConfig = this.brokerController.getTopicConfigManager().selectTopicConfig(retryTopicName);
+        if (retryTopicConfig != null) {
+            getMessages(retryTopicName, consumerGroup, retryTopicConfig.getReadQueueNums(), result);
+        }
         response.setCode(ResponseCode.SUCCESS);
         response.setRemark(null);
         response.setBody(result.encode());
