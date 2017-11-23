@@ -145,6 +145,10 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 											if (!DataConverter.getBit(popCheckPoint.getBitMap(), j)) {
 												// retry msg
 												MessageExt messageExt = getBizMessage(popCheckPoint.getTopic(), popCheckPoint.getStartOffset() + j, popCheckPoint.getQueueId());
+												if (messageExt == null) {
+													POP_LOGGER.warn("can not get biz msg {} , then continue ", popCheckPoint.getStartOffset() + j);
+													continue;
+												}
 												MessageExtBrokerInner msgInner = new MessageExtBrokerInner();
 												if (!popCheckPoint.getTopic().startsWith(MixAll.RETRY_GROUP_TOPIC_PREFIX)) {
 													msgInner.setTopic(KeyBuilder.buildPopRetryTopic(popCheckPoint.getTopic(), popCheckPoint.getCid()));
@@ -220,6 +224,7 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 				final GetMessageResult getMessageTmpResult = brokerController.getMessageStore().getMessage(PopAckConstants.REVIVE_GROUP, topic, queueId, offset, 1, null);
 				List<MessageExt> list = decodeMsgList(getMessageTmpResult);
 				if (list.size() == 0) {
+					POP_LOGGER.warn("can not get msg , topic {}, offset {}, queueId {}, result is {}", topic, offset, queueId, getMessageTmpResult);
 					return null;
 				} else {
 					return list.get(0);
