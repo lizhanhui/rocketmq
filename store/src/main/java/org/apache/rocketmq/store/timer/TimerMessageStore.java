@@ -746,6 +746,9 @@ public class TimerMessageStore {
                     perfs.endTick("dequeue_read_timerlog");
                 }
             }
+            if (deleteMsgStack.size() == 0 && normalMsgStack.size() == 0) {
+                log.warn("dequeue time:{} but read nothing from timerlog", currReadTimeMs);
+            }
             for (SelectMappedBufferResult sbr : sbrs) {
                 if (null != sbr)
                     sbr.release();
@@ -1257,6 +1260,7 @@ public class TimerMessageStore {
                                 //the tr will never be processed afterwards, so idempotentRelease it
                                 tr.idempotentRelease();
                                 doRes = true;
+                                log.warn("Get message from commitlog failed, offsetPy:{} sizePy:{} delayTime:{}", tr.getOffsetPy(), tr.getSizePy(), tr.getDelayTime());
                                 perfs.getCounter("dequeue_get_msg_miss").flow(System.currentTimeMillis() - start);
                             }
                         } catch (Throwable e) {
