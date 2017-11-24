@@ -41,7 +41,7 @@ public class PerfCounter {
     private String prefix = "DEFAULT";
 
     public float getLastTps() {
-        if (System.currentTimeMillis() - last <= MAX_MS_PER_COUNT) {
+        if (System.currentTimeMillis() - last <= MAX_MS_PER_COUNT  + 3000) {
             return lastTps;
         }
         return 0.0f;
