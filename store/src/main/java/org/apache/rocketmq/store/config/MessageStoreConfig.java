@@ -148,7 +148,7 @@ public class MessageStoreConfig {
 
     private boolean timerWheelEnable = true;
     private int mappedFileSizeTimerLog = 100 * 1024 * 1024;
-    private int timerRollWindowSec = Integer.MAX_VALUE;
+    private int timerRollWindowSec = 3600 * 24 * 2;
     private int timerMaxDelaySec = 3600 * 24 * 3;
     private int timerFlushIntervalMs = 1000;
     private int timerProgressLogIntervalMs = 10 * 1000;

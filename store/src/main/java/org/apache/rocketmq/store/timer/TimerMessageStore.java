@@ -71,6 +71,8 @@ public class TimerMessageStore {
     public static final Random random = new Random();
     public static final int PUT_OK = 0, PUT_NEED_RETRY = 1, PUT_NO_RETRY = 2;
     public static final int DAY_SECS = 24 * 3600;
+    //the timer wheel length, if the broker shutdown last more than the configured days, will cause message loss
+    public static final int TIMER_WHELL_TTL_DAY = 7;
     public static final int TIME_BLANK = 60 * 1000;
     public static final int MAGIC_DEFAULT = 1;
     public static final int MAGIC_ROLL = 1 << 1;
@@ -130,8 +132,8 @@ public class TimerMessageStore {
         this.storeConfig = storeConfig;
         this.commitLogFileSize = storeConfig.getMapedFileSizeCommitLog();
         this.timerLogFileSize = storeConfig.getMappedFileSizeTimerLog();
-        this.ttlSecs = 2 * DAY_SECS;
-        this.timerWheel = new TimerWheel(getTimerWheelPath(storeConfig.getStorePathRootDir()), 2 * DAY_SECS);
+        this.ttlSecs = TIMER_WHELL_TTL_DAY * DAY_SECS;
+        this.timerWheel = new TimerWheel(getTimerWheelPath(storeConfig.getStorePathRootDir()),  this.ttlSecs);
         this.timerLog = new TimerLog(getTimerLogPath(storeConfig.getStorePathRootDir()), timerLogFileSize);
         this.timerMetrics = timerMetrics;
         this.timerCheckpoint = timerCheckpoint;
