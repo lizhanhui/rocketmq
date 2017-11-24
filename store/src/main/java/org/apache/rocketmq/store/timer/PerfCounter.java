@@ -28,6 +28,7 @@ public class PerfCounter {
     private static final int MAX_NUM_PER_COUNT = 1000 * 1000;
     private static final int MAX_MS_PER_COUNT = 10 * 1000;
     private long last = System.currentTimeMillis();
+    private float lastTps = 0.0f;
 
     private ThreadLocal<AtomicLong> lastTickMs = new ThreadLocal<AtomicLong>() {
         @Override
@@ -38,6 +39,13 @@ public class PerfCounter {
 
     private Logger logger;
     private String prefix = "DEFAULT";
+
+    public float getLastTps() {
+        if (System.currentTimeMillis() - last <= MAX_MS_PER_COUNT) {
+            return lastTps;
+        }
+        return 0.0f;
+    }
 
     //1000 * ms, 1000 * 10 ms, then 100ms every slots
     private AtomicInteger[] count;
@@ -96,9 +104,10 @@ public class PerfCounter {
         long count501t999 = this.getCount(501, 999);
         long count1000t = this.getCount(1000, 100000000);
         long elapsed = System.currentTimeMillis() - last;
+        lastTps = (allCount.get() + 0.1f) * 1000 / elapsed;
         String str = String.format("PERF_COUNTER_%s[%s] num:%d cost:%d tps:%.4f min:%d max:%d tp50:%d tp80:%d tp90:%d tp99:%d tp999:%d " +
                 "0_1:%d 2_5:%d 6_10:%d 11_50:%d 51_100:%d 101_500:%d 501_999:%d 1000_:%d",
-            prefix, new Timestamp(System.currentTimeMillis()), allCount.get(), elapsed, (allCount.get() + 0.1) * 1000 / elapsed,
+            prefix, new Timestamp(System.currentTimeMillis()), allCount.get(), elapsed, lastTps,
             min, max, tp50, tp80, tp90, tp99, tp999,
             count0t1, count2t5, count6t10, count11t50, count51t100, count101t500, count501t999, count1000t);
         if (logger != null) {

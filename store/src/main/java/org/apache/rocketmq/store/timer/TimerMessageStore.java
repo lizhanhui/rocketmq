@@ -1381,6 +1381,17 @@ public class TimerMessageStore {
         return false;
     }
 
+    public long getReadBehind() {
+        return (System.currentTimeMillis() - currReadTimeMs) / 1000;
+    }
+
+    public float getEnqueueTps() {
+        return perfs.getCounter("enqueue_put").getLastTps();
+    }
+    public float getDequeueTps() {
+        return perfs.getCounter("dequeue_put").getLastTps();
+    }
+
     public void prepareTimerCheckPoint() {
         timerCheckpoint.setLastTimerLogFlushPos(timerLog.getMappedFileQueue().getFlushedWhere());
         if (isMaster()) {
