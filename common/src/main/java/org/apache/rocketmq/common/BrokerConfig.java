@@ -127,12 +127,20 @@ public class BrokerConfig {
 
     //how long to clean filter data after dead.Default: 24h
     private long filterDataCleanTimeSpan = 24 * 3600 * 1000;
-
+ 
     // whether do filter when retry.
     private boolean filterSupportRetry = false;
     private boolean enablePropertyFilter = false;
     private int  popPollingSize = 20;
-
+	private int  reviveQueueNum = 8;
+    private long  reviveInterval = 1000;
+    private long  reviveScanTime = 10000;
+    public long getReviveScanTime() {
+		return reviveScanTime;
+	}
+    public void setReviveScanTime(long reviveScanTime) {
+		this.reviveScanTime = reviveScanTime;
+	}
     public boolean isTraceOn() {
         return traceOn;
     }
@@ -588,4 +596,17 @@ public class BrokerConfig {
     public void setRejectPullConsumerEnable(final boolean rejectPullConsumerEnable) {
         this.rejectPullConsumerEnable = rejectPullConsumerEnable;
     }
+    public int getReviveQueueNum() {
+		return reviveQueueNum;
+	}
+
+	public void setReviveQueueNum(int reviveQueueNum) {
+		this.reviveQueueNum = reviveQueueNum;
+	}
+	public long getReviveInterval() {
+		return reviveInterval;
+	}
+	public void setReviveInterval(long reviveInterval) {
+		this.reviveInterval = reviveInterval;
+	}
 }

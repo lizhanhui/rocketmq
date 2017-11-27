@@ -242,7 +242,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
             return response;
         }
 		int randomQ=random.nextInt(100);
-		int reviveQid=randomQ % PopAckConstants.REVIVE_QUEUE_NUM;
+		int reviveQid=randomQ % this.brokerController.getBrokerConfig().getReviveQueueNum();
 		GetMessageResult getMessageResult=new GetMessageResult();
 		long restNum = 0;
 		boolean needRetry=(randomQ % 5 == 0);

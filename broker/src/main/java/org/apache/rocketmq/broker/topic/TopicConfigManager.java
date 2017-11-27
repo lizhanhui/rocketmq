@@ -132,8 +132,8 @@ public class TopicConfigManager extends ConfigManager {
             String topic = PopAckConstants.REVIVE_TOPIC + this.brokerController.getBrokerConfig().getBrokerClusterName();
             TopicConfig topicConfig = new TopicConfig(topic);
             this.systemTopicList.add(topic);
-            topicConfig.setReadQueueNums(PopAckConstants.REVIVE_QUEUE_NUM);
-            topicConfig.setWriteQueueNums(PopAckConstants.REVIVE_QUEUE_NUM);
+            topicConfig.setReadQueueNums(this.brokerController.getBrokerConfig().getReviveQueueNum());
+            topicConfig.setWriteQueueNums(this.brokerController.getBrokerConfig().getReviveQueueNum());
             this.topicConfigTable.put(topicConfig.getTopicName(), topicConfig);
         }
         {
