@@ -23,9 +23,14 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.FileRegion;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Random;
+
 import org.apache.rocketmq.broker.BrokerController;
 import org.apache.rocketmq.broker.pagecache.ManyMessageTransfer;
+import org.apache.rocketmq.common.KeyBuilder;
+import org.apache.rocketmq.common.PopAckConstants;
 import org.apache.rocketmq.common.TopicConfig;
+import org.apache.rocketmq.common.constant.ConsumeInitMode;
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.common.constant.PermName;
 import org.apache.rocketmq.common.help.FAQUrl;
@@ -33,6 +38,7 @@ import org.apache.rocketmq.common.message.MessageDecoder;
 import org.apache.rocketmq.common.protocol.ResponseCode;
 import org.apache.rocketmq.common.protocol.header.PeekMessageRequestHeader;
 import org.apache.rocketmq.common.protocol.header.PeekMessageResponseHeader;
+import org.apache.rocketmq.common.protocol.header.PopMessageRequestHeader;
 import org.apache.rocketmq.remoting.common.RemotingHelper;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 import org.apache.rocketmq.remoting.netty.NettyRequestProcessor;
@@ -40,12 +46,14 @@ import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 import org.apache.rocketmq.store.GetMessageResult;
 import org.apache.rocketmq.store.GetMessageStatus;
 import org.apache.rocketmq.store.SelectMappedBufferResult;
+import org.apache.rocketmq.util.cache.LockManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class PeekMessageProcessor implements NettyRequestProcessor {
     private static final Logger LOG = LoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
     private final BrokerController brokerController;
+    private Random random=new Random(System.currentTimeMillis());
 
     public PeekMessageProcessor(final BrokerController brokerController) {
         this.brokerController = brokerController;
@@ -101,31 +109,39 @@ public class PeekMessageProcessor implements NettyRequestProcessor {
             response.setRemark(errorInfo);
             return response;
         }
+		int randomQ=random.nextInt(100);
+		int reviveQid=randomQ % this.brokerController.getBrokerConfig().getReviveQueueNum();
 		GetMessageResult getMessageResult=new GetMessageResult();
-		if (requestHeader.getQueueId() < 0) {
-			int num = requestHeader.getMaxMsgNums() / topicConfig.getReadQueueNums();
-			if (num==0) {
-				num=1;
+		boolean needRetry=(randomQ % 5 == 0);
+		long popTime=System.currentTimeMillis();
+		if (needRetry) {
+			TopicConfig retryTopicConfig = this.brokerController.getTopicConfigManager().selectTopicConfig(KeyBuilder.buildPopRetryTopic(requestHeader.getTopic(), requestHeader.getConsumerGroup()));
+			if (retryTopicConfig != null) {
+				for (int i = 0; i < retryTopicConfig.getReadQueueNums(); i++) {
+					int queueId = (randomQ + i) % retryTopicConfig.getReadQueueNums();
+					peekMsgFromQueue(true, getMessageResult, requestHeader, queueId, reviveQid, channel, popTime);
+				}
 			}
+		}
+		if (requestHeader.getQueueId() < 0) {
+			// read all queue
 			for (int i = 0; i < topicConfig.getReadQueueNums(); i++) {
-				long offset = this.brokerController.getMessageStore().getMaxOffsetInQueue(topicConfig.getTopicName(), i) - num;
-				long minOffset = this.brokerController.getMessageStore().getMinOffsetInQueue(topicConfig.getTopicName(), i);
-				if (offset < minOffset) {
-					offset = minOffset;
-				}
-				final GetMessageResult getMessageTmpResult = this.brokerController.getMessageStore().getMessage(requestHeader.getConsumerGroup(), requestHeader.getTopic(), i, offset,
-						num, null);
-				for (SelectMappedBufferResult mapedBuffer : getMessageTmpResult.getMessageMapedList()) {
-					getMessageResult.addMessage(mapedBuffer);
-				}
-				if (getMessageResult.getMessageMapedList().size()>=requestHeader.getMaxMsgNums()) {
-					break;
-				}
+				int queueId = (randomQ + i) % topicConfig.getReadQueueNums();
+				peekMsgFromQueue(false, getMessageResult, requestHeader, queueId, reviveQid, channel,popTime);
 			}
 		}else {
-			long offset = this.brokerController.getMessageStore().getMaxOffsetInQueue(topicConfig.getTopicName(), requestHeader.getQueueId()) - requestHeader.getMaxMsgNums();
-			getMessageResult = this.brokerController.getMessageStore().getMessage(requestHeader.getConsumerGroup(), requestHeader.getTopic(), requestHeader.getQueueId(), offset,
-					requestHeader.getMaxMsgNums(), null);
+			int queueId = requestHeader.getQueueId();
+			peekMsgFromQueue(false, getMessageResult, requestHeader, queueId, reviveQid, channel,popTime);
+		}
+		// if not full , fetch retry again
+		if (!needRetry && getMessageResult.getMessageMapedList().size() < requestHeader.getMaxMsgNums()) {
+			TopicConfig retryTopicConfig = this.brokerController.getTopicConfigManager().selectTopicConfig(KeyBuilder.buildPopRetryTopic(requestHeader.getTopic(), requestHeader.getConsumerGroup()));
+			if (retryTopicConfig != null) {
+				for (int i = 0; i < retryTopicConfig.getReadQueueNums(); i++) {
+					int queueId = (randomQ + i) % retryTopicConfig.getReadQueueNums();
+					peekMsgFromQueue(true, getMessageResult, requestHeader, queueId , reviveQid, channel, popTime);
+				}
+			}
 		}
 		if (!getMessageResult.getMessageBufferList().isEmpty()) {
             response.setCode(ResponseCode.SUCCESS);
@@ -182,6 +198,35 @@ public class PeekMessageProcessor implements NettyRequestProcessor {
         return response;
 }
 
+	private void peekMsgFromQueue(boolean isRetry, GetMessageResult getMessageResult, PeekMessageRequestHeader requestHeader, int queueId, int reviveQid, Channel channel, long popTime) {
+		String topic = isRetry ? KeyBuilder.buildPopRetryTopic(requestHeader.getTopic(), requestHeader.getConsumerGroup()) : requestHeader.getTopic();
+		GetMessageResult getMessageTmpResult;
+		if (getMessageResult.getMessageMapedList().size() >= requestHeader.getMaxMsgNums()) {
+			return;
+		}
+		long offset = getPopOffset(topic, requestHeader.getConsumerGroup(), queueId);
+		getMessageTmpResult = this.brokerController.getMessageStore().getMessage(requestHeader.getConsumerGroup(), topic, queueId, offset,
+				requestHeader.getMaxMsgNums() - getMessageResult.getMessageMapedList().size(), null);
+		// maybe store offset is not correct.
+		if (GetMessageStatus.OFFSET_TOO_SMALL.equals(getMessageTmpResult.getStatus()) || GetMessageStatus.OFFSET_OVERFLOW_BADLY.equals(getMessageTmpResult.getStatus())) {
+			offset = getMessageTmpResult.getNextBeginOffset();
+			getMessageTmpResult = this.brokerController.getMessageStore().getMessage(requestHeader.getConsumerGroup(), topic, queueId, offset,
+					requestHeader.getMaxMsgNums() - getMessageResult.getMessageMapedList().size(), null);
+		}
+		if (getMessageTmpResult != null) {
+			for (SelectMappedBufferResult mapedBuffer : getMessageTmpResult.getMessageMapedList()) {
+				getMessageResult.addMessage(mapedBuffer);
+			}
+		}
+		return;
+	}
+	private long getPopOffset(String topic, String cid, int queueId) {
+		long offset = this.brokerController.getConsumerOffsetManager().queryOffset(cid, topic, queueId);
+		if (offset < 0) {
+			offset = this.brokerController.getMessageStore().getMinOffsetInQueue(topic, queueId);
+		}
+		return offset;
+	}
     private byte[] readGetMessageResult(final GetMessageResult getMessageResult, final String group, final String topic, final int queueId) {
         final ByteBuffer byteBuffer = ByteBuffer.allocate(getMessageResult.getBufferTotalSize());
 

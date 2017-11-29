@@ -25,12 +25,15 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.rocketmq.broker.BrokerController;
+import org.apache.rocketmq.client.consumer.PullResult;
+import org.apache.rocketmq.client.consumer.PullStatus;
 import org.apache.rocketmq.common.KeyBuilder;
 import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.common.PopAckConstants;
@@ -66,6 +69,7 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 	private final BrokerController brokerController;
 	private String reviveTopic;
 	private ExecutorService executorService ;
+    private Random random=new Random(System.currentTimeMillis());
 
 	public AckMessageProcessor(final BrokerController brokerController) {
 		this.brokerController = brokerController;
@@ -156,6 +160,14 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 		}
 		@Override
 		public void run() {
+			try {
+				int initDelay = random.nextInt((int) brokerController.getBrokerConfig().getReviveInterval());
+				if (initDelay > 0) {
+					Thread.sleep(initDelay);
+				}
+			} catch (Exception e) {
+				POP_LOGGER.error("init delay error", e);
+			}
 
 			while (true) {
 				try {
@@ -169,10 +181,12 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 						long oldOffset = brokerController.getConsumerOffsetManager().queryOffset(PopAckConstants.REVIVE_GROUP, reviveTopic, queueId);
 						POP_LOGGER.info("reviveQueueId={}, old offset is {} ",queueId,oldOffset);
 						long offset = oldOffset + 1;
+						//TODO: offset 自我纠正
 						while (true) {
+							long timerDelay = brokerController.getMessageStore().getTimerMessageStore().getReadBehind();
 							List<MessageExt> messageExts = getReviveMessage(offset, queueId);
 							if (messageExts.isEmpty()) {
-								if (endTime != 0 && (System.currentTimeMillis() - endTime > 10 * PopAckConstants.ackTimeInterval)) {
+								if (endTime != 0 && (System.currentTimeMillis() - endTime) > (2 * PopAckConstants.ackTimeInterval + timerDelay)) {
 									endTime = System.currentTimeMillis();
 								}
 								POP_LOGGER.info("reviveQueueId={}, offset is {}, can not get new msg  ", queueId, offset);
@@ -315,22 +329,70 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 				return list.get(0);
 			}
 		}
+	    public PullResult getMessage(String group, String topic, int queueId, long offset, int nums) throws Exception {
+	        GetMessageResult getMessageResult = brokerController.getMessageStore().getMessage(group, topic, queueId, offset, nums, null);
 
-		private List<MessageExt> decodeMsgList(GetMessageResult getMessageResult) {
-			List<MessageExt> foundList = new ArrayList<>();
-			try {
-				List<ByteBuffer> messageBufferList = getMessageResult.getMessageBufferList();
-				for (ByteBuffer bb : messageBufferList) {
-					MessageExt msgExt = MessageDecoder.decode(bb);
-					foundList.add(msgExt);
-				}
+	        if (getMessageResult != null) {
+	            PullStatus pullStatus = PullStatus.NO_NEW_MSG;
+	            List<MessageExt> foundList = null;
+	            switch (getMessageResult.getStatus()) {
+	                case FOUND:
+	                    pullStatus = PullStatus.FOUND;
+	                    foundList = decodeMsgList(getMessageResult);
+	                    brokerController.getBrokerStatsManager().incGroupGetNums(group, topic, getMessageResult.getMessageCount());
+	                    brokerController.getBrokerStatsManager().incGroupGetSize(group, topic, getMessageResult.getBufferTotalSize());
+	                    brokerController.getBrokerStatsManager().incBrokerGetNums(getMessageResult.getMessageCount());
+	                    brokerController.getBrokerStatsManager().recordDiskFallBehindTime(group, topic, queueId,
+	                    brokerController.getMessageStore().now() - foundList.get(foundList.size() - 1).getStoreTimestamp());
+	                    break;
+	                case NO_MATCHED_MESSAGE:
+	                    pullStatus = PullStatus.NO_MATCHED_MSG;
+	                    POP_LOGGER.warn("no matched message. GetMessageStatus={}, topic={}, groupId={}, requestOffset={}",
+	                        getMessageResult.getStatus(), topic, group, offset);
+	                    break;
+	                case NO_MESSAGE_IN_QUEUE:
+	                    pullStatus = PullStatus.NO_NEW_MSG;
+	                    POP_LOGGER.warn("no new message. GetMessageStatus={}, topic={}, groupId={}, requestOffset={}",
+	                        getMessageResult.getStatus(), topic, group, offset);
+	                    break;
+	                case MESSAGE_WAS_REMOVING:
+	                case NO_MATCHED_LOGIC_QUEUE:
+	                case OFFSET_FOUND_NULL:
+	                case OFFSET_OVERFLOW_BADLY:
+	                case OFFSET_OVERFLOW_ONE:
+	                case OFFSET_TOO_SMALL:
+	                    pullStatus = PullStatus.OFFSET_ILLEGAL;
+	                    POP_LOGGER.warn("offset illegal. GetMessageStatus={}, topic={}, groupId={}, requestOffset={}",
+	                        getMessageResult.getStatus(), topic, group, offset);
+	                    break;
+	                default:
+	                    assert false;
+	                    break;
+	            }
 
-			} finally {
-				getMessageResult.release();
-			}
+	            return new PullResult(pullStatus, getMessageResult.getNextBeginOffset(), getMessageResult.getMinOffset(),
+	                getMessageResult.getMaxOffset(), foundList);
 
-			return foundList;
-		}
+	        } else {
+	        	POP_LOGGER.error("get message from store return null. topic={}, groupId={}, requestOffset={}", topic, group, offset);
+	            return null;
+	        }
+	    }
+
+	    private List<MessageExt> decodeMsgList(GetMessageResult getMessageResult) {
+	        List<MessageExt> foundList = new ArrayList<>();
+	        try {
+	            List<ByteBuffer> messageBufferList = getMessageResult.getMessageBufferList();
+	            for (ByteBuffer bb : messageBufferList) {
+	                MessageExt msgExt = MessageDecoder.decode(bb);
+	                foundList.add(msgExt);
+	            }
+
+	        } finally {
+	            getMessageResult.release();
+	        }
+
+	        return foundList;
+	    }
 	}
-
 }
