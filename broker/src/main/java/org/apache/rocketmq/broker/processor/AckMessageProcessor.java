@@ -185,7 +185,7 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 						while (true) {
 							long timerDelay = brokerController.getMessageStore().getTimerMessageStore().getReadBehind();
 							List<MessageExt> messageExts = getReviveMessage(offset, queueId);
-							if (messageExts.isEmpty()) {
+							if (messageExts == null || messageExts.isEmpty()) {
 								if (endTime != 0 && (System.currentTimeMillis() - endTime) > (2 * PopAckConstants.ackTimeInterval + timerDelay)) {
 									endTime = System.currentTimeMillis();
 								}
@@ -314,11 +314,21 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 			brokerController.getTopicConfigManager().updateTopicConfig(topicConfig);
 			return true;
 		}
-		private List<MessageExt> getReviveMessage(long offset, int queueId) {
-			final GetMessageResult getMessageTmpResult = brokerController.getMessageStore().getMessage(PopAckConstants.REVIVE_GROUP, reviveTopic, queueId, offset, 32, null);
-			return decodeMsgList(getMessageTmpResult);
-		}
 
+		private List<MessageExt> getReviveMessage(long offset, int queueId) {
+			PullResult pullResult = getMessage(PopAckConstants.REVIVE_GROUP, reviveTopic, queueId, offset, 32);
+			if (reachTail(pullResult, offset)) {
+				POP_LOGGER.info("reviveQueueId={}, reach tail,offset {}", queueId, offset);
+			} else if (pullResult.getPullStatus() == PullStatus.OFFSET_ILLEGAL || pullResult.getPullStatus() == PullStatus.NO_MATCHED_MSG) {
+				POP_LOGGER.error("reviveQueueId={}, OFFSET_ILLEGAL {}, result is {}", queueId, offset, pullResult);
+				brokerController.getConsumerOffsetManager().commitOffset(PopAckConstants.LOCAL_HOST, PopAckConstants.REVIVE_GROUP, reviveTopic, queueId, pullResult.getNextBeginOffset());
+			}
+			return pullResult.getMsgFoundList();
+		}
+		private boolean reachTail(PullResult pullResult, long offset){
+			return pullResult.getPullStatus() == PullStatus.NO_NEW_MSG
+					|| (pullResult.getPullStatus() == PullStatus.OFFSET_ILLEGAL && offset == pullResult.getMaxOffset());
+		}
 		private MessageExt getBizMessage(String topic, long offset, int queueId) {
 			final GetMessageResult getMessageTmpResult = brokerController.getMessageStore().getMessage(PopAckConstants.REVIVE_GROUP, topic, queueId, offset, 1, null);
 			List<MessageExt> list = decodeMsgList(getMessageTmpResult);
@@ -329,7 +339,7 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 				return list.get(0);
 			}
 		}
-	    public PullResult getMessage(String group, String topic, int queueId, long offset, int nums) throws Exception {
+	    public PullResult getMessage(String group, String topic, int queueId, long offset, int nums)  {
 	        GetMessageResult getMessageResult = brokerController.getMessageStore().getMessage(group, topic, queueId, offset, nums, null);
 
 	        if (getMessageResult != null) {
