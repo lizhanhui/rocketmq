@@ -475,6 +475,10 @@ public class TimerMessageStore {
         if (null == cq) {
             return false;
         }
+        if (currQueueOffset < cq.getMinOffsetInQueue()) {
+            log.warn("Timer currQueueOffset:{} is smaller than minOffsetInQueue:{}", currQueueOffset, cq.getMinOffsetInQueue());
+            currQueueOffset = cq.getMinOffsetInQueue();
+        }
         long offset = currQueueOffset;
         SelectMappedBufferResult bufferCQ = cq.getIndexBuffer(offset);
         if (null == bufferCQ) {
