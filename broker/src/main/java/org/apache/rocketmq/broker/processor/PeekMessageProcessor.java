@@ -36,6 +36,7 @@ import org.apache.rocketmq.common.message.MessageDecoder;
 import org.apache.rocketmq.common.protocol.ResponseCode;
 import org.apache.rocketmq.common.protocol.header.PeekMessageRequestHeader;
 import org.apache.rocketmq.common.protocol.header.PopMessageResponseHeader;
+import org.apache.rocketmq.common.subscription.SubscriptionGroupConfig;
 import org.apache.rocketmq.remoting.common.RemotingHelper;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 import org.apache.rocketmq.remoting.netty.NettyRequestProcessor;
@@ -105,6 +106,18 @@ public class PeekMessageProcessor implements NettyRequestProcessor {
             response.setRemark(errorInfo);
             return response;
         }
+		SubscriptionGroupConfig subscriptionGroupConfig = this.brokerController.getSubscriptionGroupManager().findSubscriptionGroupConfig(requestHeader.getConsumerGroup());
+		if (null == subscriptionGroupConfig) {
+			response.setCode(ResponseCode.SUBSCRIPTION_GROUP_NOT_EXIST);
+			response.setRemark(String.format("subscription group [%s] does not exist, %s", requestHeader.getConsumerGroup(), FAQUrl.suggestTodo(FAQUrl.SUBSCRIPTION_GROUP_NOT_EXIST)));
+			return response;
+		}
+
+		if (!subscriptionGroupConfig.isConsumeEnable()) {
+			response.setCode(ResponseCode.NO_PERMISSION);
+			response.setRemark("subscription group no permission, " + requestHeader.getConsumerGroup());
+			return response;
+		}        
 		int randomQ=random.nextInt(100);
 		int reviveQid=randomQ % this.brokerController.getBrokerConfig().getReviveQueueNum();
 		GetMessageResult getMessageResult=new GetMessageResult();
