@@ -41,6 +41,7 @@ import org.apache.rocketmq.common.TopicConfig;
 import org.apache.rocketmq.common.TopicFilterType;
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.common.help.FAQUrl;
+import org.apache.rocketmq.common.message.Message;
 import org.apache.rocketmq.common.message.MessageAccessor;
 import org.apache.rocketmq.common.message.MessageConst;
 import org.apache.rocketmq.common.message.MessageDecoder;
@@ -242,40 +243,25 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 							if (endTime - popCheckPoint.getReviveTime() > PopAckConstants.ackTimeInterval) {
 								for (int j = 0; j < popCheckPoint.getNum(); j++) {
 									if (!DataConverter.getBit(popCheckPoint.getBitMap(), j)) {
+										// check normal topic, skip ck , if normal topic is not exist
+										String normalTopic=KeyBuilder.parseNormalTopic(popCheckPoint.getTopic(), popCheckPoint.getCid());
+										if (brokerController.getTopicConfigManager().selectTopicConfig(normalTopic) == null) {
+											POP_LOGGER.warn("reviveQueueId={},can not get normal topic {} , then continue ", queueId, popCheckPoint.getTopic());
+											continue;
+										}
 										// retry msg
 										MessageExt messageExt = getBizMessage(popCheckPoint.getTopic(), popCheckPoint.getStartOffset() + j, popCheckPoint.getQueueId());
 										if (messageExt == null) {
-											POP_LOGGER.warn("can not get biz msg {} , then continue ", popCheckPoint.getStartOffset() + j);
+											POP_LOGGER.warn("reviveQueueId={},can not get biz msg topic is {}, offset is {} , then continue ", queueId, popCheckPoint.getTopic(),
+													popCheckPoint.getStartOffset() + j);
 											continue;
 										}
-										MessageExtBrokerInner msgInner = new MessageExtBrokerInner();
-										if (!popCheckPoint.getTopic().startsWith(MixAll.RETRY_GROUP_TOPIC_PREFIX)) {
-											msgInner.setTopic(KeyBuilder.buildPopRetryTopic(popCheckPoint.getTopic(), popCheckPoint.getCid()));
-										} else {
-											msgInner.setTopic(popCheckPoint.getTopic());
+										//skip ck from last epoch
+										if (popCheckPoint.getPopTime() < messageExt.getBornTimestamp()) {
+											POP_LOGGER.warn("reviveQueueId={},skip ck from last epoch {}", queueId, popCheckPoint);
+											continue;
 										}
-										msgInner.setBody(messageExt.getBody());
-										msgInner.setQueueId(0);
-										if (messageExt.getTags() != null) {
-											msgInner.setTags(messageExt.getTags());
-										}else {
-											MessageAccessor.setProperties(msgInner, new HashMap<String, String>());
-										}
-										msgInner.setBornTimestamp(messageExt.getBornTimestamp());
-										msgInner.setBornHost(brokerController.getStoreHost());
-										msgInner.setStoreHost(brokerController.getStoreHost());
-										msgInner.setReconsumeTimes(messageExt.getReconsumeTimes() + 1);
-										msgInner.getProperties().putAll(messageExt.getProperties());
-										if (messageExt.getReconsumeTimes() == 0 || msgInner.getProperties().get(MessageConst.PROPERTY_FIRST_POP_TIME) == null) {
-											msgInner.getProperties().put(MessageConst.PROPERTY_FIRST_POP_TIME, String.valueOf(popCheckPoint.getPopTime()));
-										}
-										msgInner.setPropertiesString(MessageDecoder.messageProperties2String(msgInner.getProperties()));
-										addRetryTopicIfNoExit(msgInner.getTopic());
-										PutMessageResult putMessageResult = brokerController.getMessageStore().putMessage(msgInner);
-										POP_LOGGER.info("reviveQueueId={},retry msg , topic {}, cid {}, msg queueId {}, offset {}, revive delay {}, result is {} ",queueId,popCheckPoint.getTopic(),popCheckPoint.getCid(),messageExt.getQueueId(),messageExt.getQueueOffset(),(System.currentTimeMillis()-popCheckPoint.getReviveTime())/1000,putMessageResult);
-										if (putMessageResult.getAppendMessageResult().getStatus()!=AppendMessageStatus.PUT_OK) {
-											throw new Exception("reviveQueueId=" + queueId + "revive error ,msg is :"+msgInner);
-										}
+										reviveRetry(popCheckPoint, messageExt);
 									}
 								}
 							} else {
@@ -296,9 +282,36 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 					POP_LOGGER.error("revive error", e);
 				}
 			}
-
-		
-			
+		}
+		private void reviveRetry(PopCheckPoint popCheckPoint,MessageExt messageExt) throws Exception{
+			MessageExtBrokerInner msgInner = new MessageExtBrokerInner();
+			if (!popCheckPoint.getTopic().startsWith(MixAll.RETRY_GROUP_TOPIC_PREFIX)) {
+				msgInner.setTopic(KeyBuilder.buildPopRetryTopic(popCheckPoint.getTopic(), popCheckPoint.getCid()));
+			} else {
+				msgInner.setTopic(popCheckPoint.getTopic());
+			}
+			msgInner.setBody(messageExt.getBody());
+			msgInner.setQueueId(0);
+			if (messageExt.getTags() != null) {
+				msgInner.setTags(messageExt.getTags());
+			}else {
+				MessageAccessor.setProperties(msgInner, new HashMap<String, String>());
+			}
+			msgInner.setBornTimestamp(messageExt.getBornTimestamp());
+			msgInner.setBornHost(brokerController.getStoreHost());
+			msgInner.setStoreHost(brokerController.getStoreHost());
+			msgInner.setReconsumeTimes(messageExt.getReconsumeTimes() + 1);
+			msgInner.getProperties().putAll(messageExt.getProperties());
+			if (messageExt.getReconsumeTimes() == 0 || msgInner.getProperties().get(MessageConst.PROPERTY_FIRST_POP_TIME) == null) {
+				msgInner.getProperties().put(MessageConst.PROPERTY_FIRST_POP_TIME, String.valueOf(popCheckPoint.getPopTime()));
+			}
+			msgInner.setPropertiesString(MessageDecoder.messageProperties2String(msgInner.getProperties()));
+			addRetryTopicIfNoExit(msgInner.getTopic());
+			PutMessageResult putMessageResult = brokerController.getMessageStore().putMessage(msgInner);
+			POP_LOGGER.info("reviveQueueId={},retry msg , topic {}, cid {}, msg queueId {}, offset {}, revive delay {}, result is {} ",queueId,popCheckPoint.getTopic(),popCheckPoint.getCid(),messageExt.getQueueId(),messageExt.getQueueOffset(),(System.currentTimeMillis()-popCheckPoint.getReviveTime())/1000,putMessageResult);
+			if (putMessageResult.getAppendMessageResult() == null || putMessageResult.getAppendMessageResult().getStatus() != AppendMessageStatus.PUT_OK) {
+				throw new Exception("reviveQueueId=" + queueId + ",revive error ,msg is :"+msgInner);
+			}
 		}
 		private boolean addRetryTopicIfNoExit(String topic) {
 			TopicConfig topicConfig = brokerController.getTopicConfigManager().selectTopicConfig(topic);
