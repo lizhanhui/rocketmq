@@ -563,6 +563,10 @@ public class AdminBrokerProcessor implements NettyRequestProcessor {
 
         this.brokerController.getSubscriptionGroupManager().deleteSubscriptionGroupConfig(requestHeader.getGroupName());
 
+        if (requestHeader.isCleanOffset()) {
+            this.brokerController.getConsumerOffsetManager().cleanOffset(requestHeader.getGroupName());
+        }
+
         response.setCode(ResponseCode.SUCCESS);
         response.setRemark(null);
         return response;
