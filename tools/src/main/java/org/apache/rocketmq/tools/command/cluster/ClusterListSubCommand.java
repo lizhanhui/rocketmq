@@ -210,6 +210,7 @@ public class ClusterListSubCommand implements SubCommand {
                         String earliestMessageTimeStamp = "";
                         String commitLogDiskRatio = "";
                         long timerReadBehind = 0;
+                        long timerOffsetBehind = 0;
                         long timerCongestNum = 0;
                         float timerEnqueueTps = 0.0f;
                         float timerDequeueTps = 0.0f;
@@ -230,6 +231,7 @@ public class ClusterListSubCommand implements SubCommand {
                             commitLogDiskRatio = kvTable.getTable().get("commitLogDiskRatio");
 
                             timerReadBehind = Long.valueOf(kvTable.getTable().get("timerReadBehind"));
+                            timerOffsetBehind = Long.valueOf(kvTable.getTable().get("timerOffsetBehind"));
                             timerCongestNum = Long.valueOf(kvTable.getTable().get("timerCongestNum"));
                             timerEnqueueTps = Float.valueOf(kvTable.getTable().get("timerEnqueueTps"));
                             timerDequeueTps = Float.valueOf(kvTable.getTable().get("timerDequeueTps"));
@@ -272,7 +274,7 @@ public class ClusterListSubCommand implements SubCommand {
                             version,
                             String.format("%9.2f(%s,%sms)", in, sendThreadPoolQueueSize, sendThreadPoolQueueHeadWaitTimeMills),
                             String.format("%9.2f(%s,%sms)", out, pullThreadPoolQueueSize, pullThreadPoolQueueHeadWaitTimeMills),
-                            String.format("%d(%.1fw, %.1f, %.1f)", timerReadBehind, timerCongestNum/10000.0f, timerEnqueueTps, timerDequeueTps),
+                            String.format("%d-%d(%.1fw, %.1f, %.1f)", timerReadBehind, timerOffsetBehind, timerCongestNum/10000.0f, timerEnqueueTps, timerDequeueTps),
                             pageCacheLockTimeMills,
                             String.format("%2.2f", hour),
                             String.format("%.4f", space)

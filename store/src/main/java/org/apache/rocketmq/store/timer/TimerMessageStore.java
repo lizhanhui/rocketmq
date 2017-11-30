@@ -1389,6 +1389,13 @@ public class TimerMessageStore {
         return (System.currentTimeMillis() - currReadTimeMs) / 1000;
     }
 
+    public long getOffsetBehind() {
+        long tmpQueueOffset = currQueueOffset;
+        ConsumeQueue cq = messageStore.getConsumeQueue(TIMER_TOPIC, 0);
+        long maxOffsetInQueue = cq == null ? 0 : cq.getMaxOffsetInQueue();
+        return maxOffsetInQueue - tmpQueueOffset;
+    }
+
     public float getEnqueueTps() {
         return perfs.getCounter("enqueue_put").getLastTps();
     }
