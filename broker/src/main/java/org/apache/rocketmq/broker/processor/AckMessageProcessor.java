@@ -412,11 +412,20 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 	        List<MessageExt> foundList = new ArrayList<>();
 	        try {
 	            List<ByteBuffer> messageBufferList = getMessageResult.getMessageBufferList();
-	            for (ByteBuffer bb : messageBufferList) {
-	                MessageExt msgExt = MessageDecoder.decode(bb);
-	                foundList.add(msgExt);
+	            if (messageBufferList != null) {
+					for (ByteBuffer bb : messageBufferList) {
+						if (bb == null) {
+							POP_LOGGER.error("bb is null {}", getMessageResult);
+							continue;
+						}
+						MessageExt msgExt = MessageDecoder.decode(bb);
+						if (msgExt == null) {
+							POP_LOGGER.error("decode msgExt is null {}", getMessageResult);
+							continue;
+						}
+						foundList.add(msgExt);
+					}
 	            }
-
 	        } finally {
 	            getMessageResult.release();
 	        }
