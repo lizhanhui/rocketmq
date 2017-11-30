@@ -299,6 +299,12 @@ public class DefaultMQAdminExt extends ClientConfig implements MQAdminExt {
     }
 
     @Override
+    public void deleteSubscriptionGroup(String addr, String groupName, boolean cleanOffset)
+        throws RemotingException, MQBrokerException, InterruptedException, MQClientException {
+        defaultMQAdminExtImpl.deleteSubscriptionGroup(addr, groupName, cleanOffset);
+    }
+
+    @Override
     public void createAndUpdateKvConfig(String namespace, String key,
         String value) throws RemotingException, MQBrokerException,
         InterruptedException, MQClientException {
