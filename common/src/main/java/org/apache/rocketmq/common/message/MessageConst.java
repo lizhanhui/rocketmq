@@ -49,6 +49,7 @@ public class MessageConst {
     public static final String PROPERTY_TIMER_DEQUEUE_MS = "TIMER_DEQUEUE_MS";
     public static final String PROPERTY_TIMER_ROLL_TIMES = "TIMER_ROLL_TIMES";
     public static final String PROPERTY_TIMER_DEL_UNIQKEY = "TIMER_DEL_UNIQKEY";
+    public static final String PROPERTY_TIMER_DELAY_LEVEL = "TIMER_DELAY_LEVEL";
     public static final String PROPERTY_POP_CK = "POP_CK";
     public static final String PROPERTY_POP_CK_OFFSET = "POP_CK_OFFSET";
     public static final String PROPERTY_FIRST_POP_TIME = "1ST_POP_TIME";

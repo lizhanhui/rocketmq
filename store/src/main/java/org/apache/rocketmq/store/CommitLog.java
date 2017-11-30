@@ -537,12 +537,16 @@ public class CommitLog {
 
     private PutMessageResult transformTimerMessage(MessageExtBrokerInner msg) {
         //do transform
+        int delayLevel = msg.getDelayTimeLevel();
         if (msg.getDelayTimeLevel() > 0) {
             if (msg.getDelayTimeLevel() > this.defaultMessageStore.getScheduleMessageService().getMaxDelayLevel()) {
                 msg.setDelayTimeLevel(this.defaultMessageStore.getScheduleMessageService().getMaxDelayLevel());
             }
+            delayLevel = msg.getDelayTimeLevel();
             MessageAccessor.putProperty(msg, MessageConst.PROPERTY_TIMER_DELIVER_MS, this.defaultMessageStore.getScheduleMessageService().computeDeliverTimestamp(msg.getDelayTimeLevel(),
                 System.currentTimeMillis()) + "");
+            MessageAccessor.putProperty(msg, MessageConst.PROPERTY_TIMER_DELAY_LEVEL, delayLevel + "");
+            MessageAccessor.clearProperty(msg, MessageConst.PROPERTY_DELAY_TIME_LEVEL);
         }
         long deliverMs;
         try {
@@ -555,7 +559,7 @@ public class CommitLog {
             return new PutMessageResult(PutMessageStatus.WHEEL_TIMER_MSG_ILLEGAL, null);
         }
         if (deliverMs > System.currentTimeMillis()) {
-            if (msg.getDelayTimeLevel() <= 0 && deliverMs - System.currentTimeMillis() > this.defaultMessageStore.getMessageStoreConfig().getTimerMaxDelaySec() * 1000) {
+            if (delayLevel <= 0 && deliverMs - System.currentTimeMillis() > this.defaultMessageStore.getMessageStoreConfig().getTimerMaxDelaySec() * 1000) {
                 return new PutMessageResult(PutMessageStatus.WHEEL_TIMER_MSG_ILLEGAL, null);
             }
             if (deliverMs % 1000 == 0) {
