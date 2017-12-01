@@ -169,6 +169,12 @@ public class DefaultMQAdminExt extends ClientConfig implements MQAdminExt {
     }
 
     @Override
+    public void createAndUpdateSubWithInitOffset(String addr, SubscriptionGroupConfig config, String topic, int initMode)
+        throws RemotingException, MQBrokerException, InterruptedException, MQClientException {
+        defaultMQAdminExtImpl.createAndUpdateSubWithInitOffset(addr, config, topic, initMode);
+    }
+
+    @Override
     public SubscriptionGroupConfig examineSubscriptionGroupConfig(String addr, String group) {
         return defaultMQAdminExtImpl.examineSubscriptionGroupConfig(addr, group);
     }

@@ -126,6 +126,8 @@ public class RequestCode {
 
     public static final int INVOKE_BROKER_TO_GET_CONSUMER_STATUS = 223;
 
+    public static final int UPDATE_AND_CREATE_SUB_INIT_OFFSET = 224;
+
     public static final int QUERY_TOPIC_CONSUME_BY_WHO = 300;
 
     public static final int GET_TOPICS_BY_CLUSTER = 224;

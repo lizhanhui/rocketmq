@@ -266,6 +266,33 @@ public class MQClientAPIImpl {
 
     }
 
+    public void createSubscriptionGroupInitOffset(final String addr, final SubscriptionGroupConfig config,
+                                                  final String topic, final int initMode, final long timeoutMillis)
+        throws RemotingException, MQBrokerException, InterruptedException, MQClientException {
+
+        InitConsumerOffsetRequestHeader requestHeader = new InitConsumerOffsetRequestHeader();
+        requestHeader.setTopic(topic);
+        requestHeader.setInitMode(initMode);
+
+        RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.UPDATE_AND_CREATE_SUB_INIT_OFFSET, requestHeader);
+
+        byte[] body = RemotingSerializable.encode(config);
+        request.setBody(body);
+
+        RemotingCommand response = this.remotingClient.invokeSync(MixAll.brokerVIPChannel(this.clientConfig.isVipChannelEnabled(), addr),
+            request, timeoutMillis);
+        assert response != null;
+        switch (response.getCode()) {
+            case ResponseCode.SUCCESS: {
+                return;
+            }
+            default:
+                break;
+        }
+
+        throw new MQClientException(response.getCode(), response.getRemark());
+    }
+
     public void createTopic(final String addr, final String defaultTopic, final TopicConfig topicConfig,
         final long timeoutMillis)
         throws RemotingException, MQBrokerException, InterruptedException, MQClientException {
