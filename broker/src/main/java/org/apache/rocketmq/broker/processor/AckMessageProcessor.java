@@ -242,19 +242,19 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 						long newOffset = oldOffset;
 						for (PopCheckPoint popCheckPoint : sortList) {
 							if (endTime - popCheckPoint.getReviveTime() > PopAckConstants.ackTimeInterval) {
+								// check normal topic, skip ck , if normal topic is not exist
+								String normalTopic=KeyBuilder.parseNormalTopic(popCheckPoint.getTopic(), popCheckPoint.getCid());
+								if (brokerController.getTopicConfigManager().selectTopicConfig(normalTopic) == null) {
+									POP_LOGGER.warn("reviveQueueId={},can not get normal topic {} , then continue ", queueId, popCheckPoint.getTopic());
+									continue;
+								}
+								SubscriptionGroupConfig subscriptionGroupConfig = brokerController.getSubscriptionGroupManager().findSubscriptionGroupConfig(popCheckPoint.getCid());
+								if (null == subscriptionGroupConfig) {
+									POP_LOGGER.warn("reviveQueueId={},can not get cid {} , then continue ", queueId, popCheckPoint.getCid());
+									continue;
+								}
 								for (int j = 0; j < popCheckPoint.getNum(); j++) {
 									if (!DataConverter.getBit(popCheckPoint.getBitMap(), j)) {
-										// check normal topic, skip ck , if normal topic is not exist
-										String normalTopic=KeyBuilder.parseNormalTopic(popCheckPoint.getTopic(), popCheckPoint.getCid());
-										if (brokerController.getTopicConfigManager().selectTopicConfig(normalTopic) == null) {
-											POP_LOGGER.warn("reviveQueueId={},can not get normal topic {} , then continue ", queueId, popCheckPoint.getTopic());
-											continue;
-										}
-										SubscriptionGroupConfig subscriptionGroupConfig = brokerController.getSubscriptionGroupManager().findSubscriptionGroupConfig(popCheckPoint.getCid());
-										if (null == subscriptionGroupConfig) {
-											POP_LOGGER.warn("reviveQueueId={},can not get cid {} , then continue ", queueId, popCheckPoint.getCid());
-											continue;
-										}
 										// retry msg
 										MessageExt messageExt = getBizMessage(popCheckPoint.getTopic(), popCheckPoint.getStartOffset() + j, popCheckPoint.getQueueId());
 										if (messageExt == null) {
@@ -340,7 +340,7 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 				POP_LOGGER.info("reviveQueueId={}, reach tail,offset {}", queueId, offset);
 			} else if (pullResult.getPullStatus() == PullStatus.OFFSET_ILLEGAL || pullResult.getPullStatus() == PullStatus.NO_MATCHED_MSG) {
 				POP_LOGGER.error("reviveQueueId={}, OFFSET_ILLEGAL {}, result is {}", queueId, offset, pullResult);
-				brokerController.getConsumerOffsetManager().commitOffset(PopAckConstants.LOCAL_HOST, PopAckConstants.REVIVE_GROUP, reviveTopic, queueId, pullResult.getNextBeginOffset());
+				brokerController.getConsumerOffsetManager().commitOffset(PopAckConstants.LOCAL_HOST, PopAckConstants.REVIVE_GROUP, reviveTopic, queueId, pullResult.getNextBeginOffset()-1);
 			}
 			return pullResult.getMsgFoundList();
 		}
