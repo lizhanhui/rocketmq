@@ -91,7 +91,7 @@ public class MixAll {
 
     /**
      *  This method accepts two methods to specify name server lookup domain: system environment variables and Java option.
-     *  The later one take precedence.
+     *  The latter one take precedence.
      *
      * @return Endpoint to query name server address list through HTTP request.
      */
