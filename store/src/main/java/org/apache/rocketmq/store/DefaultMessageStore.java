@@ -45,6 +45,7 @@ import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.common.message.MessageDecoder;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.message.MessageExtBatch;
+import org.apache.rocketmq.common.message.MessageVersion;
 import org.apache.rocketmq.common.running.RunningStats;
 import org.apache.rocketmq.common.sysflag.MessageSysFlag;
 import org.apache.rocketmq.store.config.BrokerRole;
@@ -116,6 +117,8 @@ public class DefaultMessageStore implements MessageStore {
 
     private final PerfCounter.Ticks ticks =  new PerfCounter.Ticks(log);
 
+    private final MessageVersion messageVersion;
+
     public DefaultMessageStore(final MessageStoreConfig messageStoreConfig, final BrokerStatsManager brokerStatsManager,
         final MessageArrivingListener messageArrivingListener, final BrokerConfig brokerConfig) throws IOException {
         this.messageArrivingListener = messageArrivingListener;
@@ -154,6 +157,7 @@ public class DefaultMessageStore implements MessageStore {
         File file = new File(StorePathConfigHelper.getLockFile(messageStoreConfig.getStorePathRootDir()));
         MappedFile.ensureDirOK(file.getParent());
         lockFile = new RandomAccessFile(file, "rw");
+        this.messageVersion = MessageVersion.valueOf(messageStoreConfig.getMessageVersion());
     }
 
     public void truncateDirtyLogicFiles(long phyOffset) {
@@ -331,8 +335,15 @@ public class DefaultMessageStore implements MessageStore {
             this.printTimes.set(0);
         }
 
-        if (msg.getTopic().length() > this.messageStoreConfig.getMaxTopicLength()) {
-            log.warn("putMessage message topic length too long " + msg.getTopic().length());
+        int topicLen = msg.getTopic().length();
+        if (topicLen > this.messageStoreConfig.getMaxTopicLength()) {
+            log.warn("putMessage message topic[{}] length too long {}", msg.getTopic(), topicLen);
+            return new PutMessageResult(PutMessageStatus.MESSAGE_ILLEGAL, null);
+        }
+
+        if (topicLen > Byte.MAX_VALUE && this.messageVersion.equals(MessageVersion.MESSAGE_VERSION_V1)) {
+            log.warn("putMessage message topic[{}] length too long {}, but it is not supported by broker, {}",
+                msg.getTopic(), topicLen, this.messageStoreConfig.getMessageVersion());
             return new PutMessageResult(PutMessageStatus.MESSAGE_ILLEGAL, null);
         }
 
@@ -387,8 +398,15 @@ public class DefaultMessageStore implements MessageStore {
             this.printTimes.set(0);
         }
 
-        if (messageExtBatch.getTopic().length() > this.messageStoreConfig.getMaxTopicLength()) {
-            log.warn("PutMessages topic length too long " + messageExtBatch.getTopic().length());
+        int topicLen = messageExtBatch.getTopic().length();
+        if (topicLen > this.messageStoreConfig.getMaxTopicLength()) {
+            log.warn("putMessage batch message topic[{}] length too long {}", messageExtBatch.getTopic(), topicLen);
+            return new PutMessageResult(PutMessageStatus.MESSAGE_ILLEGAL, null);
+        }
+
+        if (topicLen > Byte.MAX_VALUE && messageVersion.equals(MessageVersion.MESSAGE_VERSION_V1)) {
+            log.warn("putMessage batch message topic[{}] length too long {}, but it is not supported by broker, {}",
+                messageExtBatch.getTopic(), topicLen, this.messageStoreConfig.getMessageVersion());
             return new PutMessageResult(PutMessageStatus.MESSAGE_ILLEGAL, null);
         }
 

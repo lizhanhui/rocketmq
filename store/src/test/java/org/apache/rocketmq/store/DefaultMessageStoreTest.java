@@ -27,6 +27,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.rocketmq.common.BrokerConfig;
 import org.apache.rocketmq.common.UtilAll;
+import org.apache.rocketmq.common.message.MessageDecoder;
+import org.apache.rocketmq.common.message.MessageExt;
+import org.apache.rocketmq.common.message.MessageVersion;
 import org.apache.rocketmq.store.config.FlushDiskType;
 import org.apache.rocketmq.store.config.MessageStoreConfig;
 import org.junit.After;
@@ -99,6 +102,7 @@ public class DefaultMessageStoreTest {
         messageStoreConfig.setMaxHashSlotNum(10000);
         messageStoreConfig.setMaxIndexNum(100 * 100);
         messageStoreConfig.setFlushDiskType(FlushDiskType.SYNC_FLUSH);
+        messageStoreConfig.setMessageVersion(MessageVersion.MESSAGE_VERSION_V2.name());
         return new DefaultMessageStore(messageStoreConfig, new BrokerStatsManager("simpleTest"), new MyMessageArrivingListener(), new BrokerConfig());
     }
 
@@ -119,6 +123,27 @@ public class DefaultMessageStoreTest {
         verifyThatMasterIsFunctional(totalMsgs, messageStore);
     }
 
+    @Test
+    public void testNewMagicCode() throws Exception {
+        MessageExtBrokerInner message = buildMessage();
+        messageStore.putMessage(message);
+        Thread.sleep(3000);
+        GetMessageResult result = messageStore.getMessage("GROUP_A", "FooBar", message.getQueueId(), 0, 1, null);
+        assertThat(result).isNotNull();
+        try {
+            assertThat(result.getMessageCount()).isEqualTo(1);
+            assertThat(result.getMessageBufferList().size()).isEqualTo(1);
+
+            MessageExt decode = MessageDecoder.decode(result.getMessageBufferList().get(0), true, true);
+
+            assertThat(decode).isNotNull();
+            assertThat(decode.getKeys()).isEqualTo(message.getKeys());
+            assertThat(decode.getTopic()).isEqualTo(message.getTopic());
+        } finally {
+            result.release();
+        }
+    }
+
     public MessageExtBrokerInner buildMessage() {
         MessageExtBrokerInner msg = new MessageExtBrokerInner();
         msg.setTopic("FooBar");
@@ -131,6 +156,7 @@ public class DefaultMessageStoreTest {
         msg.setBornTimestamp(System.currentTimeMillis());
         msg.setStoreHost(StoreHost);
         msg.setBornHost(BornHost);
+        msg.setPropertiesString(MessageDecoder.messageProperties2String(msg.getProperties()));
         return msg;
     }
 

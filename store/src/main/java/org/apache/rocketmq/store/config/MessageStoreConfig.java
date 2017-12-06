@@ -18,6 +18,7 @@ package org.apache.rocketmq.store.config;
 
 import java.io.File;
 import org.apache.rocketmq.common.annotation.ImportantField;
+import org.apache.rocketmq.common.message.MessageVersion;
 import org.apache.rocketmq.store.ConsumeQueue;
 
 public class MessageStoreConfig {
@@ -84,6 +85,9 @@ public class MessageStoreConfig {
     private int maxMessageSize = 1024 * 1024 * 4;
     // Maximum length of topic
     private int maxTopicLength = Byte.MAX_VALUE;
+    // Message magic code and related store logic.
+    @ImportantField
+    private String messageVersion = MessageVersion.MESSAGE_VERSION_V1.name();
     // Whether check the CRC32 of the records consumed.
     // This ensures no on-the-wire or on-disk corruption to the messages occurred.
     // This check adds some overhead,so it may be disabled in cases seeking extreme performance.
@@ -298,6 +302,14 @@ public class MessageStoreConfig {
 
     public void setMaxTopicLength(int maxTopicLength) {
         this.maxTopicLength = maxTopicLength;
+    }
+
+    public String getMessageVersion() {
+        return messageVersion;
+    }
+
+    public void setMessageVersion(String messageVersion) {
+        this.messageVersion = messageVersion;
     }
 
     public boolean isCheckCRCOnRecover() {

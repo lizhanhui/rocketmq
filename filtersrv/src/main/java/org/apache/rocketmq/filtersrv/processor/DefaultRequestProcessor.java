@@ -34,6 +34,7 @@ import org.apache.rocketmq.common.filter.FilterContext;
 import org.apache.rocketmq.common.message.MessageDecoder;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.message.MessageQueue;
+import org.apache.rocketmq.common.message.MessageVersion;
 import org.apache.rocketmq.common.protocol.RequestCode;
 import org.apache.rocketmq.common.protocol.ResponseCode;
 import org.apache.rocketmq.common.protocol.header.PullMessageRequestHeader;
@@ -273,6 +274,7 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
             }
         }
 
+        final MessageVersion version = msg.getVersion();
         final int bodyLength = msg.getBody() != null ? msg.getBody().length : 0;
         byte[] topicData = msg.getTopic().getBytes(MixAll.DEFAULT_CHARSET);
         final int topicLength = topicData.length;
@@ -294,7 +296,7 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
             + 4 // 13 RECONSUMETIMES
             + 8 // 14 Prepared Transaction Offset
             + 4 + bodyLength // 14 BODY
-            + 1 + topicLength // 15 TOPIC
+            + (version == null ? 1 : version.getTopicLengthSize()) + topicLength // 15 TOPIC
             + 2 + propertiesLength // 16 propertiesLength
             + 0;
 
@@ -305,7 +307,7 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         // 1 TOTALSIZE
         msgStoreItemMemory.putInt(msgLen);
         // 2 MAGICCODE
-        msgStoreItemMemory.putInt(CommitLog.MESSAGE_MAGIC_CODE);
+        msgStoreItemMemory.putInt(version == null ? MessageDecoder.MESSAGE_MAGIC_CODE : version.getMagicCode());
         // 3 BODYCRC
         msgStoreItemMemory.putInt(UtilAll.crc32(msgInner.getBody()));
         // 4 QUEUEID

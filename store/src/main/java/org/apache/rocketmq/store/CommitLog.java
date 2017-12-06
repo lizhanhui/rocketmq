@@ -31,6 +31,7 @@ import org.apache.rocketmq.common.message.MessageConst;
 import org.apache.rocketmq.common.message.MessageDecoder;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.message.MessageExtBatch;
+import org.apache.rocketmq.common.message.MessageVersion;
 import org.apache.rocketmq.common.sysflag.MessageSysFlag;
 import org.apache.rocketmq.store.config.BrokerRole;
 import org.apache.rocketmq.store.config.FlushDiskType;
@@ -45,7 +46,6 @@ import org.slf4j.LoggerFactory;
  */
 public class CommitLog {
     // Message's MAGIC CODE daa320a7
-    public final static int MESSAGE_MAGIC_CODE = 0xAABBCCDD ^ 1880681586 + 8;
     private static final Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
     // End of file empty MAGIC CODE cbd43194
     private final static int BLANK_MAGIC_CODE = 0xBBCCDDEE ^ 1880681586 + 8;
@@ -76,16 +76,16 @@ public class CommitLog {
         }
 
         this.commitLogService = new CommitRealTimeService();
+        final MessageVersion messageVersion = MessageVersion.valueOf(defaultMessageStore.getMessageStoreConfig().getMessageVersion());
 
-        this.appendMessageCallback = new DefaultAppendMessageCallback(defaultMessageStore.getMessageStoreConfig().getMaxMessageSize());
+        this.appendMessageCallback = new DefaultAppendMessageCallback(defaultMessageStore.getMessageStoreConfig().getMaxMessageSize(), messageVersion);
         batchEncoderThreadLocal = new ThreadLocal<MessageExtBatchEncoder>() {
             @Override
             protected MessageExtBatchEncoder initialValue() {
-                return new MessageExtBatchEncoder(defaultMessageStore.getMessageStoreConfig().getMaxMessageSize());
+                return new MessageExtBatchEncoder(defaultMessageStore.getMessageStoreConfig().getMaxMessageSize(), messageVersion);
             }
         };
         this.putMessageLock = defaultMessageStore.getMessageStoreConfig().isUseReentrantLockWhenPutMessage() ? new PutMessageReentrantLock() : new PutMessageSpinLock();
-
     }
 
     public boolean load() {
@@ -236,7 +236,8 @@ public class CommitLog {
             // 2 MAGIC CODE
             int magicCode = byteBuffer.getInt();
             switch (magicCode) {
-                case MESSAGE_MAGIC_CODE:
+                case MessageDecoder.MESSAGE_MAGIC_CODE:
+                case MessageDecoder.MESSAGE_MAGIC_CODE_V2:
                     break;
                 case BLANK_MAGIC_CODE:
                     return new DispatchRequest(0, true /* success */);
@@ -244,6 +245,7 @@ public class CommitLog {
                     log.warn("found a illegal magic code 0x" + Integer.toHexString(magicCode));
                     return new DispatchRequest(-1, false /* success */);
             }
+            MessageVersion messageVersion = MessageVersion.valueOfMagicCode(magicCode);
 
             byte[] bytesContent = new byte[totalSize];
 
@@ -288,7 +290,7 @@ public class CommitLog {
                 }
             }
 
-            byte topicLen = byteBuffer.get();
+            int topicLen = messageVersion.getTopicLength(byteBuffer);
             byteBuffer.get(bytesContent, 0, topicLen);
             String topic = new String(bytesContent, 0, topicLen, MessageDecoder.CHARSET_UTF8);
 
@@ -330,7 +332,7 @@ public class CommitLog {
                 }
             }
 
-            int readLength = calMsgLength(bodyLen, topicLen, propertiesLength);
+            int readLength = calMsgLength(messageVersion, bodyLen, topicLen, propertiesLength);
             if (totalSize != readLength) {
                 doNothingForDeadCode(reconsumeTimes);
                 doNothingForDeadCode(flag);
@@ -358,12 +360,13 @@ public class CommitLog {
                 propertiesMap
             );
         } catch (Exception e) {
+            log.error("", e);
         }
 
         return new DispatchRequest(-1, false /* success */);
     }
 
-    private static int calMsgLength(int bodyLength, int topicLength, int propertiesLength) {
+    private static int calMsgLength(MessageVersion messageVersion, int bodyLength, int topicLength, int propertiesLength) {
         final int msgLen = 4 //TOTALSIZE
             + 4 //MAGICCODE
             + 4 //BODYCRC
@@ -379,7 +382,7 @@ public class CommitLog {
             + 4 //RECONSUMETIMES
             + 8 //Prepared Transaction Offset
             + 4 + (bodyLength > 0 ? bodyLength : 0) //BODY
-            + 1 + topicLength //TOPIC
+            + messageVersion.getTopicLengthSize() + topicLength //TOPIC
             + 2 + (propertiesLength > 0 ? propertiesLength : 0) //propertiesLength
             + 0;
         return msgLen;
@@ -478,7 +481,7 @@ public class CommitLog {
         ByteBuffer byteBuffer = mappedFile.sliceByteBuffer();
 
         int magicCode = byteBuffer.getInt(MessageDecoder.MESSAGE_MAGIC_CODE_POSTION);
-        if (magicCode != MESSAGE_MAGIC_CODE) {
+        if (magicCode != MessageDecoder.MESSAGE_MAGIC_CODE && magicCode != MessageDecoder.MESSAGE_MAGIC_CODE_V2) {
             return false;
         }
 
@@ -1251,10 +1254,20 @@ public class CommitLog {
 
         private final ByteBuffer hostHolder = ByteBuffer.allocate(8);
 
+        private final MessageVersion messageVersion;
+
         DefaultAppendMessageCallback(final int size) {
             this.msgIdMemory = ByteBuffer.allocate(MessageDecoder.MSG_ID_LENGTH);
             this.msgStoreItemMemory = ByteBuffer.allocate(size + END_FILE_MIN_BLANK_LENGTH);
             this.maxMessageSize = size;
+            this.messageVersion = MessageVersion.MESSAGE_VERSION_V1;
+        }
+
+        DefaultAppendMessageCallback(final int size, final MessageVersion messageVersion) {
+            this.msgIdMemory = ByteBuffer.allocate(MessageDecoder.MSG_ID_LENGTH);
+            this.msgStoreItemMemory = ByteBuffer.allocate(size + END_FILE_MIN_BLANK_LENGTH);
+            this.maxMessageSize = size;
+            this.messageVersion = messageVersion;
         }
 
         public ByteBuffer getMsgStoreItemMemory() {
@@ -1316,7 +1329,7 @@ public class CommitLog {
 
             final int bodyLength = msgInner.getBody() == null ? 0 : msgInner.getBody().length;
 
-            final int msgLen = calMsgLength(bodyLength, topicLength, propertiesLength);
+            final int msgLen = calMsgLength(messageVersion, bodyLength, topicLength, propertiesLength);
 
             // Exceeds the maximum message
             if (msgLen > this.maxMessageSize) {
@@ -1345,7 +1358,7 @@ public class CommitLog {
             // 1 TOTALSIZE
             this.msgStoreItemMemory.putInt(msgLen);
             // 2 MAGICCODE
-            this.msgStoreItemMemory.putInt(CommitLog.MESSAGE_MAGIC_CODE);
+            this.msgStoreItemMemory.putInt(messageVersion.getMagicCode());
             // 3 BODYCRC
             this.msgStoreItemMemory.putInt(msgInner.getBodyCRC());
             // 4 QUEUEID
@@ -1378,7 +1391,7 @@ public class CommitLog {
             if (bodyLength > 0)
                 this.msgStoreItemMemory.put(msgInner.getBody());
             // 16 TOPIC
-            this.msgStoreItemMemory.put((byte) topicLength);
+            messageVersion.putTopicLength(this.msgStoreItemMemory, topicLength);
             this.msgStoreItemMemory.put(topicData);
             // 17 PROPERTIES
             this.msgStoreItemMemory.putShort((short) propertiesLength);
@@ -1504,9 +1517,18 @@ public class CommitLog {
 
         private final ByteBuffer hostHolder = ByteBuffer.allocate(8);
 
+        private final MessageVersion messageVersion;
+
         MessageExtBatchEncoder(final int size) {
             this.msgBatchMemory = ByteBuffer.allocateDirect(size);
             this.maxMessageSize = size;
+            this.messageVersion = MessageVersion.MESSAGE_VERSION_V1;
+        }
+
+        MessageExtBatchEncoder(final int size, final MessageVersion messageVersion) {
+            this.msgBatchMemory = ByteBuffer.allocateDirect(size);
+            this.maxMessageSize = size;
+            this.messageVersion = messageVersion;
         }
 
         public ByteBuffer encode(final MessageExtBatch messageExtBatch) {
@@ -1536,7 +1558,7 @@ public class CommitLog {
 
                 final int topicLength = topicData.length;
 
-                final int msgLen = calMsgLength(bodyLen, topicLength, propertiesLen);
+                final int msgLen = calMsgLength(messageVersion, bodyLen, topicLength, propertiesLen);
 
                 // Exceeds the maximum message
                 if (msgLen > this.maxMessageSize) {
@@ -1554,7 +1576,7 @@ public class CommitLog {
                 // 1 TOTALSIZE
                 this.msgBatchMemory.putInt(msgLen);
                 // 2 MAGICCODE
-                this.msgBatchMemory.putInt(CommitLog.MESSAGE_MAGIC_CODE);
+                this.msgBatchMemory.putInt(messageVersion.getMagicCode());
                 // 3 BODYCRC
                 this.msgBatchMemory.putInt(bodyCrc);
                 // 4 QUEUEID
@@ -1586,7 +1608,7 @@ public class CommitLog {
                 if (bodyLen > 0)
                     this.msgBatchMemory.put(messagesByteBuff.array(), bodyPos, bodyLen);
                 // 16 TOPIC
-                this.msgBatchMemory.put((byte) topicLength);
+                messageVersion.putTopicLength(this.msgBatchMemory, topicLength);
                 this.msgBatchMemory.put(topicData);
                 // 17 PROPERTIES
                 this.msgBatchMemory.putShort(propertiesLen);
