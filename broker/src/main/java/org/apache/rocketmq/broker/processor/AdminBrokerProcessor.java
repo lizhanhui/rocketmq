@@ -35,8 +35,10 @@ import org.apache.rocketmq.broker.client.ClientChannelInfo;
 import org.apache.rocketmq.broker.client.ConsumerGroupInfo;
 import org.apache.rocketmq.broker.filter.ConsumerFilterData;
 import org.apache.rocketmq.broker.filter.ExpressionMessageFilter;
+import org.apache.rocketmq.common.KeyBuilder;
 import org.apache.rocketmq.common.MQVersion;
 import org.apache.rocketmq.common.MixAll;
+import org.apache.rocketmq.common.PopAckConstants;
 import org.apache.rocketmq.common.TopicConfig;
 import org.apache.rocketmq.common.UtilAll;
 import org.apache.rocketmq.common.admin.ConsumeStats;
@@ -534,6 +536,7 @@ public class AdminBrokerProcessor implements NettyRequestProcessor {
         throws RemotingCommandException {
 
         final RemotingCommand response = RemotingCommand.createResponseCommand(null);
+        final String clientHost = ctx.channel().remoteAddress().toString();
 
         log.info("updateAndCreateSubscriptionGroupInitOffset called by {}", RemotingHelper.parseChannelRemoteAddr(ctx.channel()));
 
@@ -544,32 +547,46 @@ public class AdminBrokerProcessor implements NettyRequestProcessor {
         if (config != null) {
             this.brokerController.getSubscriptionGroupManager().updateSubscriptionGroupConfig(config);
             if (requestHeader.getTopic() != null) {
-                String topic = requestHeader.getTopic();
                 TopicConfig topicConfig = this.brokerController.getTopicConfigManager().selectTopicConfig(requestHeader.getTopic());
                 if (topicConfig != null) {
-                    for (int queueId = 0; queueId < topicConfig.getReadQueueNums(); queueId++) {
-                        if (this.brokerController.getConsumerOffsetManager().queryOffset(config.getGroupName(), topic, queueId) > -1) {
-                            continue;
-                        }
-                        long offset = 0;
-                        if (this.brokerController.getMessageStore().getConsumeQueue(topic, queueId) != null) {
-                            if (ConsumeInitMode.MAX == requestHeader.getInitMode()) {
-                                offset = this.brokerController.getMessageStore().getMaxOffsetInQueue(topic, queueId);
-                            } else if (ConsumeInitMode.MIN == requestHeader.getInitMode()) {
-                                offset = this.brokerController.getMessageStore().getMinOffsetInQueue(topic, queueId);
-                            }
-                        }
-                        this.brokerController.getConsumerOffsetManager().commitOffset(ctx.channel().remoteAddress().toString(),
-                            config.getGroupName(), topic, queueId, offset);
-                        log.info("Init consumer offset: {}, {}, {}, {}", config.getGroupName(), topic, queueId, offset);
-                    }
+                    initConsumerOffset(clientHost, config.getGroupName(), requestHeader.getInitMode(), topicConfig);
                 }
+                // for pop retry
+                String popRetryTopic = KeyBuilder.buildPopRetryTopic(requestHeader.getTopic(), config.getGroupName());
+                TopicConfig popRetryTopicConfig = this.brokerController.getTopicConfigManager().selectTopicConfig(popRetryTopic);
+                if (popRetryTopicConfig == null) {
+                    popRetryTopicConfig = new TopicConfig(popRetryTopic);
+                    popRetryTopicConfig.setReadQueueNums(PopAckConstants.retryQueueNum);
+                    popRetryTopicConfig.setWriteQueueNums(PopAckConstants.retryQueueNum);
+                    popRetryTopicConfig.setPerm(6);
+                    this.brokerController.getTopicConfigManager().updateTopicConfig(popRetryTopicConfig);
+                }
+                initConsumerOffset(clientHost, config.getGroupName(), requestHeader.getInitMode(), popRetryTopicConfig);
             }
         }
 
         response.setCode(ResponseCode.SUCCESS);
         response.setRemark(null);
         return response;
+    }
+
+    private void initConsumerOffset(String clientHost, String groupName, int mode, TopicConfig topicConfig) {
+        String topic = topicConfig.getTopicName();
+        for (int queueId = 0; queueId < topicConfig.getReadQueueNums(); queueId++) {
+            if (this.brokerController.getConsumerOffsetManager().queryOffset(groupName, topic, queueId) > -1) {
+                continue;
+            }
+            long offset = 0;
+            if (this.brokerController.getMessageStore().getConsumeQueue(topic, queueId) != null) {
+                if (ConsumeInitMode.MAX == mode) {
+                    offset = this.brokerController.getMessageStore().getMaxOffsetInQueue(topic, queueId);
+                } else if (ConsumeInitMode.MIN == mode) {
+                    offset = this.brokerController.getMessageStore().getMinOffsetInQueue(topic, queueId);
+                }
+            }
+            this.brokerController.getConsumerOffsetManager().commitOffset(clientHost, groupName, topic, queueId, offset);
+            log.info("Init consumer offset: {}, {}, {}, {}", groupName, topic, queueId, offset);
+        }
     }
 
     private RemotingCommand getAllSubscriptionGroup(ChannelHandlerContext ctx,
