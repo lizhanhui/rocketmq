@@ -246,11 +246,13 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 								String normalTopic=KeyBuilder.parseNormalTopic(popCheckPoint.getTopic(), popCheckPoint.getCid());
 								if (brokerController.getTopicConfigManager().selectTopicConfig(normalTopic) == null) {
 									POP_LOGGER.warn("reviveQueueId={},can not get normal topic {} , then continue ", queueId, popCheckPoint.getTopic());
+									newOffset = popCheckPoint.getReviveOffset();
 									continue;
 								}
 								SubscriptionGroupConfig subscriptionGroupConfig = brokerController.getSubscriptionGroupManager().findSubscriptionGroupConfig(popCheckPoint.getCid());
 								if (null == subscriptionGroupConfig) {
 									POP_LOGGER.warn("reviveQueueId={},can not get cid {} , then continue ", queueId, popCheckPoint.getCid());
+									newOffset = popCheckPoint.getReviveOffset();
 									continue;
 								}
 								for (int j = 0; j < popCheckPoint.getNum(); j++) {
