@@ -89,8 +89,27 @@ public class MixAll {
     public static final String DEFAULT_TRACE_REGION_ID = "DefaultRegion";
     public static final String CONSUME_CONTEXT_TYPE = "ConsumeContextType";
 
+    /**
+     *  This method accepts two methods to specify name server lookup domain: system environment variables and Java option.
+     *  The latter one take precedence.
+     *
+     * @return Endpoint to query name server address list through HTTP request.
+     */
     public static String getWSAddr() {
-        String wsDomainName = System.getProperty("rocketmq.namesrv.domain", DEFAULT_NAMESRV_ADDR_LOOKUP);
+
+        final String NAME_SRV_DOMAIN_ENV_KEY = "NAME_SRV_QUERY_DOMAIN";
+
+        final String NAME_SRV_DOMAIN_JAVA_OPTION_KEY = "rocketmq.namesrv.domain";
+
+        String wsDomainName = System.getenv(NAME_SRV_DOMAIN_ENV_KEY);
+        if (null != System.getProperty(NAME_SRV_DOMAIN_JAVA_OPTION_KEY)) {
+            wsDomainName = System.getProperty(NAME_SRV_DOMAIN_JAVA_OPTION_KEY);
+        }
+
+        if (null == wsDomainName) {
+            wsDomainName = DEFAULT_NAMESRV_ADDR_LOOKUP;
+        }
+
         String wsDomainSubgroup = System.getProperty("rocketmq.namesrv.domain.subgroup", "nsaddr");
         String wsAddr = "http://" + wsDomainName + ":8080/rocketmq/" + wsDomainSubgroup;
         if (wsDomainName.indexOf(":") > 0) {
