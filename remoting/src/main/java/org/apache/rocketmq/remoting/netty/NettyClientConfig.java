@@ -17,11 +17,15 @@
 package org.apache.rocketmq.remoting.netty;
 
 public class NettyClientConfig {
+    public static final String CLIENT_CALLBACK_EXECUTOR_THREAD_NUMS = "client.callback.executor.thread.nums";
+
     /**
      * Worker thread number
      */
     private int clientWorkerThreads = 4;
-    private int clientCallbackExecutorThreads = Runtime.getRuntime().availableProcessors();
+    private int clientCallbackExecutorThreads = Integer.parseInt(System.getProperty(CLIENT_CALLBACK_EXECUTOR_THREAD_NUMS,
+        String.valueOf(Runtime.getRuntime().availableProcessors())));
+
     private int clientOnewaySemaphoreValue = NettySystemConfig.CLIENT_ONEWAY_SEMAPHORE_VALUE;
     private int clientAsyncSemaphoreValue = NettySystemConfig.CLIENT_ASYNC_SEMAPHORE_VALUE;
     private int connectTimeoutMillis = 3000;
