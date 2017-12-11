@@ -52,8 +52,14 @@ public class MixAll {
     public static final String NAMESRV_ADDR_ENV = "NAMESRV_ADDR";
     public static final String NAMESRV_ADDR_PROPERTY = "rocketmq.namesrv.addr";
     public static final String MESSAGE_COMPRESS_LEVEL = "rocketmq.message.compressLevel";
+
+    public static final String NAME_SRV_DOMAIN_ENV_KEY = "NAME_SRV_QUERY_DOMAIN";
+    public static final String NAME_SRV_DOMAIN_JAVA_OPTION_KEY = "rocketmq.namesrv.domain";
     public static final String DEFAULT_NAMESRV_ADDR_LOOKUP = "jmenv.tbsite.net";
-    public static final String WS_DOMAIN_NAME = System.getProperty("rocketmq.namesrv.domain", DEFAULT_NAMESRV_ADDR_LOOKUP);
+    public static final String WS_DOMAIN_NAME =
+        System.getProperty(NAME_SRV_DOMAIN_JAVA_OPTION_KEY,
+            null == System.getenv(NAME_SRV_DOMAIN_ENV_KEY) ? DEFAULT_NAMESRV_ADDR_LOOKUP : System.getenv(NAME_SRV_DOMAIN_ENV_KEY));
+
     public static final String WS_DOMAIN_SUBGROUP = System.getProperty("rocketmq.namesrv.domain.subgroup", "nsaddr");
     //http://jmenv.tbsite.net:8080/rocketmq/nsaddr
     //public static final String WS_ADDR = "http://" + WS_DOMAIN_NAME + ":8080/rocketmq/" + WS_DOMAIN_SUBGROUP;
@@ -91,8 +97,14 @@ public class MixAll {
     public static final String DEFAULT_TRACE_REGION_ID = "DefaultRegion";
     public static final String CONSUME_CONTEXT_TYPE = "ConsumeContextType";
 
+    /**
+     *  This method accepts two methods to specify name server lookup domain: system environment variables and Java option.
+     *  The latter one take precedence.
+     *
+     * @return Endpoint to query name server address list through HTTP request.
+     */
     public static String getWSAddr() {
-        String wsDomainName = System.getProperty("rocketmq.namesrv.domain", DEFAULT_NAMESRV_ADDR_LOOKUP);
+        String wsDomainName = WS_DOMAIN_NAME;
         String wsDomainSubgroup = System.getProperty("rocketmq.namesrv.domain.subgroup", "nsaddr");
         String wsAddr = "http://" + wsDomainName + ":8080/rocketmq/" + wsDomainSubgroup;
         if (wsDomainName.indexOf(":") > 0) {
