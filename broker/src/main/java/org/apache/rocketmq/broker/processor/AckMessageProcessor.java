@@ -277,7 +277,11 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 							}
 							newOffset = popCheckPoint.getReviveOffset();
 						}
-						POP_LOGGER.info("reviveQueueId={},revive finish,old offset is {}, new offset is {}  ", queueId, oldOffset, newOffset);
+						long delay=0;
+						if (sortList.size() > 0) {
+							delay = (System.currentTimeMillis() - sortList.get(0).getReviveTime()) / 1000;
+						}
+						POP_LOGGER.info("reviveQueueId={},revive finish,old offset is {}, new offset is {}, ck delay {}  ", queueId, oldOffset, newOffset, delay);
 						if (newOffset > oldOffset) {
 							brokerController.getConsumerOffsetManager().commitOffset(PopAckConstants.LOCAL_HOST, PopAckConstants.REVIVE_GROUP, reviveTopic, queueId, newOffset);
 						}
