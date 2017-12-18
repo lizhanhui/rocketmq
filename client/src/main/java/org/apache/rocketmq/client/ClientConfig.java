@@ -19,6 +19,7 @@ package org.apache.rocketmq.client;
 import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.common.UtilAll;
 import org.apache.rocketmq.remoting.common.RemotingUtil;
+import org.apache.rocketmq.remoting.netty.TlsSystemConfig;
 
 /**
  * Client Common configuration
@@ -53,7 +54,7 @@ public class ClientConfig {
     private boolean decodeReadBody = Boolean.parseBoolean(System.getProperty(DECODE_READ_BODY, "true"));
     private boolean decodeDecompressBody = Boolean.parseBoolean(System.getProperty(DECODE_DECOMPRESS_BODY, "true"));
 
-    private boolean useTLS;
+    private boolean useTLS = TlsSystemConfig.tlsEnable;
 
     public String buildMQClientId() {
         StringBuilder sb = new StringBuilder();
