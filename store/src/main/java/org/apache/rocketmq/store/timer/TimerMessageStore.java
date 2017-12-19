@@ -806,11 +806,9 @@ public class TimerMessageStore {
         }
         List<TimerRequest> currList = null;
         int fileIndexPy = -1;
-        int fileNum = 0;
         int msgIndex = 0;
         for (TimerRequest tr : origin) {
             if (fileIndexPy != tr.getOffsetPy() / commitLogFileSize) {
-                fileNum++;
                 msgIndex = 0;
                 if (null != currList && currList.size() > 0) {
                     lists.add(currList);
@@ -828,9 +826,6 @@ public class TimerMessageStore {
         }
         if (null != currList && currList.size() > 0) {
             lists.add(currList);
-        }
-        if (storeConfig.getTimerGetMessageThreadNum() > 1 && fileNum < storeConfig.getTimerGetMessageThreadNum()) {
-            Collections.shuffle(lists);
         }
         return lists;
     }
