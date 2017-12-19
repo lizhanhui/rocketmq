@@ -366,7 +366,6 @@ public class TimerMessageStoreTest {
         MessageExt msgExt = MessageDecoder.decode(msgBuff);
         assertNotNull(msgExt);
         assertEquals(topic, msgExt.getTopic());
-        assertEquals(1, msgExt.getDelayTimeLevel());
         for (int i = 0; i < 10; i++) {
             Assert.assertEquals(0, timerMessageStore.getTimerMetrics().getTimingCount(topic + i));
         }

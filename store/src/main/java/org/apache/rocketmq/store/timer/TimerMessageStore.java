@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -804,8 +806,12 @@ public class TimerMessageStore {
         }
         List<TimerRequest> currList = null;
         int fileIndexPy = -1;
+        int fileNum = 0;
+        int msgIndex = 0;
         for (TimerRequest tr : origin) {
             if (fileIndexPy != tr.getOffsetPy() / commitLogFileSize) {
+                fileNum++;
+                msgIndex = 0;
                 if (null != currList && currList.size() > 0) {
                     lists.add(currList);
                 }
@@ -814,10 +820,17 @@ public class TimerMessageStore {
                 fileIndexPy = (int) (tr.getOffsetPy() / commitLogFileSize);
             } else {
                 currList.add(tr);
+                if (++msgIndex % 2000 == 0) {
+                    lists.add(currList);
+                    currList = new ArrayList<>();
+                }
             }
         }
         if (null != currList && currList.size() > 0) {
             lists.add(currList);
+        }
+        if (storeConfig.getTimerGetMessageThreadNum() > 1 && fileNum < storeConfig.getTimerGetMessageThreadNum()) {
+            Collections.shuffle(lists);
         }
         return lists;
     }
@@ -828,7 +841,7 @@ public class TimerMessageStore {
         boolean res = messageStore.getData(offsetPy, sizePy, bufferLocal.get());
         if (res) {
             bufferLocal.get().flip();
-            return MessageDecoder.decode(bufferLocal.get(), true, false);
+            return MessageDecoder.decode(bufferLocal.get(), true, false, false, false, false);
         }
         return null;
     }

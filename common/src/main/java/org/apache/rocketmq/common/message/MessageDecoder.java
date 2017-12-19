@@ -255,6 +255,17 @@ public class MessageDecoder {
 
     public static MessageExt decode(
         java.nio.ByteBuffer byteBuffer, final boolean readBody, final boolean deCompressBody, final boolean isClient) {
+        return decode(byteBuffer, readBody, deCompressBody, isClient, false, true);
+    }
+
+    public static MessageExt decode(
+        java.nio.ByteBuffer byteBuffer, final boolean readBody, final boolean deCompressBody, final boolean isClient, final boolean isSetPropertiesString) {
+
+        return decode(byteBuffer, readBody, deCompressBody, isClient, isSetPropertiesString, true);
+    }
+
+    public static MessageExt decode(
+        java.nio.ByteBuffer byteBuffer, final boolean readBody, final boolean deCompressBody, final boolean isClient, final boolean isSetPropertiesString, final boolean checkCRC) {
         try {
 
             MessageExt msgExt;
