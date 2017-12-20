@@ -18,20 +18,21 @@ import org.apache.rocketmq.remoting.exception.RemotingException;
 
 public class Consumer {
 	public static void main(String[] args) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
-		final String consumerGroup="C_longji1";
+		final String consumerGroup="cid-longji";
 		final DefaultMQPullConsumer pullConsumer = new DefaultMQPullConsumer(consumerGroup+"1");
+		//pullConsumer.setNamesrvAddr("10.101.162.180:9876");
 		pullConsumer.setNamesrvAddr("127.0.0.1:9876");
-		//pullConsumer.setNamesrvAddr("10.137.84.33:9876");
 		pullConsumer.start();
 		//SendResult [sendStatus=SEND_OK, msgId=1E056189586318B4AAC246B811320003, offsetMsgId=0A89542100002A9F00000005A659F74A, messageQueue=MessageQueue [topic=longji1, brokerName=xigutestdaily-01, queueId=1], queueOffset=0]
 //SendResult [sendStatus=SEND_OK, msgId=1E0560847F5B2A139A5560FC2DEF0001, offsetMsgId=1E05608400002A9F00000000000062F8, messageQueue=MessageQueue [topic=longji1, brokerName=broker-a, queueId=3], queueOffset=4]
 
        // String topic="1_smq_abc";
-		String topic="longji11";
+		String topic="longji-stress";
+        //final String brokerName="xigutestdaily-02";
         final String brokerName="broker-a";
 		final MessageQueue mq=new MessageQueue(topic, brokerName, -1);
-		/*PopResult popResult=pullConsumer.peekMessage(mq, 1000, 1000);
-		System.out.println("sync peek:"+popResult);
+		PopResult popResult=pullConsumer.peekMessage(mq, 1000, consumerGroup, 1000);
+		System.out.println("sync peek:"+popResult);/*
 		pullConsumer.peekAsync(mq, 2, consumerGroup, 1000, new PopCallback() {
 			
 			@Override

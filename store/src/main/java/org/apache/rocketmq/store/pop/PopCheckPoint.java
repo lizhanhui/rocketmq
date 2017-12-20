@@ -1,78 +1,95 @@
 package org.apache.rocketmq.store.pop;
 
+import com.alibaba.fastjson.JSON;
+
 public class PopCheckPoint {
-	Long startOffset;
-	Long reviveTime;
-	Long popTime;
-	Long invisibleTime;
-	Integer bitMap;
+	long startOffset;
+	long reviveTime;
+	long popTime;
+	long invisibleTime;
+	int bitMap;
 	byte num;
 	byte queueId;
 	String topic;
 	String cid;
-	Long reviveOffset;
-	public Long getReviveOffset() {
+	long reviveOffset;
+	public long getRo() {
 		return reviveOffset;
 	}
-	public void setReviveOffset(Long reviveOffset) {
+	public void setRo(long reviveOffset) {
 		this.reviveOffset = reviveOffset;
 	}
-	public Long getStartOffset() {
+	public long getSo() {
 		return startOffset;
 	}
-	public void setStartOffset(Long startOffset) {
+	public void setSo(long startOffset) {
 		this.startOffset = startOffset;
 	}
-	public void setPopTime(Long popTime) {
+	public void setPt(long popTime) {
 		this.popTime = popTime;
 	}
-	public void setInvisibleTime(Long invisibleTime) {
+	public void setIt(long invisibleTime) {
 		this.invisibleTime = invisibleTime;
 	}
-	public Long getPopTime() {
+	public long getPt() {
 		return popTime;
 	}
-	public Long getInvisibleTime() {
+	public long getIt() {
 		return invisibleTime;
 	}
-	public Long getReviveTime() {
+	public long getRt() {
 		return popTime + invisibleTime;
 	}
-	public Integer getBitMap() {
+	public int getBm() {
 		return bitMap;
 	}
-	public void setBitMap(Integer bitMap) {
+	public void setBm(int bitMap) {
 		this.bitMap = bitMap;
 	}
-	public byte getNum() {
+	public byte getN() {
 		return num;
 	}
-	public void setNum(byte num) {
+	public void setN(byte num) {
 		this.num = num;
 	}
-	public byte getQueueId() {
+	public byte getQ() {
 		return queueId;
 	}
-	public void setQueueId(byte queueId) {
+	public void setQ(byte queueId) {
 		this.queueId = queueId;
 	}
 
-	public String getTopic() {
+	public String getT() {
 		return topic;
 	}
-	public void setTopic(String topic) {
+	public void setT(String topic) {
 		this.topic = topic;
 	}
-	public String getCid() {
+	public String getC() {
 		return cid;
 	}
-	public void setCid(String cid) {
+	public void setC(String cid) {
 		this.cid = cid;
 	}
+	public static void main(String[] args) {
+		PopCheckPoint ck=new PopCheckPoint();
+		ck.setBm(0);
+		ck.setN((byte) 1);
+		ck.setPt(2);
+		ck.setIt(3);
+		ck.setSo(4);
+		ck.setC("c");
+		ck.setT("t");
+		ck.setQ((byte) 5);
+		String s=JSON.toJSONString(ck);
+		System.out.println(s);
+		PopCheckPoint point = JSON.parseObject(s, PopCheckPoint.class);
+		System.out.println(JSON.toJSONString(point));
 
+	}
 	@Override
 	public String toString() {
-		return "PopCheckPoint [topic=" + topic + ", cid=" + cid + ", queueId=" + queueId + ", startOffset=" + startOffset + ", bitMap=" + bitMap + ", num=" + num + ", reviveTime=" + getReviveTime()
+		return "PopCheckPoint [topic=" + topic + ", cid=" + cid + ", queueId=" + queueId + ", startOffset=" + startOffset + ", bitMap=" + bitMap + ", num=" + num + ", reviveTime=" + getRt()
 				+ ", reviveOffset=" + reviveOffset + "]";
 	}
 

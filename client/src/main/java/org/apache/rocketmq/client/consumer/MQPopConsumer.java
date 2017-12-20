@@ -39,8 +39,8 @@ public interface MQPopConsumer {
      * @throws MQBrokerException
      * @throws InterruptedException
      */
-	PopResult peek(final MessageQueue mq, final int maxNums, 
-		final long timeout) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+	PopResult peek(MessageQueue mq, int maxNums, String consumerGroup, long timeout)
+			throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 	/**
 	 * ack msg in oneway , broker will commit this offset 
 	 * @param mq
@@ -99,4 +99,5 @@ public interface MQPopConsumer {
 
 	void statisticsMessages(MessageQueue mq, String consumerGroup, long timeout, StatisticsMessagesCallback callback)
 			throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+
 }

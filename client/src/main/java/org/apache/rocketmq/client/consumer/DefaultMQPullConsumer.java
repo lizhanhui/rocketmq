@@ -342,8 +342,8 @@ public class DefaultMQPullConsumer extends ClientConfig implements MQPullConsume
     }
 
     @Override
-    public PopResult peekMessage(MessageQueue mq, int maxNums, long timeout) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
-        return this.defaultMQPullConsumerImpl.peek(mq, maxNums, timeout);
+    public PopResult peekMessage(MessageQueue mq, int maxNums, String consumerGroup, long timeout) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+        return this.defaultMQPullConsumerImpl.peek(mq, maxNums, consumerGroup,timeout);
     }
 
     @Override

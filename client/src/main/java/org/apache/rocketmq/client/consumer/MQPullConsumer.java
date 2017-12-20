@@ -152,8 +152,9 @@ public interface MQPullConsumer extends MQConsumer {
         throws RemotingException, MQBrokerException, InterruptedException, MQClientException;
 
 
-	PopResult peekMessage(MessageQueue mq, int maxNums, long timeout) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
-
+	PopResult peekMessage(MessageQueue mq, int maxNums, String consumerGroup, long timeout)
+			throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+	
 	void ackMessage(MessageQueue mq, long offset, String consumerGroup, String extraInfo) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 
 
@@ -173,4 +174,6 @@ public interface MQPullConsumer extends MQConsumer {
 			throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
     void statisticsMessages(MessageQueue mq, String consumerGroup, long timeout, StatisticsMessagesCallback callback)
             throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+
+
 }

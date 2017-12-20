@@ -137,12 +137,19 @@ public class BrokerConfig {
     private int  popPollingSize = 20;
 	private int  reviveQueueNum = 8;
     private long  reviveInterval = 1000;
+    private long  reviveMaxSlow = 10;
     private long  reviveScanTime = 10000;
     public long getReviveScanTime() {
 		return reviveScanTime;
 	}
     public void setReviveScanTime(long reviveScanTime) {
 		this.reviveScanTime = reviveScanTime;
+	}
+    public long getReviveMaxSlow() {
+		return reviveMaxSlow;
+	}
+    public void setReviveMaxSlow(long reviveMaxSlow) {
+		this.reviveMaxSlow = reviveMaxSlow;
 	}
     public boolean isTraceOn() {
         return traceOn;

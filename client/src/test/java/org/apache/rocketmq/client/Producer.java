@@ -15,7 +15,7 @@ public class Producer {
         producer.setNamesrvAddr("127.0.0.1:9876");
        // producer.setNamesrvAddr("10.137.84.33:9876");
         producer.start();
-        String topic="longji11";
+        String topic="longji-stress";
         final String brokerName="broker-a";
 		final MessageQueue mq=new MessageQueue(topic, brokerName, 1);
         for (int i = 0; i < 10; i++) { 
