@@ -466,6 +466,13 @@ public class TimerMessageStore {
         }
 
     }
+    public void holdMomentForUnknownError() {
+        try {
+            Thread.sleep(50);
+        } catch (Exception ignored) {
+
+        }
+    }
     public boolean enqueue(int queueId) {
         if (storeConfig.isTimerStopEnqueue()) {
             return false;
@@ -514,6 +521,7 @@ public class TimerMessageStore {
                     if (storeConfig.isTimerSkipUnknownError()) {
                         log.warn("Unknown error in skipped in enqueuing", e);
                     } else {
+                        holdMomentForUnknownError();
                         throw e;
                     }
                 } finally {
@@ -831,14 +839,18 @@ public class TimerMessageStore {
     }
 
     private MessageExt getMessageByCommitOffset(long offsetPy, int sizePy) {
+        MessageExt msgExt = null;
         bufferLocal.get().position(0);
         bufferLocal.get().limit(sizePy);
         boolean res = messageStore.getData(offsetPy, sizePy, bufferLocal.get());
         if (res) {
             bufferLocal.get().flip();
-            return MessageDecoder.decode(bufferLocal.get(), true, false, false, false, false);
+            msgExt =  MessageDecoder.decode(bufferLocal.get(), true, false, false, false, false);
         }
-        return null;
+        if (null == msgExt) {
+            log.warn("Fail to read msg from commitlog offsetPy:{} sizePy:{}", offsetPy, sizePy);
+        }
+        return msgExt;
     }
 
     private MessageExtBrokerInner convert(MessageExt messageExt, long enqueueTime, boolean needRoll) {
@@ -1125,6 +1137,8 @@ public class TimerMessageStore {
                             log.error("Unknown error", t);
                             if (storeConfig.isTimerSkipUnknownError()) {
                                 doRes = true;
+                            } else {
+                                holdMomentForUnknownError();
                             }
                         }
                     }
@@ -1211,6 +1225,8 @@ public class TimerMessageStore {
                                 log.info("Unknown error", t);
                                 if (storeConfig.isTimerSkipUnknownError()) {
                                     doRes = true;
+                                } else {
+                                    holdMomentForUnknownError();
                                 }
                             }
                         }
@@ -1258,7 +1274,11 @@ public class TimerMessageStore {
                                     tr.idempotentRelease();
                                     doRes = true;
                                 } else {
-                                    if (tr.getDeleteList().size() > 0 && tr.getDeleteList().contains(MessageClientIDSetter.getUniqID(msgExt))) {
+                                    String uniqkey = MessageClientIDSetter.getUniqID(msgExt);
+                                    if (null == uniqkey) {
+                                        log.warn("No uniqkey for msg:{}", msgExt);
+                                    }
+                                    if (null != uniqkey && tr.getDeleteList().size() > 0 && tr.getDeleteList().contains(uniqkey)) {
                                         doRes = true;
                                         tr.idempotentRelease();
                                         perfs.getCounter("dequeue_delete").flow(1);
@@ -1282,6 +1302,8 @@ public class TimerMessageStore {
                             if (storeConfig.isTimerSkipUnknownError()) {
                                 tr.idempotentRelease();
                                 doRes = true;
+                            } else {
+                                holdMomentForUnknownError();
                             }
                         } finally {
                             if (doRes) {
@@ -1309,9 +1331,9 @@ public class TimerMessageStore {
             TimerMessageStore.log.info(this.getServiceName() + " service start");
             while (!this.isStopped()) {
                 try {
-                    if (!storeConfig.isTimerWarmEnable() || -1 == TimerMessageStore.this.warmDequeue()) {
+                    //if (!storeConfig.isTimerWarmEnable() || -1 == TimerMessageStore.this.warmDequeue()) {
                         waitForRunning(50);
-                    }
+                    //}
                 } catch (Throwable e) {
                     TimerMessageStore.log.error("Error occurred in " + getServiceName(), e);
                 }
