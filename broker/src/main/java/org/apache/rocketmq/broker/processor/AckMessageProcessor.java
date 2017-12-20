@@ -41,7 +41,6 @@ import org.apache.rocketmq.common.TopicConfig;
 import org.apache.rocketmq.common.TopicFilterType;
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.common.help.FAQUrl;
-import org.apache.rocketmq.common.message.Message;
 import org.apache.rocketmq.common.message.MessageAccessor;
 import org.apache.rocketmq.common.message.MessageConst;
 import org.apache.rocketmq.common.message.MessageDecoder;
@@ -173,9 +172,9 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 
 			while (true) {
 				try {
-					POP_LOGGER.info("start revive topic={}, reviveQueueId={}",reviveTopic,queueId);
 					try {
 						Thread.sleep(brokerController.getBrokerConfig().getReviveInterval());
+						POP_LOGGER.info("start revive topic={}, reviveQueueId={}",reviveTopic,queueId);
 						HashMap<String, PopCheckPoint> map = new HashMap<>();
 						long startScanTime = System.currentTimeMillis();
 						long startTime = 0;
@@ -188,10 +187,15 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 							long timerDelay = brokerController.getMessageStore().getTimerMessageStore().getReadBehind();
 							List<MessageExt> messageExts = getReviveMessage(offset, queueId);
 							if (messageExts == null || messageExts.isEmpty()) {
-								if (endTime != 0 && (System.currentTimeMillis() - endTime) > (2 * PopAckConstants.ackTimeInterval + timerDelay)) {
+								long old = endTime;
+								if (endTime != 0 && ((System.currentTimeMillis() - endTime) > (2 * PopAckConstants.SECOND + 1000 * timerDelay))) {
 									endTime = System.currentTimeMillis();
 								}
-								POP_LOGGER.info("reviveQueueId={}, offset is {}, can not get new msg  ", queueId, offset);
+								if (timerDelay > 60) {
+									POP_LOGGER.error("timer is delay {}", timerDelay);
+								}
+								POP_LOGGER.info("reviveQueueId={}, offset is {}, can not get new msg, old endTime {}, new endTime {}, timerDelay {}  ", queueId,
+										offset, old, endTime, timerDelay);
 								break;
 							}
 							if (System.currentTimeMillis() - startScanTime > brokerController.getBrokerConfig().getReviveScanTime()) {
@@ -241,7 +245,7 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 						}
 						long newOffset = oldOffset;
 						for (PopCheckPoint popCheckPoint : sortList) {
-							if (endTime - popCheckPoint.getReviveTime() > PopAckConstants.ackTimeInterval) {
+							if (endTime - popCheckPoint.getReviveTime() > (PopAckConstants.ackTimeInterval + PopAckConstants.SECOND)) {
 								// check normal topic, skip ck , if normal topic is not exist
 								String normalTopic=KeyBuilder.parseNormalTopic(popCheckPoint.getTopic(), popCheckPoint.getCid());
 								if (brokerController.getTopicConfigManager().selectTopicConfig(normalTopic) == null) {
