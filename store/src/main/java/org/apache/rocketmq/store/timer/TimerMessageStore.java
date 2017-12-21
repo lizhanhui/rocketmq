@@ -113,6 +113,9 @@ public class TimerMessageStore {
     private volatile long currQueueOffset; //only one queue that is 0
     private volatile long commitQueueOffset;
 
+    private long lastEnqueueButExpiredTime;
+    private long lastEnqueueButExpiredStoreTime;
+
     private final int commitLogFileSize;
     private final int timerLogFileSize;
     private final int timerRollWindowSec;
@@ -504,6 +507,8 @@ public class TimerMessageStore {
                     if (null == msgExt) {
                         perfs.getCounter("enqueue_get_miss");
                     } else {
+                        lastEnqueueButExpiredTime = System.currentTimeMillis();
+                        lastEnqueueButExpiredStoreTime = msgExt.getStoreTimestamp();
                         long delayedTime = Long.valueOf(msgExt.getProperty(TIMER_OUT_MS));
                         TimerRequest timerRequest = new TimerRequest(offsetPy, sizePy, delayedTime, System.currentTimeMillis(), MAGIC_DEFAULT, msgExt);
                         while (true) {
@@ -1382,11 +1387,11 @@ public class TimerMessageStore {
                         ConsumeQueue cq = messageStore.getConsumeQueue(TIMER_TOPIC, 0);
                         long maxOffsetInQueue = cq == null ? 0 : cq.getMaxOffsetInQueue();
                         TimerMessageStore.log.info("[{}]Timer progress-check commitRead:[{}] currRead:[{}] currWrite:[{}] readBehind:{} currReadOffset:{} offsetBehind:{} behindMaster:{} " +
-                                "enqPutQueue:{} deqGetQueue:{} deqPutQueue:{} allCongestNum:{}",
+                                "enqPutQueue:{} deqGetQueue:{} deqPutQueue:{} allCongestNum:{} enqExpiredStoreTime:{}",
                             storeConfig.getBrokerRole(),
                             format(commitReadTimeMs), format(currReadTimeMs), format(currWriteTimeMs), (System.currentTimeMillis() - currReadTimeMs) / 1000,
                             tmpQueueOffset, maxOffsetInQueue - tmpQueueOffset, timerCheckpoint.getMasterTimerQueueOffset() - tmpQueueOffset,
-                            enqueuePutQueue.size(), dequeueGetQueue.size(), dequeuePutQueue.size(), getALlCongestNum());
+                            enqueuePutQueue.size(), dequeueGetQueue.size(), dequeuePutQueue.size(), getALlCongestNum(), format(lastEnqueueButExpiredStoreTime));
                     }
                     timerMetrics.persist();
                     waitForRunning(storeConfig.getTimerFlushIntervalMs());
@@ -1418,6 +1423,14 @@ public class TimerMessageStore {
             return true;
         }
         return false;
+    }
+
+
+    public long  getEnqueueBehind() {
+        if (System.currentTimeMillis() - lastEnqueueButExpiredTime < 2000) {
+            return (System.currentTimeMillis() - lastEnqueueButExpiredStoreTime) /1000;
+        }
+        return 0;
     }
 
     public long getReadBehind() {
