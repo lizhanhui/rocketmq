@@ -505,7 +505,7 @@ public class TimerMessageStore {
                         perfs.getCounter("enqueue_get_miss");
                     } else {
                         long delayedTime = Long.valueOf(msgExt.getProperty(TIMER_OUT_MS));
-                        TimerRequest timerRequest = new TimerRequest(offsetPy, sizePy, delayedTime, System.currentTimeMillis(), -1, msgExt);
+                        TimerRequest timerRequest = new TimerRequest(offsetPy, sizePy, delayedTime, System.currentTimeMillis(), MAGIC_DEFAULT, msgExt);
                         while (true) {
                             if (enqueuePutQueue.offer(timerRequest, 3, TimeUnit.SECONDS)) {
                                 break;
