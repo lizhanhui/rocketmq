@@ -186,17 +186,18 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 						//TODO: offset 自我纠正
 						while (true) {
 							long timerDelay = brokerController.getMessageStore().getTimerMessageStore().getReadBehind();
+							long commitLogDelay=brokerController.getMessageStore().getTimerMessageStore().getEnqueueBehind();
 							List<MessageExt> messageExts = getReviveMessage(offset, queueId);
 							if (messageExts == null || messageExts.isEmpty()) {
 								long old = endTime;
-								if (endTime != 0 && ((System.currentTimeMillis() - endTime) > (2 * PopAckConstants.SECOND + 1000 * timerDelay))) {
+								if (endTime != 0 && ((System.currentTimeMillis() - endTime) > (3 * PopAckConstants.SECOND + (timerDelay + commitLogDelay) * PopAckConstants.SECOND))) {
 									endTime = System.currentTimeMillis();
 								}
-								if (timerDelay > 60) {
-									POP_LOGGER.error("timer is delay {}", timerDelay);
+								if (timerDelay > 5 || commitLogDelay > 5 ) {
+									POP_LOGGER.warn("timer is delay,timerDelay={}, commit log is delay,commitLogDelay={}", timerDelay, commitLogDelay);
 								}
-								POP_LOGGER.info("reviveQueueId={}, offset is {}, can not get new msg, old endTime {}, new endTime {}, timerDelay {}  ", queueId,
-										offset, old, endTime, timerDelay);
+								POP_LOGGER.info("reviveQueueId={}, offset is {}, can not get new msg, old endTime {}, new endTime {}, timerDelay={}, commitLogDelay={} ", queueId,
+										offset, old, endTime, timerDelay, commitLogDelay);
 								break;
 							}
 							if (System.currentTimeMillis() - startScanTime > brokerController.getBrokerConfig().getReviveScanTime()) {
@@ -239,7 +240,7 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 								return (int) (o1.getRo() - o2.getRo());
 							}
 						});
-						POP_LOGGER.info("reviveQueueId={},ck list size={}", queueId, sortList.size());
+						POP_LOGGER.info("reviveQueueId={},ck listSize={}", queueId, sortList.size());
 						if (sortList.size()!=0) {
 							POP_LOGGER.info("reviveQueueId={}, 1st ck, startOffset={}, reviveOffset={} ; last ck, startOffset={}, reviveOffset={}",queueId, sortList.get(0).getSo(),
 									sortList.get(0).getRo(), sortList.get(sortList.size() - 1).getSo(), sortList.get(sortList.size() - 1).getRo());
@@ -287,7 +288,7 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 							delay = (System.currentTimeMillis() - sortList.get(0).getRt()) / 1000;
 							slow = 1;
 						}
-						POP_LOGGER.info("reviveQueueId={},revive finish,old offset is {}, new offset is {}, ck delay {}  ", queueId, oldOffset, newOffset, delay);
+						POP_LOGGER.info("reviveQueueId={},revive finish,old offset is {}, new offset is {}, ckDelay={}  ", queueId, oldOffset, newOffset, delay);
 						if (newOffset > oldOffset) {
 							brokerController.getConsumerOffsetManager().commitOffset(PopAckConstants.LOCAL_HOST, PopAckConstants.REVIVE_GROUP, reviveTopic, queueId, newOffset);
 						}
@@ -333,7 +334,7 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 			msgInner.setPropertiesString(MessageDecoder.messageProperties2String(msgInner.getProperties()));
 			addRetryTopicIfNoExit(msgInner.getTopic());
 			PutMessageResult putMessageResult = brokerController.getMessageStore().putMessage(msgInner);
-			POP_LOGGER.info("reviveQueueId={},retry msg , topic {}, cid {}, msg queueId {}, offset {}, revive delay {}, result is {} ",queueId,popCheckPoint.getT(),popCheckPoint.getC(),messageExt.getQueueId(),messageExt.getQueueOffset(),(System.currentTimeMillis()-popCheckPoint.getRt())/1000,putMessageResult);
+			POP_LOGGER.info("reviveQueueId={},retry msg , topic {}, cid {}, msg queueId {}, offset {}, reviveDelay={}, result is {} ",queueId,popCheckPoint.getT(),popCheckPoint.getC(),messageExt.getQueueId(),messageExt.getQueueOffset(),(System.currentTimeMillis()-popCheckPoint.getRt())/1000,putMessageResult);
 			if (putMessageResult.getAppendMessageResult() == null || putMessageResult.getAppendMessageResult().getStatus() != AppendMessageStatus.PUT_OK) {
 				throw new Exception("reviveQueueId=" + queueId + ",revive error ,msg is :"+msgInner);
 			}
