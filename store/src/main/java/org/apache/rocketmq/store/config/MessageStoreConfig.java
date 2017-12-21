@@ -158,6 +158,7 @@ public class MessageStoreConfig {
     private int timerProgressLogIntervalMs = 10 * 1000;
     private int timerGetMessageThreadNum = 3;
     private int timerPutMessageThreadNum = 3;
+    private boolean timerEnqueuePutMsg2Queue = false;
     private boolean timerWarmEnable = false;
     private boolean timerSkipUnknownError = false;
     private boolean timerInterceptDelayLevel = false;
@@ -854,5 +855,13 @@ public class MessageStoreConfig {
 
     public void setWakeCommitWhenPutMessage(boolean wakeCommitWhenPutMessage) {
         this.wakeCommitWhenPutMessage = wakeCommitWhenPutMessage;
+    }
+
+    public boolean isTimerEnqueuePutMsg2Queue() {
+        return timerEnqueuePutMsg2Queue;
+    }
+
+    public void setTimerEnqueuePutMsg2Queue(boolean timerEnqueuePutMsg2Queue) {
+        this.timerEnqueuePutMsg2Queue = timerEnqueuePutMsg2Queue;
     }
 }

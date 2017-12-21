@@ -23,7 +23,6 @@ import java.nio.ByteBuffer;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -1104,14 +1103,21 @@ public class TimerMessageStore {
                             } else {
                                 perfs.startTick("enqueue_put");
                                 if (isMaster() && req.getDelayTime() < currWriteTimeMs) {
-                                    MessageExtBrokerInner msg = convert(req.getMsg(), System.currentTimeMillis(), false);
-                                    while (!doRes && !isStopped() && isMaster()) {
-                                        doRes =  PUT_NEED_RETRY != doPut(msg, false);
-                                        if (!doRes) {
-                                            Thread.sleep(500);
+                                    if (storeConfig.isTimerEnqueuePutMsg2Queue()) {
+                                        //high performance but may cause message loss
+                                        dequeuePutQueue.put(req);
+                                        doRes = true;
+                                    } else {
+                                        //poor performance but guarantee the msg
+                                        MessageExtBrokerInner msg = convert(req.getMsg(), System.currentTimeMillis(), false);
+                                        while (!doRes && !isStopped() && isMaster()) {
+                                            doRes =  PUT_NEED_RETRY != doPut(msg, false);
+                                            if (!doRes) {
+                                                Thread.sleep(500);
+                                            }
                                         }
-                                        maybeMoveWriteTime();
                                     }
+                                    maybeMoveWriteTime();
                                 }
                                 //the broker role may have changed
                                 if (!doRes) {
@@ -1268,7 +1274,7 @@ public class TimerMessageStore {
                             MessageExt msgExt = getMessageByCommitOffset(tr.getOffsetPy(), tr.getSizePy());
                             if (null != msgExt) {
                                 if (needDelete(tr.getMagic()) && !needRoll(tr.getMagic())) {
-                                    if (msgExt.getProperty(MessageConst.PROPERTY_TIMER_DEL_UNIQKEY) != null) {
+                                    if (msgExt.getProperty(MessageConst.PROPERTY_TIMER_DEL_UNIQKEY) != null && tr.getDeleteList() != null) {
                                         tr.getDeleteList().add(msgExt.getProperty(MessageConst.PROPERTY_TIMER_DEL_UNIQKEY));
                                     }
                                     tr.idempotentRelease();
@@ -1278,7 +1284,7 @@ public class TimerMessageStore {
                                     if (null == uniqkey) {
                                         log.warn("No uniqkey for msg:{}", msgExt);
                                     }
-                                    if (null != uniqkey && tr.getDeleteList().size() > 0 && tr.getDeleteList().contains(uniqkey)) {
+                                    if (null != uniqkey && tr.getDeleteList() != null && tr.getDeleteList().size() > 0 && tr.getDeleteList().contains(uniqkey)) {
                                         doRes = true;
                                         tr.idempotentRelease();
                                         perfs.getCounter("dequeue_delete").flow(1);
