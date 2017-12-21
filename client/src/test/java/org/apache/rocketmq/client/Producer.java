@@ -12,7 +12,8 @@ public class Producer {
 	public static void main(String[] args) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
         String producerGroupTemp="P_longji";
         DefaultMQProducer producer = new DefaultMQProducer(producerGroupTemp);
-        producer.setNamesrvAddr("127.0.0.1:9876");
+		// 觉音测试 10.101.93.75，日常环境 10.101.162.180
+        producer.setNamesrvAddr("10.101.162.180:9876");
        // producer.setNamesrvAddr("10.137.84.33:9876");
         producer.start();
         String topic="longji-stress";
