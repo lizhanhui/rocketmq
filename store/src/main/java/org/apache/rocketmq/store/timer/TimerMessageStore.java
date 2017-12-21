@@ -1300,7 +1300,6 @@ public class TimerMessageStore {
                                 //the tr will never be processed afterwards, so idempotentRelease it
                                 tr.idempotentRelease();
                                 doRes = true;
-                                log.warn("Get message from commitlog failed, offsetPy:{} sizePy:{} delayTime:{}", tr.getOffsetPy(), tr.getSizePy(), tr.getDelayTime());
                                 perfs.getCounter("dequeue_get_msg_miss").flow(System.currentTimeMillis() - start);
                             }
                         } catch (Throwable e) {
