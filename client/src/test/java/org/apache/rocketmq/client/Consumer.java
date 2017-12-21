@@ -19,7 +19,7 @@ public class Consumer {
 		final String consumerGroup="cid-longji";
 		final DefaultMQPullConsumer pullConsumer = new DefaultMQPullConsumer(consumerGroup+"1");
 		// 觉音测试 10.101.93.75，日常环境 10.101.162.180
-		pullConsumer.setNamesrvAddr("10.101.162.180:9876");
+		pullConsumer.setNamesrvAddr("127.0.0.1:9876");
 		pullConsumer.start();
 		//SendResult [sendStatus=SEND_OK, msgId=1E056189586318B4AAC246B811320003, offsetMsgId=0A89542100002A9F00000005A659F74A, messageQueue=MessageQueue [topic=longji1, brokerName=xigutestdaily-01, queueId=1], queueOffset=0]
 //SendResult [sendStatus=SEND_OK, msgId=1E0560847F5B2A139A5560FC2DEF0001, offsetMsgId=1E05608400002A9F00000000000062F8, messageQueue=MessageQueue [topic=longji1, brokerName=broker-a, queueId=3], queueOffset=4]
@@ -27,7 +27,7 @@ public class Consumer {
        // String topic="1_smq_abc"; b2b2d707-4b97-486d-b068-b18f33e97d27 ;longji-stress
 		String topic="longji-stress";
         //final String brokerName="xigutestdaily-02";
-        final String brokerName="xigutestdaily-02";
+        final String brokerName="broker-a";
 		final MessageQueue mq=new MessageQueue(topic, brokerName, -1);
 		PopResult popResult=pullConsumer.peekMessage(mq, 1000, consumerGroup, 1000);
 		System.out.println("sync peek:"+popResult);/*
@@ -88,7 +88,7 @@ public class Consumer {
 									e.printStackTrace();
 								}
 							});*/
-							//pullConsumer.ackMessage(new MessageQueue(msg.getTopic(),brokerName,msg.getQueueId()), msg.getQueueOffset(), consumerGroup, msg.getProperty(MessageConst.PROPERTY_POP_CK));
+							pullConsumer.ackMessage(new MessageQueue(msg.getTopic(),brokerName,msg.getQueueId()), msg.getQueueOffset(), consumerGroup, msg.getProperty(MessageConst.PROPERTY_POP_CK));
 							
 							/*pullConsumer.ackMessageAsync(new MessageQueue(msg.getTopic(),brokerName,msg.getQueueId()),  msg.getQueueOffset(), consumerGroup, msg.getProperty(MessageConst.PROPERTY_POP_CK), 1000, new AckCallback() {
 								

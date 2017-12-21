@@ -454,7 +454,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 		msgInner.setBornHost(this.brokerController.getStoreHost());
 		msgInner.setStoreHost(this.brokerController.getStoreHost());
 		msgInner.putUserProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS, String.valueOf(ck.getRt()-PopAckConstants.ackTimeInterval));
-		msgInner.putUserProperty(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX, ck.getT() + PopAckConstants.SPLIT + ck.getQ() + PopAckConstants.SPLIT + ck.getSo() + PopAckConstants.SPLIT + ck.getC());
+		msgInner.getProperties().put(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX, ck.getT() + PopAckConstants.SPLIT + ck.getQ() + PopAckConstants.SPLIT + ck.getSo() + PopAckConstants.SPLIT + ck.getC());
 		msgInner.setPropertiesString(MessageDecoder.messageProperties2String(msgInner.getProperties()));
 		PutMessageResult putMessageResult = this.brokerController.getMessageStore().putMessage(msgInner);
 		if (putMessageResult.getAppendMessageResult().getStatus() == AppendMessageStatus.PUT_OK) {
