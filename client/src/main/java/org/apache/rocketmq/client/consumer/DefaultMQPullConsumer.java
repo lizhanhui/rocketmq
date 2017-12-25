@@ -91,13 +91,6 @@ public class DefaultMQPullConsumer extends ClientConfig implements MQPullConsume
      */
     private boolean autoUpdateTopicRoute = false;
 
-    /**
-     * Whether auto clean the related info when topic route is not exist.
-     * 1. Clean subscription.
-     * 2. Clean subscribed topic route.
-     */
-    private boolean autoCleanTopicRouteNotFound = false;
-
     public DefaultMQPullConsumer() {
         this(MixAll.DEFAULT_CONSUMER_GROUP, null);
     }
@@ -416,13 +409,5 @@ public class DefaultMQPullConsumer extends ClientConfig implements MQPullConsume
 
     public void setAutoUpdateTopicRoute(boolean autoUpdateTopicRoute) {
         this.autoUpdateTopicRoute = autoUpdateTopicRoute;
-    }
-
-    public boolean isAutoCleanTopicRouteNotFound() {
-        return autoCleanTopicRouteNotFound;
-    }
-
-    public void setAutoCleanTopicRouteNotFound(boolean autoCleanTopicRouteNotFound) {
-        this.autoCleanTopicRouteNotFound = autoCleanTopicRouteNotFound;
     }
 }

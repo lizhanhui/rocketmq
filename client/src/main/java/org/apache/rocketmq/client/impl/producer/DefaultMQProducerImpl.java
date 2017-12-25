@@ -346,12 +346,6 @@ public class DefaultMQProducerImpl implements MQProducerInner {
         if (prev != null) {
             log.info("removeTopicPublishInfo {}, {}, {}", this.defaultMQProducer.getProducerGroup(), topic, prev);
         }
-        // auto clean default producer.
-        try {
-            this.mQClientFactory.getDefaultMQProducer().getDefaultMQProducerImpl()
-                .getTopicPublishInfoTable().remove(topic);
-        } catch (Exception ignore) {
-        }
     }
 
     @Override

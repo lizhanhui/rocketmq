@@ -709,6 +709,10 @@ public class MQClientInstance {
                 }
             }
         }
+
+        {
+            this.defaultMQProducer.getDefaultMQProducerImpl().removeTopicPublishInfo(topic);
+        }
     }
 
     private HeartbeatData prepareHeartbeatData() {
