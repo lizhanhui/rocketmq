@@ -59,7 +59,10 @@ public class StatsItem {
                 CallSnapshot first = csList.getFirst();
                 CallSnapshot last = csList.getLast();
                 sum = last.getValue() - first.getValue();
-                tps = (sum * 1000.0d) / (last.getTimestamp() - first.getTimestamp());
+                long timeStampDiff = last.getTimestamp() - first.getTimestamp();
+                if(timeStampDiff > 0) {
+                    tps = (sum * 1000.0d) / timeStampDiff;
+                }
 
                 long timesDiff = last.getTimes() - first.getTimes();
                 if (timesDiff > 0) {
@@ -224,6 +227,10 @@ public class StatsItem {
 
     public AtomicLong getTimes() {
         return times;
+    }
+
+    public LinkedList<CallSnapshot> getCsListHour() {
+        return csListHour;
     }
 }
 
