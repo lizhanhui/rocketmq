@@ -126,7 +126,7 @@ public class StatsItemSet {
                 CallSnapshot first = csList.getFirst();
                 CallSnapshot last = csList.getLast();
                 if((first.getTimes() == last.getTimes()) && (first.getValue() == last.getValue())) {
-                    this.statsItemTable.remove(next.getKey());
+                    it.remove();
                 }
             }
         }
