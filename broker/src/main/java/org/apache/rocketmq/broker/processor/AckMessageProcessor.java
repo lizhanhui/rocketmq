@@ -58,6 +58,7 @@ import org.apache.rocketmq.store.GetMessageResult;
 import org.apache.rocketmq.store.MessageExtBrokerInner;
 import org.apache.rocketmq.store.PutMessageResult;
 import org.apache.rocketmq.store.PutMessageStatus;
+import org.apache.rocketmq.store.config.BrokerRole;
 import org.apache.rocketmq.store.pop.AckMsg;
 import org.apache.rocketmq.store.pop.PopCheckPoint;
 import org.slf4j.Logger;
@@ -71,6 +72,7 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 	private String reviveTopic;
 	private ExecutorService executorService ;
     private Random random=new Random(System.currentTimeMillis());
+    private boolean isMaster=false;
 
 	public AckMessageProcessor(final BrokerController brokerController) {
 		this.brokerController = brokerController;
@@ -175,6 +177,10 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 				try {
 					try {
 						Thread.sleep(brokerController.getBrokerConfig().getReviveInterval());
+						if (!checkAndSetMaster()) {
+							POP_LOGGER.info("slave skip start revive topic={}, reviveQueueId={}", reviveTopic, queueId);
+							continue;
+						}
 						POP_LOGGER.info("start revive topic={}, reviveQueueId={}",reviveTopic,queueId);
 						HashMap<String, PopCheckPoint> map = new HashMap<>();
 						long startScanTime = System.currentTimeMillis();
@@ -185,12 +191,16 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 						long offset = oldOffset + 1;
 						//TODO: offset 自我纠正
 						while (true) {
+							if (!checkAndSetMaster()) {
+								POP_LOGGER.info("slave skip scan , revive topic={}, reviveQueueId={}", reviveTopic, queueId);
+								break;
+							}
 							long timerDelay = brokerController.getMessageStore().getTimerMessageStore().getReadBehind();
 							long commitLogDelay=brokerController.getMessageStore().getTimerMessageStore().getEnqueueBehind();
 							List<MessageExt> messageExts = getReviveMessage(offset, queueId);
 							if (messageExts == null || messageExts.isEmpty()) {
 								long old = endTime;
-								if (endTime != 0 && ((System.currentTimeMillis() - endTime) > (3 * PopAckConstants.SECOND + (timerDelay + commitLogDelay) * PopAckConstants.SECOND))) {
+								if (endTime != 0 && ((System.currentTimeMillis() - endTime) > (3 * PopAckConstants.SECOND) && timerDelay == 0 && commitLogDelay == 0)) {
 									endTime = System.currentTimeMillis();
 								}
 								if (timerDelay > 5 || commitLogDelay > 5 ) {
@@ -233,6 +243,10 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 							}
 							offset = offset + messageExts.size();
 						}
+						if (!checkAndSetMaster()) {
+							POP_LOGGER.info("slave skip scan , revive topic={}, reviveQueueId={}", reviveTopic, queueId);
+							continue;
+						}
 						ArrayList<PopCheckPoint> sortList = new ArrayList<>(map.values());
 						Collections.sort(sortList, new Comparator<PopCheckPoint>() {
 							@Override
@@ -247,6 +261,10 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 						}
 						long newOffset = oldOffset;
 						for (PopCheckPoint popCheckPoint : sortList) {
+							if (!checkAndSetMaster()) {
+								POP_LOGGER.info("slave skip ck process , revive topic={}, reviveQueueId={}", reviveTopic, queueId);
+								break ;
+							}
 							if (endTime - popCheckPoint.getRt() > (PopAckConstants.ackTimeInterval + PopAckConstants.SECOND)) {
 								// check normal topic, skip ck , if normal topic is not exist
 								String normalTopic=KeyBuilder.parseNormalTopic(popCheckPoint.getT(), popCheckPoint.getC());
@@ -290,6 +308,10 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 						}
 						POP_LOGGER.info("reviveQueueId={},revive finish,old offset is {}, new offset is {}, ckDelay={}  ", queueId, oldOffset, newOffset, delay);
 						if (newOffset > oldOffset) {
+							if (!checkAndSetMaster()) {
+								POP_LOGGER.info("slave skip commit, revive topic={}, reviveQueueId={}", reviveTopic, queueId);
+								continue ;
+							}
 							brokerController.getConsumerOffsetManager().commitOffset(PopAckConstants.LOCAL_HOST, PopAckConstants.REVIVE_GROUP, reviveTopic, queueId, newOffset);
 						}
 						if (sortList.size() == 0) {
@@ -309,7 +331,19 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 				}
 			}
 		}
+
+		private boolean checkMaster() {
+			return brokerController.getMessageStoreConfig().getBrokerRole() != BrokerRole.SLAVE;
+		}
+		private boolean checkAndSetMaster() {
+			isMaster = checkMaster();
+			return isMaster;
+		}
 		private void reviveRetry(PopCheckPoint popCheckPoint,MessageExt messageExt) throws Exception{
+			if (!checkAndSetMaster()) {
+				POP_LOGGER.info("slave skip retry , revive topic={}, reviveQueueId={}", reviveTopic, queueId);
+				return ;
+			}
 			MessageExtBrokerInner msgInner = new MessageExtBrokerInner();
 			if (!popCheckPoint.getT().startsWith(MixAll.RETRY_GROUP_TOPIC_PREFIX)) {
 				msgInner.setTopic(KeyBuilder.buildPopRetryTopic(popCheckPoint.getT(), popCheckPoint.getC()));
@@ -360,6 +394,10 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 				POP_LOGGER.info("reviveQueueId={}, reach tail,offset {}", queueId, offset);
 			} else if (pullResult.getPullStatus() == PullStatus.OFFSET_ILLEGAL || pullResult.getPullStatus() == PullStatus.NO_MATCHED_MSG) {
 				POP_LOGGER.error("reviveQueueId={}, OFFSET_ILLEGAL {}, result is {}", queueId, offset, pullResult);
+				if (!checkAndSetMaster()) {
+					POP_LOGGER.info("slave skip offset correct topic={}, reviveQueueId={}", reviveTopic, queueId);
+					return null;
+				}
 				brokerController.getConsumerOffsetManager().commitOffset(PopAckConstants.LOCAL_HOST, PopAckConstants.REVIVE_GROUP, reviveTopic, queueId, pullResult.getNextBeginOffset()-1);
 			}
 			return pullResult.getMsgFoundList();
