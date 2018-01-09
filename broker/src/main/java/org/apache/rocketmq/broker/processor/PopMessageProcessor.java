@@ -82,27 +82,30 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 				while (true) {
 					try {
 						Thread.sleep(2000L);
-						Collection<ArrayBlockingQueue<PopRequest>> pops=pollingMap.values();
+						Collection<ArrayBlockingQueue<PopRequest>> pops = pollingMap.values();
 						for (ArrayBlockingQueue<PopRequest> popQ : pops) {
-							PopRequest tmPopRequest=popQ.peek();
-							if (tmPopRequest==null) {
-								continue;
-							}
-							if (tmPopRequest.isTimeout()) {
-								tmPopRequest=popQ.poll();
-								if (tmPopRequest==null) {
-									continue;
-								}
-								if (!tmPopRequest.isTimeout()) {
-									popQ.offer(tmPopRequest);
-								}else {
-									POP_LOGGER.info("timeout , wakeUp : {}",tmPopRequest);
-									wakeUp(tmPopRequest);
+							PopRequest tmPopRequest = popQ.peek();
+							while (tmPopRequest != null) {
+								if (tmPopRequest.isTimeout()) {
+									tmPopRequest = popQ.poll();
+									if (tmPopRequest == null) {
+										break;
+									}
+									if (!tmPopRequest.isTimeout()) {
+										popQ.offer(tmPopRequest);
+										break;
+									} else {
+										POP_LOGGER.info("timeout , wakeUp : {}", tmPopRequest);
+										wakeUp(tmPopRequest);
+										tmPopRequest = popQ.peek();
+									}
+								} else {
+									break;
 								}
 							}
 						}
 					} catch (Exception e) {
-						POP_LOGGER.error("checkPolling error",e);
+						POP_LOGGER.error("checkPolling error", e);
 					}
 				}
 			}
