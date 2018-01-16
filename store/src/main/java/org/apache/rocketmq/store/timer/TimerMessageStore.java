@@ -846,18 +846,22 @@ public class TimerMessageStore {
     }
 
     private MessageExt getMessageByCommitOffset(long offsetPy, int sizePy) {
-        MessageExt msgExt = null;
-        bufferLocal.get().position(0);
-        bufferLocal.get().limit(sizePy);
-        boolean res = messageStore.getData(offsetPy, sizePy, bufferLocal.get());
-        if (res) {
-            bufferLocal.get().flip();
-            msgExt =  MessageDecoder.decode(bufferLocal.get(), true, false, false, false, false);
+        for (int i = 0; i < 3; i++) {
+            MessageExt msgExt = null;
+            bufferLocal.get().position(0);
+            bufferLocal.get().limit(sizePy);
+            boolean res = messageStore.getData(offsetPy, sizePy, bufferLocal.get());
+            if (res) {
+                bufferLocal.get().flip();
+                msgExt =  MessageDecoder.decode(bufferLocal.get(), true, false, false, false, false);
+            }
+            if (null == msgExt) {
+                log.warn("Fail to read msg from commitlog offsetPy:{} sizePy:{}", offsetPy, sizePy);
+            } else {
+                return msgExt;
+            }
         }
-        if (null == msgExt) {
-            log.warn("Fail to read msg from commitlog offsetPy:{} sizePy:{}", offsetPy, sizePy);
-        }
-        return msgExt;
+        return null;
     }
 
     private MessageExtBrokerInner convert(MessageExt messageExt, long enqueueTime, boolean needRoll) {
