@@ -468,12 +468,15 @@ public class TimerMessageStore {
         }
 
     }
-    public void holdMomentForUnknownError() {
+    public void holdMomentForUnknownError(long ms) {
         try {
-            Thread.sleep(50);
+            Thread.sleep(ms);
         } catch (Exception ignored) {
 
         }
+    }
+    public void holdMomentForUnknownError() {
+       holdMomentForUnknownError(50);
     }
     public boolean enqueue(int queueId) {
         if (storeConfig.isTimerStopEnqueue()) {
@@ -687,7 +690,7 @@ public class TimerMessageStore {
         }
         int checkNum = 0;
         while (true) {
-            if (dequeueGetQueue.size() > 0 || dequeuePutQueue.size() > 0
+            if (dequeuePutQueue.size() > 0
                 || !checkStateForGetMessages(StateService.WAITING)
                 || !checkStateForPutMessages(StateService.WAITING)) {
                 //let it go
@@ -1097,63 +1100,62 @@ public class TimerMessageStore {
             while (!this.isStopped() || enqueuePutQueue.size() != 0) {
                 try {
                     long tmpCommitQueueOffset = currQueueOffset;
-                    TimerRequest req = enqueuePutQueue.poll(10, TimeUnit.MILLISECONDS);
-                    boolean doRes =  false;
-                    while (!isStopped() && !doRes) {
-                        try {
-                            if (null == req) {
-                                commitQueueOffset = tmpCommitQueueOffset;
-                                maybeMoveWriteTime();
-                                doRes = true;
-                            } else {
-                                perfs.startTick("enqueue_put");
-                                if (isMaster() && req.getDelayTime() < currWriteTimeMs) {
-                                    if (storeConfig.isTimerEnqueuePutMsg2Queue()) {
-                                        //high performance but may cause message loss
-                                        dequeuePutQueue.put(req);
-                                        doRes = true;
-                                    } else {
-                                        //poor performance but guarantee the msg
-                                        MessageExtBrokerInner msg = convert(req.getMsg(), System.currentTimeMillis(), false);
-                                        while (!doRes && !isStopped() && isMaster()) {
-                                            doRes =  PUT_NEED_RETRY != doPut(msg, false);
-                                            if (!doRes) {
-                                                Thread.sleep(500);
-                                            }
-                                        }
-                                    }
-                                    maybeMoveWriteTime();
-                                }
-                                //the broker role may have changed
-                                if (!doRes) {
-                                    doRes = doEnqueue(req.getOffsetPy(), req.getSizePy(), req.getDelayTime(), req.getMsg());
-                                    if (!doRes) {
-                                        Thread.sleep(50);
-                                    }
-                                    maybeMoveWriteTime();
-                                }
-                                if (!doRes && storeConfig.isTimerSkipUnknownError()) {
-                                    break;
-                                }
-                                if (doRes) {
-                                    if (enqueuePutQueue.size() == 0) {
-                                        commitQueueOffset = tmpCommitQueueOffset;
-                                    } else {
-                                        commitQueueOffset = req.getMsg().getQueueOffset();
-                                    }
-                                }
-                                perfs.endTick("enqueue_put");
+                    List<TimerRequest> trs = null;
+                    //collect the requests
+                    TimerRequest firstReq = enqueuePutQueue.poll(10, TimeUnit.MILLISECONDS);
+                    if (null != firstReq) {
+                        trs = new ArrayList<>(16);
+                        trs.add(firstReq);
+                        while (true) {
+                            TimerRequest tmpReq = enqueuePutQueue.poll(3, TimeUnit.MILLISECONDS);
+                            if (null == tmpReq) {
+                                break;
                             }
-                        } catch (Throwable t) {
-                            log.error("Unknown error", t);
-                            if (storeConfig.isTimerSkipUnknownError()) {
-                                doRes = true;
-                            } else {
-                                holdMomentForUnknownError();
-                            }
+                            trs.add(tmpReq);
+                            if (trs.size() > 10)
+                                break;
                         }
                     }
-
+                    if (null == trs || trs.isEmpty()) {
+                        commitQueueOffset = tmpCommitQueueOffset;
+                        maybeMoveWriteTime();
+                        continue;
+                    }
+                    while (!isStopped()) {
+                        CountDownLatch latch =  new CountDownLatch(trs.size());
+                        for (TimerRequest req : trs) {
+                            req.setLatch(latch);
+                            try {
+                                perfs.startTick("enqueue_put");
+                                if (isMaster() && req.getDelayTime() < currWriteTimeMs) {
+                                    dequeuePutQueue.put(req);
+                                } else {
+                                    boolean doEnqueueRes = doEnqueue(req.getOffsetPy(), req.getSizePy(), req.getDelayTime(), req.getMsg());
+                                    req.idempotentRelease(doEnqueueRes || storeConfig.isTimerSkipUnknownError());
+                                }
+                                perfs.endTick("enqueue_put");
+                            } catch (Throwable t) {
+                                log.error("Unknown error", t);
+                                if (storeConfig.isTimerSkipUnknownError()) {
+                                    req.idempotentRelease(true);
+                                } else {
+                                    holdMomentForUnknownError();
+                                }
+                            }
+                        }
+                        checkDequeueLatch(latch, -1);
+                        boolean allSucc = true;
+                        for (TimerRequest tr: trs) {
+                            allSucc = allSucc && tr.isSucc();
+                        }
+                        if (allSucc) {
+                            break;
+                        } else {
+                            holdMomentForUnknownError();
+                        }
+                    }
+                    commitQueueOffset = trs.get(trs.size() - 1).getMsg().getQueueOffset();
+                    maybeMoveWriteTime();
                 } catch (Throwable e) {
                     TimerMessageStore.log.error("Unknown error", e);
                 }
@@ -1212,10 +1214,12 @@ public class TimerMessageStore {
                     }
                     setState(StateService.RUNNING);
                     boolean doRes = false;
+                    boolean tmpDequeueChangeFlag = false;
                     try {
                         while (!isStopped() && !doRes) {
                             if (!isRunningDequeue()) {
                                 dequeueStatusChangeFlag = true;
+                                tmpDequeueChangeFlag = true;
                                 break;
                             }
                             try {
@@ -1226,6 +1230,7 @@ public class TimerMessageStore {
                                 while (!doRes && !isStopped()) {
                                     if (!isRunningDequeue()) {
                                         dequeueStatusChangeFlag = true;
+                                        tmpDequeueChangeFlag = true;
                                         break;
                                     }
                                     doRes = PUT_NEED_RETRY != doPut(msg, needRoll(tr.getMagic()));
@@ -1242,7 +1247,7 @@ public class TimerMessageStore {
                             }
                         }
                     } finally {
-                        tr.idempotentRelease();
+                        tr.idempotentRelease(!tmpDequeueChangeFlag);
                     }
 
                 } catch (Throwable e) {

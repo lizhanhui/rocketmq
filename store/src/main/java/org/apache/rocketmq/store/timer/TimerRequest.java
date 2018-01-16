@@ -37,6 +37,9 @@ public class TimerRequest {
 
     private boolean released;
 
+    //whether the operation is successful
+    private boolean succ;
+
     private Set<String> deleteList;
 
     public TimerRequest(long offsetPy, int sizePy, long delayTime, long enqueueTime, int magic) {
@@ -93,9 +96,18 @@ public class TimerRequest {
     }
 
     public void idempotentRelease() {
+       idempotentRelease(true);
+    }
+
+    public void idempotentRelease(boolean succ) {
+        this.succ = succ;
         if (!released && latch != null) {
             released = true;
             latch.countDown();
         }
+    }
+
+    public boolean isSucc() {
+        return succ;
     }
 }
