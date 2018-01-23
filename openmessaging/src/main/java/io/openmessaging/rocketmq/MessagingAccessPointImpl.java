@@ -16,22 +16,20 @@
  */
 package io.openmessaging.rocketmq;
 
-import io.openmessaging.IterableConsumer;
 import io.openmessaging.KeyValue;
 import io.openmessaging.MessagingAccessPoint;
-import io.openmessaging.Producer;
-import io.openmessaging.PullConsumer;
-import io.openmessaging.PushConsumer;
 import io.openmessaging.ResourceManager;
-import io.openmessaging.SequenceProducer;
-import io.openmessaging.ServiceEndPoint;
+import io.openmessaging.consumer.PullConsumer;
+import io.openmessaging.consumer.PushConsumer;
+import io.openmessaging.consumer.StreamingConsumer;
 import io.openmessaging.exception.OMSNotSupportedException;
 import io.openmessaging.observer.Observer;
+import io.openmessaging.producer.Producer;
 import io.openmessaging.rocketmq.consumer.PullConsumerImpl;
 import io.openmessaging.rocketmq.consumer.PushConsumerImpl;
 import io.openmessaging.rocketmq.producer.ProducerImpl;
-import io.openmessaging.rocketmq.producer.SequenceProducerImpl;
 import io.openmessaging.rocketmq.utils.OMSUtil;
+import java.util.List;
 
 public class MessagingAccessPointImpl implements MessagingAccessPoint {
     private final KeyValue accessPointProperties;
@@ -56,16 +54,6 @@ public class MessagingAccessPointImpl implements MessagingAccessPoint {
     }
 
     @Override
-    public SequenceProducer createSequenceProducer() {
-        return new SequenceProducerImpl(this.accessPointProperties);
-    }
-
-    @Override
-    public SequenceProducer createSequenceProducer(KeyValue properties) {
-        return new SequenceProducerImpl(OMSUtil.buildKeyValue(this.accessPointProperties, properties));
-    }
-
-    @Override
     public PushConsumer createPushConsumer() {
         return new PushConsumerImpl(accessPointProperties);
     }
@@ -85,29 +73,10 @@ public class MessagingAccessPointImpl implements MessagingAccessPoint {
         return new PullConsumerImpl(queueName, OMSUtil.buildKeyValue(this.accessPointProperties, properties));
     }
 
-    @Override
-    public IterableConsumer createIterableConsumer(String queueName) {
-        throw new OMSNotSupportedException("-1", "IterableConsumer is not supported in current version");
-    }
-
-    @Override
-    public IterableConsumer createIterableConsumer(String queueName, KeyValue properties) {
-        throw new OMSNotSupportedException("-1", "IterableConsumer is not supported in current version");
-    }
 
     @Override
     public ResourceManager getResourceManager() {
         throw new OMSNotSupportedException("-1", "ResourceManager is not supported in current version.");
-    }
-
-    @Override
-    public ServiceEndPoint createServiceEndPoint() {
-        throw new OMSNotSupportedException("-1", "ServiceEndPoint is not supported in current version.");
-    }
-
-    @Override
-    public ServiceEndPoint createServiceEndPoint(KeyValue properties) {
-        throw new OMSNotSupportedException("-1", "ServiceEndPoint is not supported in current version.");
     }
 
     @Override
@@ -116,8 +85,43 @@ public class MessagingAccessPointImpl implements MessagingAccessPoint {
     }
 
     @Override
-    public void deleteObserver(Observer observer) {
-        //Ignore
+    public String implVersion() {
+        return null;
+    }
+
+    @Override
+    public StreamingConsumer createStreamingConsumer(String queueName) {
+        return null;
+    }
+
+    @Override
+    public StreamingConsumer createStreamingConsumer(String queueName, KeyValue properties) {
+        return null;
+    }
+
+    @Override
+    public void removeObserver(Observer observer) {
+
+    }
+
+    @Override
+    public List<Producer> producers() {
+        return null;
+    }
+
+    @Override
+    public List<PushConsumer> pushConsumers() {
+        return null;
+    }
+
+    @Override
+    public List<StreamingConsumer> streamingConsumers() {
+        return null;
+    }
+
+    @Override
+    public List<PullConsumer> pullConsumers() {
+        return null;
     }
 
     @Override

@@ -17,13 +17,11 @@
 package org.apache.rocketmq.example.openmessaging;
 
 import io.openmessaging.Message;
-import io.openmessaging.MessageHeader;
-import io.openmessaging.MessageListener;
 import io.openmessaging.MessagingAccessPoint;
 import io.openmessaging.MessagingAccessPointFactory;
 import io.openmessaging.OMS;
-import io.openmessaging.PushConsumer;
-import io.openmessaging.ReceivedMessageContext;
+import io.openmessaging.consumer.MessageListener;
+import io.openmessaging.consumer.PushConsumer;
 import io.openmessaging.rocketmq.domain.NonStandardKeys;
 
 public class SimplePushConsumer {
@@ -47,8 +45,8 @@ public class SimplePushConsumer {
 
         consumer.attachQueue("OMS_HELLO_TOPIC", new MessageListener() {
             @Override
-            public void onMessage(final Message message, final ReceivedMessageContext context) {
-                System.out.printf("Received one message: %s%n", message.headers().getString(MessageHeader.MESSAGE_ID));
+            public void onReceived(final Message message, final Context context) {
+                System.out.printf("Received one message: %s%n", message.sysHeaders().getString(Message.BuiltinKeys.MessageId));
                 context.ack();
             }
         });

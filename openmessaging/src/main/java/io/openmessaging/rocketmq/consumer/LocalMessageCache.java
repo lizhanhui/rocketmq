@@ -17,7 +17,7 @@
 package io.openmessaging.rocketmq.consumer;
 
 import io.openmessaging.KeyValue;
-import io.openmessaging.PropertyKeys;
+import io.openmessaging.OMSBuiltinKeys;
 import io.openmessaging.ServiceLifecycle;
 import io.openmessaging.rocketmq.config.ClientConfig;
 import io.openmessaging.rocketmq.domain.ConsumeRequest;
@@ -96,8 +96,8 @@ class LocalMessageCache implements ServiceLifecycle {
 
     MessageExt poll(final KeyValue properties) {
         int currentPollTimeout = clientConfig.getOmsOperationTimeout();
-        if (properties.containsKey(PropertyKeys.OPERATION_TIMEOUT)) {
-            currentPollTimeout = properties.getInt(PropertyKeys.OPERATION_TIMEOUT);
+        if (properties.containsKey(OMSBuiltinKeys.OPERATION_TIMEOUT)) {
+            currentPollTimeout = properties.getInt(OMSBuiltinKeys.OPERATION_TIMEOUT);
         }
         return poll(currentPollTimeout);
     }

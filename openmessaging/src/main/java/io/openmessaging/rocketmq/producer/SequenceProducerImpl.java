@@ -19,8 +19,7 @@ package io.openmessaging.rocketmq.producer;
 import io.openmessaging.BytesMessage;
 import io.openmessaging.KeyValue;
 import io.openmessaging.Message;
-import io.openmessaging.MessageHeader;
-import io.openmessaging.SequenceProducer;
+import io.openmessaging.producer.BatchMessageSender;
 import io.openmessaging.rocketmq.utils.OMSUtil;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,7 +29,7 @@ import org.apache.rocketmq.client.Validators;
 import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.client.producer.SendResult;
 
-public class SequenceProducerImpl extends AbstractOMSProducer implements SequenceProducer {
+public class SequenceProducerImpl extends AbstractOMSProducer implements BatchMessageSender {
 
     private BlockingQueue<Message> msgCacheQueue;
 
@@ -39,7 +38,6 @@ public class SequenceProducerImpl extends AbstractOMSProducer implements Sequenc
         this.msgCacheQueue = new LinkedBlockingQueue<>();
     }
 
-    @Override
     public KeyValue properties() {
         return properties;
     }
@@ -51,7 +49,7 @@ public class SequenceProducerImpl extends AbstractOMSProducer implements Sequenc
         try {
             Validators.checkMessage(rmqMessage, this.rocketmqProducer);
         } catch (MQClientException e) {
-            throw checkProducerException(rmqMessage.getTopic(), message.headers().getString(MessageHeader.MESSAGE_ID), e);
+            throw checkProducerException(rmqMessage.getTopic(), message.sysHeaders().getString(Message.BuiltinKeys.MessageId), e);
         }
         msgCacheQueue.add(message);
     }
@@ -81,7 +79,7 @@ public class SequenceProducerImpl extends AbstractOMSProducer implements Sequenc
             String[] msgIdArray = sendResult.getMsgId().split(",");
             for (int i = 0; i < messages.size(); i++) {
                 Message message = messages.get(i);
-                message.headers().put(MessageHeader.MESSAGE_ID, msgIdArray[i]);
+                message.sysHeaders().put(Message.BuiltinKeys.MessageId, msgIdArray[i]);
             }
         } catch (Exception e) {
             throw checkProducerException("", "", e);
@@ -91,5 +89,10 @@ public class SequenceProducerImpl extends AbstractOMSProducer implements Sequenc
     @Override
     public synchronized void rollback() {
         msgCacheQueue.clear();
+    }
+
+    @Override
+    public void close() {
+
     }
 }

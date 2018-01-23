@@ -18,12 +18,11 @@ package io.openmessaging.rocketmq.consumer;
 
 import io.openmessaging.BytesMessage;
 import io.openmessaging.Message;
-import io.openmessaging.MessageHeader;
 import io.openmessaging.MessagingAccessPoint;
 import io.openmessaging.MessagingAccessPointFactory;
 import io.openmessaging.OMS;
-import io.openmessaging.PropertyKeys;
-import io.openmessaging.PullConsumer;
+import io.openmessaging.OMSBuiltinKeys;
+import io.openmessaging.consumer.PullConsumer;
 import io.openmessaging.rocketmq.config.ClientConfig;
 import io.openmessaging.rocketmq.domain.NonStandardKeys;
 import java.lang.reflect.Field;
@@ -84,7 +83,7 @@ public class PullConsumerImplTest {
         when(localMessageCache.poll()).thenReturn(consumedMsg);
 
         Message message = consumer.poll();
-        assertThat(message.headers().getString(MessageHeader.MESSAGE_ID)).isEqualTo("NewMsgId");
+        assertThat(message.sysHeaders().getString(Message.BuiltinKeys.MessageId)).isEqualTo("NewMsgId");
         assertThat(((BytesMessage) message).getBody()).isEqualTo(testBody);
     }
 
@@ -94,7 +93,7 @@ public class PullConsumerImplTest {
         Message message = consumer.poll();
         assertThat(message).isNull();
 
-        message = consumer.poll(OMS.newKeyValue().put(PropertyKeys.OPERATION_TIMEOUT, 100));
+        message = consumer.poll(OMS.newKeyValue().put(OMSBuiltinKeys.OPERATION_TIMEOUT, 100));
         assertThat(message).isNull();
     }
 }

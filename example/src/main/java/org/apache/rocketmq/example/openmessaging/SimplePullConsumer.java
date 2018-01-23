@@ -17,11 +17,10 @@
 package org.apache.rocketmq.example.openmessaging;
 
 import io.openmessaging.Message;
-import io.openmessaging.MessageHeader;
 import io.openmessaging.MessagingAccessPoint;
 import io.openmessaging.MessagingAccessPointFactory;
 import io.openmessaging.OMS;
-import io.openmessaging.PullConsumer;
+import io.openmessaging.consumer.PullConsumer;
 import io.openmessaging.rocketmq.domain.NonStandardKeys;
 
 public class SimplePullConsumer {
@@ -49,7 +48,7 @@ public class SimplePullConsumer {
         while (true) {
             Message message = consumer.poll();
             if (message != null) {
-                String msgId = message.headers().getString(MessageHeader.MESSAGE_ID);
+                String msgId = message.sysHeaders().getString(Message.BuiltinKeys.MessageId);
                 System.out.printf("Received one message: %s%n", msgId);
                 consumer.ack(msgId);
             }

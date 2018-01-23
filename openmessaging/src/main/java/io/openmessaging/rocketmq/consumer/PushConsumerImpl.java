@@ -18,12 +18,12 @@ package io.openmessaging.rocketmq.consumer;
 
 import io.openmessaging.BytesMessage;
 import io.openmessaging.KeyValue;
-import io.openmessaging.MessageListener;
 import io.openmessaging.OMS;
-import io.openmessaging.PropertyKeys;
-import io.openmessaging.PushConsumer;
-import io.openmessaging.ReceivedMessageContext;
+import io.openmessaging.OMSBuiltinKeys;
+import io.openmessaging.consumer.MessageListener;
+import io.openmessaging.consumer.PushConsumer;
 import io.openmessaging.exception.OMSRuntimeException;
+import io.openmessaging.interceptor.PushConsumerInterceptor;
 import io.openmessaging.rocketmq.config.ClientConfig;
 import io.openmessaging.rocketmq.domain.NonStandardKeys;
 import io.openmessaging.rocketmq.utils.BeanUtils;
@@ -70,7 +70,7 @@ public class PushConsumerImpl implements PushConsumer {
 
         String consumerId = OMSUtil.buildInstanceName();
         this.rocketmqPushConsumer.setInstanceName(consumerId);
-        properties.put(PropertyKeys.CONSUMER_ID, consumerId);
+        properties.put(OMSBuiltinKeys.CONSUMER_ID, consumerId);
 
         this.rocketmqPushConsumer.registerMessageListener(new MessageListenerImpl());
     }
@@ -104,6 +104,26 @@ public class PushConsumerImpl implements PushConsumer {
             throw new OMSRuntimeException("-1", String.format("RocketMQ push consumer can't attach to %s.", queueName));
         }
         return this;
+    }
+
+    @Override
+    public PushConsumer attachQueue(String queueName, MessageListener listener, KeyValue properties) {
+        return null;
+    }
+
+    @Override
+    public PushConsumer detachQueue(String queueName) {
+        return null;
+    }
+
+    @Override
+    public void addInterceptor(PushConsumerInterceptor interceptor) {
+
+    }
+
+    @Override
+    public void removeInterceptor(PushConsumerInterceptor interceptor) {
+
     }
 
     @Override
@@ -146,7 +166,7 @@ public class PushConsumerImpl implements PushConsumer {
 
             contextProperties.put(NonStandardKeys.MESSAGE_CONSUME_STATUS, ConsumeConcurrentlyStatus.RECONSUME_LATER.name());
 
-            ReceivedMessageContext context = new ReceivedMessageContext() {
+            MessageListener.Context context = new MessageListener.Context() {
                 @Override
                 public KeyValue properties() {
                     return contextProperties;
@@ -167,7 +187,7 @@ public class PushConsumerImpl implements PushConsumer {
                 }
             };
             long begin = System.currentTimeMillis();
-            listener.onMessage(omsMsg, context);
+            listener.onReceived(omsMsg, context);
             long costs = System.currentTimeMillis() - begin;
             long timeoutMills = clientConfig.getRmqMessageConsumeTimeout() * 60 * 1000;
             try {

@@ -17,7 +17,7 @@
 package io.openmessaging.rocketmq.domain;
 
 import io.openmessaging.KeyValue;
-import io.openmessaging.SendResult;
+import io.openmessaging.producer.SendResult;
 
 public class SendResultImpl implements SendResult {
     private String messageId;

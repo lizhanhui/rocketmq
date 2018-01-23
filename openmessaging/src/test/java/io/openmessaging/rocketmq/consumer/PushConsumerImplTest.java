@@ -18,13 +18,11 @@ package io.openmessaging.rocketmq.consumer;
 
 import io.openmessaging.BytesMessage;
 import io.openmessaging.Message;
-import io.openmessaging.MessageHeader;
-import io.openmessaging.MessageListener;
 import io.openmessaging.MessagingAccessPoint;
 import io.openmessaging.MessagingAccessPointFactory;
 import io.openmessaging.OMS;
-import io.openmessaging.PushConsumer;
-import io.openmessaging.ReceivedMessageContext;
+import io.openmessaging.consumer.MessageListener;
+import io.openmessaging.consumer.PushConsumer;
 import io.openmessaging.rocketmq.domain.NonStandardKeys;
 import java.lang.reflect.Field;
 import java.util.Collections;
@@ -75,8 +73,8 @@ public class PushConsumerImplTest {
         consumedMsg.setTopic("HELLO_QUEUE");
         consumer.attachQueue("HELLO_QUEUE", new MessageListener() {
             @Override
-            public void onMessage(final Message message, final ReceivedMessageContext context) {
-                assertThat(message.headers().getString(MessageHeader.MESSAGE_ID)).isEqualTo("NewMsgId");
+            public void onReceived(final Message message, final Context context) {
+                assertThat(message.sysHeaders().getString(Message.BuiltinKeys.MessageId)).isEqualTo("NewMsgId");
                 assertThat(((BytesMessage) message).getBody()).isEqualTo(testBody);
                 context.ack();
             }

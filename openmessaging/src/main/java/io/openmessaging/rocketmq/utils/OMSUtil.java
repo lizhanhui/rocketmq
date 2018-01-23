@@ -18,9 +18,9 @@ package io.openmessaging.rocketmq.utils;
 
 import io.openmessaging.BytesMessage;
 import io.openmessaging.KeyValue;
-import io.openmessaging.MessageHeader;
+import io.openmessaging.Message;
 import io.openmessaging.OMS;
-import io.openmessaging.SendResult;
+import io.openmessaging.producer.SendResult;
 import io.openmessaging.rocketmq.domain.BytesMessageImpl;
 import io.openmessaging.rocketmq.domain.NonStandardKeys;
 import io.openmessaging.rocketmq.domain.SendResultImpl;
@@ -48,15 +48,15 @@ public class OMSUtil {
         org.apache.rocketmq.common.message.Message rmqMessage = new org.apache.rocketmq.common.message.Message();
         rmqMessage.setBody(omsMessage.getBody());
 
-        KeyValue headers = omsMessage.headers();
-        KeyValue properties = omsMessage.properties();
+        KeyValue headers = omsMessage.sysHeaders();
+        KeyValue properties = omsMessage.userHeaders();
 
         //All destinations in RocketMQ use Topic
-        if (headers.containsKey(MessageHeader.TOPIC)) {
-            rmqMessage.setTopic(headers.getString(MessageHeader.TOPIC));
+        if (headers.containsKey(Message.BuiltinKeys.Topic)) {
+            rmqMessage.setTopic(headers.getString(Message.BuiltinKeys.Topic));
             rmqMessage.putUserProperty(NonStandardKeys.MESSAGE_DESTINATION, "TOPIC");
         } else {
-            rmqMessage.setTopic(headers.getString(MessageHeader.QUEUE));
+            rmqMessage.setTopic(headers.getString(Message.BuiltinKeys.Queue));
             rmqMessage.putUserProperty(NonStandardKeys.MESSAGE_DESTINATION, "QUEUE");
         }
 
@@ -76,8 +76,8 @@ public class OMSUtil {
         BytesMessage omsMsg = new BytesMessageImpl();
         omsMsg.setBody(rmqMsg.getBody());
 
-        KeyValue headers = omsMsg.headers();
-        KeyValue properties = omsMsg.properties();
+        KeyValue headers = omsMsg.sysHeaders();
+        KeyValue properties = omsMsg.userHeaders();
 
         final Set<Map.Entry<String, String>> entries = rmqMsg.getProperties().entrySet();
 
@@ -89,25 +89,25 @@ public class OMSUtil {
             }
         }
 
-        omsMsg.putHeaders(MessageHeader.MESSAGE_ID, rmqMsg.getMsgId());
+        omsMsg.putSysHeaders(Message.BuiltinKeys.MessageId, rmqMsg.getMsgId());
         if (!rmqMsg.getProperties().containsKey(NonStandardKeys.MESSAGE_DESTINATION) ||
             rmqMsg.getProperties().get(NonStandardKeys.MESSAGE_DESTINATION).equals("TOPIC")) {
-            omsMsg.putHeaders(MessageHeader.TOPIC, rmqMsg.getTopic());
+            omsMsg.putSysHeaders(Message.BuiltinKeys.Topic, rmqMsg.getTopic());
         } else {
-            omsMsg.putHeaders(MessageHeader.QUEUE, rmqMsg.getTopic());
+            omsMsg.putSysHeaders(Message.BuiltinKeys.Queue, rmqMsg.getTopic());
         }
-        omsMsg.putHeaders(MessageHeader.SEARCH_KEY, rmqMsg.getKeys());
-        omsMsg.putHeaders(MessageHeader.BORN_HOST, String.valueOf(rmqMsg.getBornHost()));
-        omsMsg.putHeaders(MessageHeader.BORN_TIMESTAMP, rmqMsg.getBornTimestamp());
-        omsMsg.putHeaders(MessageHeader.STORE_HOST, String.valueOf(rmqMsg.getStoreHost()));
-        omsMsg.putHeaders(MessageHeader.STORE_TIMESTAMP, rmqMsg.getStoreTimestamp());
+        omsMsg.putSysHeaders(Message.BuiltinKeys.SearchKey, rmqMsg.getKeys());
+        omsMsg.putSysHeaders(Message.BuiltinKeys.BornHost, String.valueOf(rmqMsg.getBornHost()));
+        omsMsg.putSysHeaders(Message.BuiltinKeys.BornTimestamp, rmqMsg.getBornTimestamp());
+        omsMsg.putSysHeaders(Message.BuiltinKeys.StoreHost, String.valueOf(rmqMsg.getStoreHost()));
+        omsMsg.putSysHeaders(Message.BuiltinKeys.StoreTimestamp, rmqMsg.getStoreTimestamp());
         return omsMsg;
     }
 
     public static boolean isOMSHeader(String value) {
-        for (Field field : MessageHeader.class.getDeclaredFields()) {
+        for (Field field : Message.BuiltinKeys.class.getDeclaredFields()) {
             try {
-                if (field.get(MessageHeader.class).equals(value)) {
+                if (field.get(Message.BuiltinKeys.class).equals(value)) {
                     return true;
                 }
             } catch (IllegalAccessException e) {

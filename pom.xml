@@ -581,7 +581,7 @@
             <dependency>
                 <groupId>io.openmessaging</groupId>
                 <artifactId>openmessaging-api</artifactId>
-                <version>0.1.0-alpha</version>
+                <version>0.2.0-alpha.1-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>log4j</groupId>
