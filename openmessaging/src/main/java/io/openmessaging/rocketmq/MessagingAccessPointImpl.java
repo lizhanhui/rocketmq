@@ -86,7 +86,7 @@ public class MessagingAccessPointImpl implements MessagingAccessPoint {
 
     @Override
     public String implVersion() {
-        return null;
+        return "0.2.0-alpha.1-SNAPSHOT";
     }
 
     @Override
