@@ -21,6 +21,8 @@
 package org.apache.rocketmq.common.protocol.heartbeat;
 
 import com.alibaba.fastjson.annotation.JSONField;
+import org.apache.rocketmq.common.filter.ExpressionType;
+
 import org.apache.rocketmq.common.message.MessageDecoder;
 
 import java.util.HashSet;
@@ -35,7 +37,7 @@ public class SubscriptionData implements Comparable<SubscriptionData> {
     private Set<String> tagsSet = new HashSet<String>();
     private Set<Integer> codeSet = new HashSet<Integer>();
     private long subVersion = System.currentTimeMillis();
-    private String expressionType;
+    private String expressionType = ExpressionType.TAG;
     /**
      * self define properties.
      */
