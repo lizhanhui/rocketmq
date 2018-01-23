@@ -261,9 +261,15 @@ public class MQAdminImpl {
 
     public MessageExt queryMessageByUniqKey(String topic,
         String uniqKey) throws InterruptedException, MQClientException {
+        // Trace back to 3 minutes
+        return queryMessageByUniqKey(topic, uniqKey, 3 * 60 * 1000);
+    }
+
+    public MessageExt queryMessageByUniqKey(String topic, String uniqKey,
+        long timeDelta) throws InterruptedException, MQClientException {
 
         QueryResult qr = this.queryMessage(topic, uniqKey, 32,
-            MessageClientIDSetter.getNearlyTimeFromID(uniqKey).getTime() - 1000, Long.MAX_VALUE, true);
+            MessageClientIDSetter.getNearlyTimeFromID(uniqKey).getTime() - timeDelta, Long.MAX_VALUE, true);
         if (qr != null && qr.getMessageList() != null && qr.getMessageList().size() > 0) {
             return qr.getMessageList().get(0);
         } else {
