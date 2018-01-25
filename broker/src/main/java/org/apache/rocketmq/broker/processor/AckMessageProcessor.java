@@ -289,7 +289,7 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 											continue;
 										}
 										//skip ck from last epoch
-										if (popCheckPoint.getPt() < messageExt.getBornTimestamp()) {
+										if (popCheckPoint.getPt() < messageExt.getStoreTimestamp()) {
 											POP_LOGGER.warn("reviveQueueId={},skip ck from last epoch {}", queueId, popCheckPoint);
 											continue;
 										}
@@ -397,7 +397,7 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 				if (!checkAndSetMaster()) {
 					POP_LOGGER.info("slave skip offset correct topic={}, reviveQueueId={}", reviveTopic, queueId);
 					return null;
-				}
+				} 
 				brokerController.getConsumerOffsetManager().commitOffset(PopAckConstants.LOCAL_HOST, PopAckConstants.REVIVE_GROUP, reviveTopic, queueId, pullResult.getNextBeginOffset()-1);
 			}
 			return pullResult.getMsgFoundList();
