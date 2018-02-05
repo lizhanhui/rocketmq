@@ -70,6 +70,8 @@ public class PopMessageProcessor implements NettyRequestProcessor {
     private final BrokerController brokerController;
     private Random random=new Random(System.currentTimeMillis());
 	private String reviveTopic;
+	private static String BORN_TIME = "bornTime";
+	private static String POLLING = "POLLING";
 	private ConcurrentHashMap<String, ConcurrentHashMap<String,Byte>> topicCidMap=new ConcurrentHashMap<String, ConcurrentHashMap<String,Byte>>(100000); 
 	private ConcurrentLinkedHashMap<String, ArrayBlockingQueue<PopRequest>> pollingMap=new ConcurrentLinkedHashMap.Builder<String, ArrayBlockingQueue<PopRequest>>().maximumWeightedCapacity(100000).build();
     public PopMessageProcessor(final BrokerController brokerController) {
@@ -92,7 +94,8 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 										break;
 									}
 									if (!tmPopRequest.isTimeout()) {
-										popQ.offer(tmPopRequest);
+										POP_LOGGER.info("not timeout , but wakeUp in advance: {}", tmPopRequest);
+										wakeUp(tmPopRequest);
 										break;
 									} else {
 										POP_LOGGER.info("timeout , wakeUp : {}", tmPopRequest);
@@ -117,7 +120,8 @@ public class PopMessageProcessor implements NettyRequestProcessor {
     
     @Override
     public RemotingCommand processRequest(final ChannelHandlerContext ctx, RemotingCommand request) throws RemotingCommandException {
-        return this.processRequest(ctx.channel(), request, true);
+		request.addExtField(BORN_TIME, String.valueOf(System.currentTimeMillis()));
+        return this.processRequest(ctx.channel(), request);
     }
 
     @Override
@@ -175,7 +179,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 			@Override
 			public void run() {
 				try {
-					final RemotingCommand response = PopMessageProcessor.this.processRequest(request.getChannel(), request.getRemotingCommand(), false);
+					final RemotingCommand response = PopMessageProcessor.this.processRequest(request.getChannel(), request.getRemotingCommand());
 
 					if (response != null) {
 						response.setOpaque(request.getRemotingCommand().getOpaque());
@@ -204,7 +208,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 		};
 		this.brokerController.getPullMessageExecutor().submit(new RequestTask(run, request.getChannel(), request.getRemotingCommand()));
 	}
-    private RemotingCommand processRequest(final Channel channel, RemotingCommand request, boolean brokerAllowSuspend)
+    private RemotingCommand processRequest(final Channel channel, RemotingCommand request)
         throws RemotingCommandException {
         RemotingCommand response = RemotingCommand.createResponseCommand(PopMessageResponseHeader.class);
         final PopMessageResponseHeader responseHeader = (PopMessageResponseHeader) response.readCustomHeader();
@@ -420,7 +424,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 		long expired = requestHeader.getBornTime() + requestHeader.getPollTime();
 		final PopRequest request = new PopRequest(remotingCommand, channel, expired);
 		boolean result = false;
-		if (!request.isTimeout()) {
+		if (!request.isTimeout() && remotingCommand.getExtFields().get(POLLING) == null) {
 			String key = KeyBuilder.buildPollingKey(requestHeader.getTopic(), requestHeader.getConsumerGroup(), requestHeader.getQueueId());
 			ArrayBlockingQueue<PopRequest> queue = pollingMap.get(key);
 			if (queue == null) {
@@ -430,6 +434,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 			} else {
 				result = queue.offer(request);
 			}
+			remotingCommand.addExtField(POLLING, POLLING);
 		}
 		POP_LOGGER.info("polling {}, result {}", remotingCommand, result);
 		return result;
@@ -490,7 +495,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
             @Override
             public void run() {
                 try {
-                    final RemotingCommand response = PopMessageProcessor.this.processRequest(channel, request, false);
+                    final RemotingCommand response = PopMessageProcessor.this.processRequest(channel, request);
 
                     if (response != null) {
                         response.setOpaque(request.getOpaque());
