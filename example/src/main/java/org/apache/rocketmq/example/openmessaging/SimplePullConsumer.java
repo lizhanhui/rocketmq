@@ -26,9 +26,9 @@ import io.openmessaging.rocketmq.domain.NonStandardKeys;
 public class SimplePullConsumer {
     public static void main(String[] args) {
         final MessagingAccessPoint messagingAccessPoint = MessagingAccessPointFactory
-            .getMessagingAccessPoint("openmessaging:rocketmq://IP1:9876,IP2:9876/namespace");
+            .getMessagingAccessPoint("oms:rocketmq://localhost:9876/default:default");
 
-        final PullConsumer consumer = messagingAccessPoint.createPullConsumer("OMS_HELLO_TOPIC",
+        final PullConsumer consumer = messagingAccessPoint.createPullConsumer("TopicTest",
             OMS.newKeyValue().put(NonStandardKeys.CONSUMER_GROUP, "OMS_CONSUMER"));
 
         messagingAccessPoint.startup();

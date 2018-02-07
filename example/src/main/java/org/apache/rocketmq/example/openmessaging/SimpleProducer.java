@@ -25,7 +25,6 @@ import io.openmessaging.OMSBuiltinKeys;
 import io.openmessaging.producer.Producer;
 import io.openmessaging.producer.SendResult;
 import java.util.Arrays;
-import java.util.concurrent.CountDownLatch;
 
 public class SimpleProducer {
     public static void main(String[] args) {
@@ -43,62 +42,11 @@ public class SimpleProducer {
         producer.startup();
         System.out.printf("Producer startup OK%n");
 
-        final CountDownLatch countDownLatch = new CountDownLatch(1);
-
-        {
-            // Warm up
-            byte[] data = new byte[1024];
-            Arrays.fill(data, (byte) 'x');
-            Message message = producer.createTopicBytesMessage("TopicTest", data);
-            for (int i = 0; i < 50000; i++) {
-                SendResult sendResult = producer.send(message);
-            }
-            // End of warm up
-
-            for (int i = 256; i <=65536; i *= 2) {
-                byte[] d = new byte[1024];
-                Arrays.fill(d, (byte) 'x');
-                Message msg = producer.createTopicBytesMessage("TopicTest", d);
-
-                long start = System.currentTimeMillis();
-                for (int j = 0; j < 5000; j++) {
-                    SendResult sendResult = producer.send(msg);
-                }
-                long end = System.currentTimeMillis();
-                System.out.println("Message Size: " + i + ", Average: " + (end - start) / 5000.0 + "ms");
-            }
-
-            //final Void aVoid = result.get(3000L);
-//            System.out.printf("Send async message OK, msgId: %s%n", sendResult.messageId());
-        }
-
-       /* {
-            final Future<SendResult> result = producer.sendAsync(producer.createTopicBytesMessage("TopicTest", "OMS_HELLO_BODY".getBytes(Charset.forName("UTF-8"))));
-            result.addListener(new FutureListener<SendResult>() {
-                @Override
-                public void operationComplete(Future<SendResult> future) {
-                    if (future.getThrowable() == null) {
-                        System.out.printf("Send async message OK, msgId: %s%n", future.get().messageId());
-                    } else {
-                        System.out.printf("Send async message Failed, error: %s%n", future.getThrowable().getMessage());
-                    }
-
-                    countDownLatch.countDown();
-                }
-            });
-        }
-
-        {
-            producer.sendOneway(producer.createTopicBytesMessage("TopicTest", "OMS_HELLO_BODY".getBytes(Charset.forName("UTF-8"))));
-            System.out.printf("Send oneway message OK%n");
-        }
-
-        try {
-            countDownLatch.await();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }*/
-
+        byte[] data = new byte[1024];
+        Arrays.fill(data, (byte) 'x');
+        Message message = producer.createTopicBytesMessage("TopicTest", data);
+        SendResult sendResult = producer.send(message);
+        // log sendResult
         producer.shutdown();
         messagingAccessPoint.shutdown();
     }

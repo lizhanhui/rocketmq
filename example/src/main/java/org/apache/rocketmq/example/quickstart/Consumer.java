@@ -30,7 +30,7 @@ import org.apache.rocketmq.common.message.MessageExt;
  */
 public class Consumer {
 
-    public static void main(String[] args) throws InterruptedException, MQClientException {
+    public static void main(String[] args) throws MQClientException {
 
         /*
          * Instantiate with specified consumer group name.

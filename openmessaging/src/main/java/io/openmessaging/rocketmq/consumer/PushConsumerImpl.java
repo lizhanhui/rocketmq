@@ -20,6 +20,7 @@ import io.openmessaging.BytesMessage;
 import io.openmessaging.KeyValue;
 import io.openmessaging.OMS;
 import io.openmessaging.OMSBuiltinKeys;
+import io.openmessaging.consumer.Context;
 import io.openmessaging.consumer.MessageListener;
 import io.openmessaging.consumer.PushConsumer;
 import io.openmessaging.exception.OMSRuntimeException;
@@ -166,7 +167,7 @@ public class PushConsumerImpl implements PushConsumer {
 
             contextProperties.put(NonStandardKeys.MESSAGE_CONSUME_STATUS, ConsumeConcurrentlyStatus.RECONSUME_LATER.name());
 
-            MessageListener.Context context = new MessageListener.Context() {
+            Context context = new Context() {
                 @Override
                 public KeyValue properties() {
                     return contextProperties;

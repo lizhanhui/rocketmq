@@ -21,6 +21,7 @@ import io.openmessaging.Message;
 import io.openmessaging.MessagingAccessPoint;
 import io.openmessaging.MessagingAccessPointFactory;
 import io.openmessaging.OMS;
+import io.openmessaging.consumer.Context;
 import io.openmessaging.consumer.MessageListener;
 import io.openmessaging.consumer.PushConsumer;
 import io.openmessaging.rocketmq.domain.NonStandardKeys;
