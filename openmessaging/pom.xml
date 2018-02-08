@@ -1,4 +1,5 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
+
 <!--
   Licensed to the Apache Software Foundation (ASF) under one or more
   contributor license agreements.  See the NOTICE file distributed with
@@ -15,26 +16,24 @@
   See the License for the specific language governing permissions and
   limitations under the License.
   -->
-
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <parent>
-        <artifactId>rocketmq-all</artifactId>
-        <groupId>org.apache.rocketmq</groupId>
-        <version>4.2.1-SNAPSHOT</version>
-    </parent>
-    <modelVersion>4.0.0</modelVersion>
-
-    <artifactId>rocketmq-openmessaging</artifactId>
-    <name>rocketmq-openmessaging ${project.version}</name>
-
-    <dependencies>
-        <dependency>
-            <groupId>io.openmessaging</groupId>
-            <artifactId>openmessaging-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.rocketmq</groupId>
-            <artifactId>rocketmq-client</artifactId>
-        </dependency>
-    </dependencies>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">  
+  <parent> 
+    <artifactId>rocketmq-all</artifactId>  
+    <groupId>org.apache.rocketmq</groupId>  
+    <version>4.3.0-SNAPSHOT</version> 
+  </parent>  
+  <modelVersion>4.0.0</modelVersion>  
+  <artifactId>rocketmq-openmessaging</artifactId>  
+  <name>rocketmq-openmessaging ${project.version}</name>  
+  <dependencies> 
+    <dependency> 
+      <groupId>io.openmessaging</groupId>  
+      <artifactId>openmessaging-api</artifactId> 
+    </dependency>  
+    <dependency> 
+      <groupId>org.apache.rocketmq</groupId>  
+      <artifactId>rocketmq-client</artifactId> 
+    </dependency> 
+  </dependencies>  
+  <contributors><contributor><properties><provider>dezhi.ldz@alibaba-inc.com</provider><codeName>null</codeName><codeUrl>git@gitlab.alibaba-inc.com:middleware/rocketmq.git commit:a9a9c59</codeUrl><description>contributors added by SCM Plugin, please don't modify it!</description></properties></contributor></contributors>
 </project>

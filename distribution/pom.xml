@@ -1,4 +1,5 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
+
 <!--
   Licensed to the Apache Software Foundation (ASF) under one or more
   contributor license agreements.  See the NOTICE file distributed with
@@ -15,109 +16,98 @@
   See the License for the specific language governing permissions and
   limitations under the License.
   -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
-    <parent>
-        <groupId>org.apache.rocketmq</groupId>
-        <artifactId>rocketmq-all</artifactId>
-        <version>4.2.1-SNAPSHOT</version>
-    </parent>
-    <artifactId>rocketmq-distribution</artifactId>
-    <name>rocketmq-distribution ${project.version}</name>
-    <packaging>pom</packaging>
-
-    <profiles>
-
-        <profile>
-            <id>release-all</id>
-
-            <dependencies>
-                <dependency>
-                    <groupId>org.apache.rocketmq</groupId>
-                    <artifactId>rocketmq-broker</artifactId>
-                </dependency>
-
-                <dependency>
-                    <groupId>org.apache.rocketmq</groupId>
-                    <artifactId>rocketmq-client</artifactId>
-                </dependency>
-
-                <dependency>
-                    <groupId>org.apache.rocketmq</groupId>
-                    <artifactId>rocketmq-filtersrv</artifactId>
-                </dependency>
-
-                <dependency>
-                    <groupId>org.apache.rocketmq</groupId>
-                    <artifactId>rocketmq-tools</artifactId>
-                </dependency>
-
-                <dependency>
-                    <groupId>org.apache.rocketmq</groupId>
-                    <artifactId>rocketmq-example</artifactId>
-                </dependency>
-            </dependencies>
-
-            <build>
-                <plugins>
-                    <plugin>
-                        <artifactId>maven-assembly-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>release-all</id>
-                                <goals>
-                                    <goal>single</goal>
-                                </goals>
-                                <phase>package</phase>
-                                <configuration>
-                                    <descriptors>
-                                        <descriptor>release.xml</descriptor>
-                                    </descriptors>
-                                    <appendAssemblyId>false</appendAssemblyId>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-                <finalName>apache-rocketmq</finalName>
-            </build>
-        </profile>
-
-        <profile>
-            <id>release-client</id>
-
-            <dependencies>
-                <dependency>
-                    <groupId>org.apache.rocketmq</groupId>
-                    <artifactId>rocketmq-client</artifactId>
-                    <version>${project.version}</version>
-                </dependency>
-            </dependencies>
-
-            <build>
-                <plugins>
-                    <plugin>
-                        <artifactId>maven-assembly-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>release-client</id>
-                                <goals>
-                                    <goal>single</goal>
-                                </goals>
-                                <phase>package</phase>
-                                <configuration>
-                                    <descriptors>
-                                        <descriptor>release-client.xml</descriptor>
-                                    </descriptors>
-                                    <appendAssemblyId>false</appendAssemblyId>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-                <finalName>apache-rocketmq</finalName>
-            </build>
-        </profile>
-    </profiles>
-
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">  
+  <modelVersion>4.0.0</modelVersion>  
+  <parent> 
+    <groupId>org.apache.rocketmq</groupId>  
+    <artifactId>rocketmq-all</artifactId>  
+    <version>4.3.0-SNAPSHOT</version> 
+  </parent>  
+  <artifactId>rocketmq-distribution</artifactId>  
+  <name>rocketmq-distribution ${project.version}</name>  
+  <packaging>pom</packaging>  
+  <profiles> 
+    <profile> 
+      <id>release-all</id>  
+      <dependencies> 
+        <dependency> 
+          <groupId>org.apache.rocketmq</groupId>  
+          <artifactId>rocketmq-broker</artifactId> 
+        </dependency>  
+        <dependency> 
+          <groupId>org.apache.rocketmq</groupId>  
+          <artifactId>rocketmq-client</artifactId> 
+        </dependency>  
+        <dependency> 
+          <groupId>org.apache.rocketmq</groupId>  
+          <artifactId>rocketmq-filtersrv</artifactId> 
+        </dependency>  
+        <dependency> 
+          <groupId>org.apache.rocketmq</groupId>  
+          <artifactId>rocketmq-tools</artifactId> 
+        </dependency>  
+        <dependency> 
+          <groupId>org.apache.rocketmq</groupId>  
+          <artifactId>rocketmq-example</artifactId> 
+        </dependency> 
+      </dependencies>  
+      <build> 
+        <plugins> 
+          <plugin> 
+            <artifactId>maven-assembly-plugin</artifactId>  
+            <executions> 
+              <execution> 
+                <id>release-all</id>  
+                <goals> 
+                  <goal>single</goal> 
+                </goals>  
+                <phase>package</phase>  
+                <configuration> 
+                  <descriptors> 
+                    <descriptor>release.xml</descriptor> 
+                  </descriptors>  
+                  <appendAssemblyId>false</appendAssemblyId> 
+                </configuration> 
+              </execution> 
+            </executions> 
+          </plugin> 
+        </plugins>  
+        <finalName>apache-rocketmq</finalName> 
+      </build> 
+    </profile>  
+    <profile> 
+      <id>release-client</id>  
+      <dependencies> 
+        <dependency> 
+          <groupId>org.apache.rocketmq</groupId>  
+          <artifactId>rocketmq-client</artifactId>  
+          <version>${project.version}</version> 
+        </dependency> 
+      </dependencies>  
+      <build> 
+        <plugins> 
+          <plugin> 
+            <artifactId>maven-assembly-plugin</artifactId>  
+            <executions> 
+              <execution> 
+                <id>release-client</id>  
+                <goals> 
+                  <goal>single</goal> 
+                </goals>  
+                <phase>package</phase>  
+                <configuration> 
+                  <descriptors> 
+                    <descriptor>release-client.xml</descriptor> 
+                  </descriptors>  
+                  <appendAssemblyId>false</appendAssemblyId> 
+                </configuration> 
+              </execution> 
+            </executions> 
+          </plugin> 
+        </plugins>  
+        <finalName>apache-rocketmq</finalName> 
+      </build> 
+    </profile> 
+  </profiles>  
+  <contributors><contributor><properties><provider>dezhi.ldz@alibaba-inc.com</provider><codeName>null</codeName><codeUrl>git@gitlab.alibaba-inc.com:middleware/rocketmq.git commit:a9a9c59</codeUrl><description>contributors added by SCM Plugin, please don't modify it!</description></properties></contributor></contributors>
 </project>
