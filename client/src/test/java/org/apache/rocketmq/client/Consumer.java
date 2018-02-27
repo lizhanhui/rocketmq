@@ -1,7 +1,13 @@
 package org.apache.rocketmq.client;
 
 import java.util.Date;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
+import org.apache.rocketmq.client.consumer.AckCallback;
+import org.apache.rocketmq.client.consumer.AckResult;
 import org.apache.rocketmq.client.consumer.DefaultMQPullConsumer;
 import org.apache.rocketmq.client.consumer.PopCallback;
 import org.apache.rocketmq.client.consumer.PopResult;
@@ -17,6 +23,7 @@ import org.apache.rocketmq.remoting.exception.RemotingException;
 public class Consumer {
 	public static void main(String[] args) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
 		final String consumerGroup="cid-longji";
+		final ScheduledExecutorService executor=Executors.newScheduledThreadPool(10);
 		final DefaultMQPullConsumer pullConsumer = new DefaultMQPullConsumer(consumerGroup+"1");
 		// 觉音测试 10.101.93.75，日常环境 10.101.162.180
 		pullConsumer.setNamesrvAddr("127.0.0.1:9876");
@@ -54,7 +61,7 @@ public class Consumer {
 			
 			@Override
 			public void onSuccess(PopResult popResult) {
-				System.out.println("async pop:"+popResult);
+				System.out.println(new Date()+",async pop:"+popResult);
 
 				try {
 					//System.out.println(new Date()+"     "+popResult);
@@ -64,23 +71,30 @@ public class Consumer {
 							/*pullConsumer.changeInvisibleTimeAsync(new MessageQueue(msg.getTopic(),brokerName,msg.getQueueId()), msg.getQueueOffset(), consumerGroup, msg.getProperty(MessageConst.PROPERTY_POP_CK), 30000, 1000, new AckCallback() {
 								
 								@Override
-								public void onSuccess(AckResult ackResult) {
+								public void onSuccess(final AckResult ackResult) {       
 									System.out.println(ackResult);
-									try {
-										pullConsumer.ackMessage(new MessageQueue(msg.getTopic(),brokerName,msg.getQueueId()), msg.getQueueOffset(), consumerGroup, ackResult.getExtraInfo());
-									} catch (MQClientException e) {
-										// TODO Auto-generated catch block
-										e.printStackTrace();
-									} catch (RemotingException e) {
-										// TODO Auto-generated catch block
-										e.printStackTrace();
-									} catch (MQBrokerException e) {
-										// TODO Auto-generated catch block
-										e.printStackTrace();
-									} catch (InterruptedException e) {
-										// TODO Auto-generated catch block
-										e.printStackTrace();
-									}
+
+									executor.schedule(new Runnable() {
+										@Override
+										public void run() {
+											try {
+												pullConsumer.ackMessage(new MessageQueue(msg.getTopic(),brokerName,msg.getQueueId()), msg.getQueueOffset(), consumerGroup, ackResult.getExtraInfo());
+											} catch (MQClientException e) {
+												// TODO Auto-generated catch block
+												e.printStackTrace();
+											} catch (RemotingException e) {
+												// TODO Auto-generated catch block
+												e.printStackTrace();
+											} catch (MQBrokerException e) {
+												// TODO Auto-generated catch block
+												e.printStackTrace();
+											} catch (InterruptedException e) {
+												// TODO Auto-generated catch block
+												e.printStackTrace();
+											}
+											
+										}
+									}, 20, TimeUnit.SECONDS);
 								}
 								
 								@Override
@@ -88,9 +102,57 @@ public class Consumer {
 									e.printStackTrace();
 								}
 							});*/
-							pullConsumer.ackMessage(new MessageQueue(msg.getTopic(),brokerName,msg.getQueueId()), msg.getQueueOffset(), consumerGroup, msg.getProperty(MessageConst.PROPERTY_POP_CK));
+							pullConsumer.changeInvisibleTimeAsync(msg.getTopic(),consumerGroup,msg.getProperty(MessageConst.PROPERTY_POP_CK), 60000, 1000, new AckCallback() {
 							
+							@Override
+							public void onSuccess(final AckResult ackResult) {
+								System.out.println(ackResult);
+								executor.schedule(new Runnable() {
+									
+									@Override
+									public void run() {
+										try {
+											pullConsumer.ackMessage(msg.getTopic(),consumerGroup,ackResult.getExtraInfo());
+										} catch (MQClientException e) {
+											// TODO Auto-generated catch block
+											e.printStackTrace();
+										} catch (RemotingException e) {
+											// TODO Auto-generated catch block
+											e.printStackTrace();
+										} catch (MQBrokerException e) {
+											// TODO Auto-generated catch block
+											e.printStackTrace();
+										} catch (InterruptedException e) {
+											// TODO Auto-generated catch block
+											e.printStackTrace();
+										}
+										
+									}
+								}, 59, TimeUnit.SECONDS);
+							
+							}
+							
+							@Override
+							public void onException(Throwable e) {
+								e.printStackTrace();
+							}
+						});
+							//pullConsumer.ackMessage(new MessageQueue(msg.getTopic(),brokerName,msg.getQueueId()), msg.getQueueOffset(), consumerGroup, msg.getProperty(MessageConst.PROPERTY_POP_CK));
+							//pullConsumer.ackMessage(msg.getTopic(),consumerGroup,msg.getProperty(MessageConst.PROPERTY_POP_CK));
 							/*pullConsumer.ackMessageAsync(new MessageQueue(msg.getTopic(),brokerName,msg.getQueueId()),  msg.getQueueOffset(), consumerGroup, msg.getProperty(MessageConst.PROPERTY_POP_CK), 1000, new AckCallback() {
+								
+								@Override
+								public void onSuccess(AckResult ackResult) {
+									System.out.println(ackResult);
+								}
+								
+								@Override
+								public void onException(Throwable e) {
+									// TODO Auto-generated method stub
+									
+								}
+							});*/
+							/*pullConsumer.ackMessageAsync(msg.getTopic(),consumerGroup,msg.getProperty(MessageConst.PROPERTY_POP_CK), 1000, new AckCallback() {
 								
 								@Override
 								public void onSuccess(AckResult ackResult) {
@@ -106,7 +168,7 @@ public class Consumer {
 						}
 					}
 					PopCallback tmPopCallback=this;
-					pullConsumer.popAsync(mq, 30000, 5, consumerGroup, 30000,  tmPopCallback, true,ConsumeInitMode.MIN);
+					pullConsumer.popAsync(mq, 20000, 5, consumerGroup, 10000,  tmPopCallback, true,ConsumeInitMode.MIN);
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -119,7 +181,7 @@ public class Consumer {
 				
 			}
 		};
-		pullConsumer.popAsync(mq, 30000, 5, consumerGroup, 30000, callback,true,ConsumeInitMode.MIN);
+		pullConsumer.popAsync(mq, 20000, 5, consumerGroup, 10000, callback,true,ConsumeInitMode.MIN);
 		Thread.sleep(10000000L);
 		
 	}

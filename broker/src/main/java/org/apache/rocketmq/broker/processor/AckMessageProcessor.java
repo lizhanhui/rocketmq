@@ -47,6 +47,7 @@ import org.apache.rocketmq.common.message.MessageDecoder;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.protocol.ResponseCode;
 import org.apache.rocketmq.common.protocol.header.AckMessageRequestHeader;
+import org.apache.rocketmq.common.protocol.header.ExtraInfoUtil;
 import org.apache.rocketmq.common.subscription.SubscriptionGroupConfig;
 import org.apache.rocketmq.common.utils.DataConverter;
 import org.apache.rocketmq.remoting.common.RemotingHelper;
@@ -131,21 +132,27 @@ public class AckMessageProcessor implements NettyRequestProcessor {
             response.setCode(ResponseCode.NO_MESSAGE);
             return response;
 		}
-		String[] extraInfo = requestHeader.getExtraInfo().split(MessageConst.KEY_SEPARATOR);
+		//String[] extraInfo = requestHeader.getExtraInfo().split(MessageConst.KEY_SEPARATOR);
+		String[] extraInfo = ExtraInfoUtil.split(requestHeader.getExtraInfo());
+
 		ackMsg.setAo(requestHeader.getOffset());
-		ackMsg.setSo(Long.valueOf(extraInfo[0]));
+		//ackMsg.setSo(Long.valueOf(extraInfo[0]));
+		ackMsg.setSo(ExtraInfoUtil.getCkQueueOffset(extraInfo));
 		ackMsg.setC(requestHeader.getConsumerGroup());
 		ackMsg.setT(requestHeader.getTopic());
 		ackMsg.setQ(requestHeader.getQueueId());
-		ackMsg.setPt(Long.valueOf(extraInfo[1]));
+		//ackMsg.setPt(Long.valueOf(extraInfo[1]));
+		ackMsg.setPt(ExtraInfoUtil.getPopTime(extraInfo));
 		msgInner.setTopic(reviveTopic);
 		msgInner.setBody(JSON.toJSONString(ackMsg).getBytes(DataConverter.charset));
-		msgInner.setQueueId(Integer.valueOf(extraInfo[3]));
+		//msgInner.setQueueId(Integer.valueOf(extraInfo[3]));
+		msgInner.setQueueId(ExtraInfoUtil.getReviveQid(extraInfo));
 		msgInner.setTags(PopAckConstants.ACK_TAG);
 		msgInner.setBornTimestamp(System.currentTimeMillis());
 		msgInner.setBornHost(this.brokerController.getStoreHost());
 		msgInner.setStoreHost(this.brokerController.getStoreHost());
-		msgInner.putUserProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS, String.valueOf(Long.valueOf(extraInfo[1]) + Long.valueOf(extraInfo[2])));
+		//msgInner.putUserProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS, String.valueOf(Long.valueOf(extraInfo[1]) + Long.valueOf(extraInfo[2])));	
+		msgInner.putUserProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS, String.valueOf(ExtraInfoUtil.getPopTime(extraInfo) + ExtraInfoUtil.getInvisibleTime(extraInfo)));
 		msgInner.getProperties().put(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX, ackMsg.getT() + PopAckConstants.SPLIT + ackMsg.getQ() + PopAckConstants.SPLIT+ ackMsg.getAo() + PopAckConstants.SPLIT + ackMsg.getC());
 		msgInner.setPropertiesString(MessageDecoder.messageProperties2String(msgInner.getProperties()));
 		PutMessageResult putMessageResult = this.brokerController.getMessageStore().putMessage(msgInner);
@@ -153,7 +160,7 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 				&& putMessageResult.getPutMessageStatus() != PutMessageStatus.FLUSH_DISK_TIMEOUT
 				&& putMessageResult.getPutMessageStatus() != PutMessageStatus.FLUSH_SLAVE_TIMEOUT 
 				&& putMessageResult.getPutMessageStatus() != PutMessageStatus.SLAVE_NOT_AVAILABLE) {
-			POP_LOGGER.warn("put ack msg error:" + putMessageResult);
+			POP_LOGGER.error("put ack msg error:" + putMessageResult);
 		}
 		return response;
 	}

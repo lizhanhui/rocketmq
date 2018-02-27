@@ -155,7 +155,6 @@ public interface MQPullConsumer extends MQConsumer {
 	PopResult peekMessage(MessageQueue mq, int maxNums, String consumerGroup, long timeout)
 			throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 	
-	void ackMessage(MessageQueue mq, long offset, String consumerGroup, String extraInfo) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 
 
 	void popAsync(MessageQueue mq, long invisibleTime, int maxNums, String consumerGroup, long timeout, PopCallback popCallback, boolean poll, int initMode)
@@ -166,14 +165,22 @@ public interface MQPullConsumer extends MQConsumer {
 	PopResult pop(MessageQueue mq, long invisibleTime, int maxNums, String consumerGroup, long timeout, int initMode)
 			throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 
+/*	void ackMessage(MessageQueue mq, long offset, String consumerGroup, String extraInfo) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 
 	void ackMessageAsync(MessageQueue mq, long offset, String consumerGroup, String extraInfo, long timeOut, AckCallback callback)
 			throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 
 	void changeInvisibleTimeAsync(MessageQueue mq, long offset, String consumerGroup, String extraInfo, long invisibleTime, long timeoutMillis, AckCallback callback)
-			throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+			throws MQClientException, RemotingException, MQBrokerException, InterruptedException;*/
     void statisticsMessages(MessageQueue mq, String consumerGroup, long timeout, StatisticsMessagesCallback callback)
             throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+
+
+	void ackMessageAsync(String topic, String consumerGroup, String extraInfo, long timeOut, AckCallback callback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+
+	void changeInvisibleTimeAsync(String topic, String consumerGroup, String extraInfo, long invisibleTime, long timeoutMillis, AckCallback callback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+
+	void ackMessage(String topic, String consumerGroup, String extraInfo) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 
 
 }

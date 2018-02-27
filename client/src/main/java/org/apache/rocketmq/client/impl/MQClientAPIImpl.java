@@ -615,6 +615,7 @@ public class MQClientAPIImpl {
     }
 
 	public PopResult popMessage(//
+			final String brokerName,
 			final String addr, //
 			final PopMessageRequestHeader requestHeader, //
 			final long timeoutMillis //
@@ -622,9 +623,10 @@ public class MQClientAPIImpl {
 		RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.POP_MESSAGE, requestHeader);
 		RemotingCommand response = this.remotingClient.invokeSync(addr, request, timeoutMillis);
 		assert response != null;
-		return this.processPopResponse(response,requestHeader.getTopic());
+		return this.processPopResponse(brokerName, response,requestHeader.getTopic());
 	}
 	public void popMessageAsync(//
+			final String brokerName,
 			final String addr, //
 			final PopMessageRequestHeader requestHeader, //
 			final long timeoutMillis ,//
@@ -639,7 +641,7 @@ public class MQClientAPIImpl {
                     RemotingCommand response = responseFuture.getResponseCommand();
                     if (response != null) {
                         try {
-                            PopResult popResult = MQClientAPIImpl.this.processPopResponse(response,requestHeader.getTopic());
+                            PopResult popResult = MQClientAPIImpl.this.processPopResponse(brokerName, response,requestHeader.getTopic());
                             assert popResult != null;
                             popCallback.onSuccess(popResult);
                         } catch (Exception e) {
@@ -659,6 +661,7 @@ public class MQClientAPIImpl {
             });
         }
 	public void peekMessageAsync(//
+			final String brokerName,
 			final String addr, //
 			final PeekMessageRequestHeader requestHeader, //
 			final long timeoutMillis ,//
@@ -673,7 +676,7 @@ public class MQClientAPIImpl {
                     RemotingCommand response = responseFuture.getResponseCommand();
                     if (response != null) {
                         try {
-                            PopResult popResult = MQClientAPIImpl.this.processPopResponse(response,requestHeader.getTopic());
+                            PopResult popResult = MQClientAPIImpl.this.processPopResponse(brokerName, response,requestHeader.getTopic());
                             assert popResult != null;
                             popCallback.onSuccess(popResult);
                         } catch (Exception e) {
@@ -693,6 +696,7 @@ public class MQClientAPIImpl {
             });
         }	
 	public PopResult peekMessage(//
+			final String brokerName,
 			final String addr, //
 			final PeekMessageRequestHeader requestHeader, //
 			final long timeoutMillis //
@@ -700,7 +704,7 @@ public class MQClientAPIImpl {
 		RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.PEEK_MESSAGE, requestHeader);
 		RemotingCommand response = this.remotingClient.invokeSync(addr, request, timeoutMillis);
 		assert response != null;
-		return this.processPopResponse(response,requestHeader.getTopic());
+		return this.processPopResponse(brokerName, response,requestHeader.getTopic());
 	}
 	public void ackMessage(//
 			final String addr, //
@@ -751,6 +755,7 @@ public class MQClientAPIImpl {
         });
 	}
 	public void changeInvisibleTimeAsync(//
+			final String brokerName,
 			final String addr, //
 			final ChangeInvisibleTimeRequestHeader requestHeader ,//
 			final long timeoutMillis,
@@ -770,8 +775,11 @@ public class MQClientAPIImpl {
 						if (ResponseCode.SUCCESS == response.getCode()) {
 							ackResult.setStatus(AckStatus.OK);
 							ackResult.setPopTime(responseHeader.getPopTime());
-							ackResult.setExtraInfo(requestHeader.getOffset() + MessageConst.KEY_SEPARATOR + responseHeader.getPopTime() + MessageConst.KEY_SEPARATOR + responseHeader.getInvisibleTime()
-							+ MessageConst.KEY_SEPARATOR + responseHeader.getReviveQid() + MessageConst.KEY_SEPARATOR  + requestHeader.getTopic());
+							/*ackResult.setExtraInfo(requestHeader.getOffset() + MessageConst.KEY_SEPARATOR + responseHeader.getPopTime() + MessageConst.KEY_SEPARATOR + responseHeader.getInvisibleTime()
+							+ MessageConst.KEY_SEPARATOR + responseHeader.getReviveQid() + MessageConst.KEY_SEPARATOR  + requestHeader.getTopic());*/
+							ackResult.setExtraInfo(ExtraInfoUtil.buildExtraInfo(requestHeader.getOffset(), responseHeader.getPopTime(), responseHeader.getInvisibleTime(),
+									responseHeader.getReviveQid(), requestHeader.getTopic(), brokerName, requestHeader.getQueueId()) + MessageConst.KEY_SEPARATOR
+									+ requestHeader.getOffset());
 						}else {
 							ackResult.setStatus(AckStatus.NO_EXIST);
 						}
@@ -866,7 +874,7 @@ public class MQClientAPIImpl {
             responseHeader.getMaxOffset(), null, responseHeader.getSuggestWhichBrokerId(), response.getBody());
     }
     
-	private PopResult processPopResponse(final RemotingCommand response,String topic) throws MQBrokerException, RemotingCommandException {
+	private PopResult processPopResponse(final String brokerName, final RemotingCommand response,String topic) throws MQBrokerException, RemotingCommandException {
 		PopStatus popStatus = PopStatus.NO_NEW_MSG;
 		List<MessageExt> msgFoundList = null;
 		switch (response.getCode()) {
@@ -892,10 +900,13 @@ public class MQClientAPIImpl {
 				// find pop ck offset
 				String key = messageExt.getTopic() + messageExt.getQueueId();
 				if (!map.containsKey(messageExt.getTopic() + messageExt.getQueueId())) {
-					map.put(key, String.valueOf(messageExt.getQueueOffset() + MessageConst.KEY_SEPARATOR + responseHeader.getPopTime() + MessageConst.KEY_SEPARATOR + responseHeader.getInvisibleTime()
-							+ MessageConst.KEY_SEPARATOR + responseHeader.getReviveQid()) + MessageConst.KEY_SEPARATOR + messageExt.getTopic());
+/*					map.put(key, String.valueOf(messageExt.getQueueOffset() + MessageConst.KEY_SEPARATOR + responseHeader.getPopTime() + MessageConst.KEY_SEPARATOR + responseHeader.getInvisibleTime()
+							+ MessageConst.KEY_SEPARATOR + responseHeader.getReviveQid()) + MessageConst.KEY_SEPARATOR + messageExt.getTopic());*/
+					map.put(key, ExtraInfoUtil.buildExtraInfo(messageExt.getQueueOffset(), responseHeader.getPopTime(), responseHeader.getInvisibleTime(), responseHeader.getReviveQid(),
+							messageExt.getTopic(), brokerName, messageExt.getQueueId()));
+					
 				}
-				messageExt.getProperties().put(MessageConst.PROPERTY_POP_CK, map.get(key));
+				messageExt.getProperties().put(MessageConst.PROPERTY_POP_CK, map.get(key) + MessageConst.KEY_SEPARATOR + messageExt.getQueueOffset());
 				messageExt.setTopic(topic);
 				if (messageExt.getProperties().get(MessageConst.PROPERTY_FIRST_POP_TIME) == null) {
 					messageExt.getProperties().put(MessageConst.PROPERTY_FIRST_POP_TIME, String.valueOf(responseHeader.getPopTime()));

@@ -77,4 +77,8 @@ public class AckMessageRequestHeader implements CommandCustomHeader {
         this.queueId = queueId;
     }
 
+	@Override
+	public String toString() {
+		return topic + "," + this.consumerGroup + "," + this.queueId + "," + this.offset + "," + this.extraInfo;
+	}
 }

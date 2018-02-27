@@ -27,6 +27,7 @@ import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.common.message.MessageDecoder;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.message.MessageQueue;
+import org.apache.rocketmq.common.protocol.header.ExtraInfoUtil;
 import org.apache.rocketmq.common.protocol.heartbeat.MessageModel;
 import org.apache.rocketmq.remoting.RPCHook;
 import org.apache.rocketmq.remoting.exception.RemotingException;
@@ -354,19 +355,38 @@ public class DefaultMQPullConsumer extends ClientConfig implements MQPullConsume
         this.defaultMQPullConsumerImpl.peekAsync(mq, maxNums, consumerGroup, timeout, popCallback);
     }
 
-    @Override
+/*    @Override
     public void ackMessage(MessageQueue mq, long offset, String consumerGroup, String extraInfo) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
         this.defaultMQPullConsumerImpl.ack(mq, offset, consumerGroup, extraInfo);
-    }
-
+    }*/
     @Override
+    public void ackMessage(String topic, String consumerGroup, String extraInfo) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+    	    String[] extraInfoStrs=ExtraInfoUtil.split(extraInfo);
+        MessageQueue mq=new MessageQueue(topic, ExtraInfoUtil.getBrokerName(extraInfoStrs), ExtraInfoUtil.getQueueId(extraInfoStrs));
+    		this.defaultMQPullConsumerImpl.ack(mq, ExtraInfoUtil.getQueueOffset(extraInfoStrs), consumerGroup, extraInfo);
+    }
+    
+/*    @Override
     public void ackMessageAsync(MessageQueue mq, long offset, String consumerGroup, String extraInfo, long timeOut, AckCallback callback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
         this.defaultMQPullConsumerImpl.ackAsync(mq, offset, consumerGroup, extraInfo, timeOut, callback);
+    }*/
+    
+    @Override
+    public void ackMessageAsync(String topic, String consumerGroup, String extraInfo, long timeOut, AckCallback callback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+    	    String[] extraInfoStrs=ExtraInfoUtil.split(extraInfo);
+        MessageQueue mq=new MessageQueue(topic, ExtraInfoUtil.getBrokerName(extraInfoStrs), ExtraInfoUtil.getQueueId(extraInfoStrs));
+    		this.defaultMQPullConsumerImpl.ackAsync(mq, ExtraInfoUtil.getQueueOffset(extraInfoStrs), consumerGroup, extraInfo, timeOut, callback);
     }
 
-    @Override
+ /*   @Override
     public void changeInvisibleTimeAsync(MessageQueue mq, long offset, String consumerGroup, String extraInfo, long invisibleTime, long timeoutMillis, AckCallback callback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
         this.defaultMQPullConsumerImpl.changeInvisibleTimeAsync(mq, offset, consumerGroup, extraInfo, invisibleTime, timeoutMillis, callback);
+    }*/
+    @Override
+    public void changeInvisibleTimeAsync(String topic, String consumerGroup, String extraInfo, long invisibleTime, long timeoutMillis, AckCallback callback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+	    String[] extraInfoStrs=ExtraInfoUtil.split(extraInfo);
+        MessageQueue mq=new MessageQueue(topic, ExtraInfoUtil.getBrokerName(extraInfoStrs), ExtraInfoUtil.getQueueId(extraInfoStrs));
+    		this.defaultMQPullConsumerImpl.changeInvisibleTimeAsync(mq,  ExtraInfoUtil.getQueueOffset(extraInfoStrs), consumerGroup, extraInfo, invisibleTime, timeoutMillis, callback);
     }
 
     @Override
