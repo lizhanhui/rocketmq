@@ -53,7 +53,8 @@ public class BrokerStartup {
     public static Logger log;
 
     public static void main(String[] args) {
-        start(createBrokerController(args));
+        BrokerController controller = createBrokerController(args);
+        start(controller);
     }
 
     public static BrokerController start(BrokerController controller) {
@@ -76,6 +77,10 @@ public class BrokerStartup {
         }
 
         return null;
+    }
+
+    public static void shutdown(BrokerController controller) {
+        controller.shutdown();
     }
 
     public static BrokerController createBrokerController(String[] args) {
