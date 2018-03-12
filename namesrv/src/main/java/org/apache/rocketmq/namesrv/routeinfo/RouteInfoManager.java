@@ -194,13 +194,24 @@ public class RouteInfoManager {
         return result;
     }
 
-    private boolean isBrokerTopicConfigChanged(final String brokerAddr, final DataVersion dataVersion) {
-        BrokerLiveInfo prev = this.brokerLiveTable.get(brokerAddr);
-        if (null == prev || !prev.getDataVersion().equals(dataVersion)) {
-            return true;
-        }
+    public boolean isBrokerTopicConfigChanged(final String brokerAddr, final DataVersion dataVersion) {
+        DataVersion prev = queryBrokerTopicConfig(brokerAddr);
+        return null == prev || !prev.equals(dataVersion);
+    }
 
-        return false;
+    public DataVersion queryBrokerTopicConfig(final String brokerAddr) {
+        BrokerLiveInfo prev = this.brokerLiveTable.get(brokerAddr);
+        if (prev != null) {
+            return prev.getDataVersion();
+        }
+        return null;
+    }
+
+    public void updateBrokerInfoUpdateTimestamp(final String brokerAddr) {
+        BrokerLiveInfo prev = this.brokerLiveTable.get(brokerAddr);
+        if (prev != null) {
+            prev.setLastUpdateTimestamp(System.currentTimeMillis());
+        }
     }
 
     private void createAndUpdateQueueData(final String brokerName, final TopicConfig topicConfig) {
@@ -406,9 +417,7 @@ public class RouteInfoManager {
             log.error("pickupTopicRouteData Exception", e);
         }
 
-        if (log.isDebugEnabled()) {
-            log.debug("pickupTopicRouteData {} {}", topic, topicRouteData);
-        }
+        log.debug("pickupTopicRouteData {} {}", topic, topicRouteData);
 
         if (foundBrokerData && foundQueueData) {
             return topicRouteData;

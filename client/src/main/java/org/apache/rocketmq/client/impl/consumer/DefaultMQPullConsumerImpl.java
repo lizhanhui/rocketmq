@@ -56,7 +56,6 @@ import org.apache.rocketmq.common.sysflag.PullSysFlag;
 import org.apache.rocketmq.remoting.RPCHook;
 import org.apache.rocketmq.remoting.common.RemotingHelper;
 import org.apache.rocketmq.remoting.exception.RemotingException;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;

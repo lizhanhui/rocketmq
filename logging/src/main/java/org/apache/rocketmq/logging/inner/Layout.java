@@ -15,29 +15,25 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.common;
+package org.apache.rocketmq.logging.inner;
 
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.atomic.AtomicLong;
+public abstract class Layout {
 
-public class ThreadFactoryImpl implements ThreadFactory {
-    private final AtomicLong threadIndex = new AtomicLong(0);
-    private final String threadNamePrefix;
-    private final boolean daemon;
+    public abstract String format(LoggingEvent event);
 
-    public ThreadFactoryImpl(final String threadNamePrefix) {
-        this(threadNamePrefix, false);
+    public String getContentType() {
+        return "text/plain";
     }
 
-    public ThreadFactoryImpl(final String threadNamePrefix, boolean daemon) {
-        this.threadNamePrefix = threadNamePrefix;
-        this.daemon = daemon;
+    public String getHeader() {
+        return null;
     }
 
-    @Override
-    public Thread newThread(Runnable r) {
-        Thread thread = new Thread(r, threadNamePrefix + this.threadIndex.incrementAndGet());
-        thread.setDaemon(daemon);
-        return thread;
+    public String getFooter() {
+        return null;
     }
+
+
+    abstract public boolean ignoresThrowable();
+
 }
