@@ -16,49 +16,48 @@
   ~  See the License for the specific language governing permissions and
   ~  limitations under the License.
   -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">  
-  <parent> 
-    <artifactId>rocketmq-all</artifactId>  
-    <groupId>org.apache.rocketmq</groupId>  
-    <version>4.3.0-SNAPSHOT</version> 
-  </parent>  
-  <modelVersion>4.0.0</modelVersion>  
-  <artifactId>rocketmq-test</artifactId>  
-  <name>rocketmq-test ${project.version}</name>  
-  <dependencies> 
-    <dependency> 
-      <groupId>log4j</groupId>  
-      <artifactId>log4j</artifactId>  
-      <version>1.2.17</version> 
-    </dependency>  
-    <dependency> 
-      <groupId>${project.groupId}</groupId>  
-      <artifactId>rocketmq-broker</artifactId> 
-    </dependency>  
-    <dependency> 
-      <groupId>${project.groupId}</groupId>  
-      <artifactId>rocketmq-namesrv</artifactId> 
-    </dependency>  
-    <dependency> 
-      <groupId>com.google.truth</groupId>  
-      <artifactId>truth</artifactId>  
-      <version>0.30</version> 
-    </dependency> 
-  </dependencies>  
-  <build> 
-    <plugins> 
-      <plugin> 
-        <groupId>org.apache.maven.plugins</groupId>  
-        <artifactId>maven-jar-plugin</artifactId>  
-        <executions> 
-          <execution> 
-            <goals> 
-              <goal>test-jar</goal> 
-            </goals> 
-          </execution> 
-        </executions> 
-      </plugin> 
-    </plugins> 
-  </build>  
-  <contributors><contributor><properties><provider>dezhi.ldz@alibaba-inc.com</provider><codeName>null</codeName><codeUrl>git@gitlab.alibaba-inc.com:middleware/rocketmq.git commit:a9a9c59</codeUrl><description>contributors added by SCM Plugin, please don't modify it!</description></properties></contributor></contributors>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>rocketmq-all</artifactId>
+        <groupId>org.apache.rocketmq</groupId>
+        <version>4.3.0-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+    <artifactId>rocketmq-test</artifactId>
+    <name>rocketmq-test ${project.version}</name>
+    <dependencies>
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>1.2.17</version>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>rocketmq-broker</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>rocketmq-namesrv</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.google.truth</groupId>
+            <artifactId>truth</artifactId>
+            <version>0.30</version>
+        </dependency>
+    </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>test-jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 </project>
