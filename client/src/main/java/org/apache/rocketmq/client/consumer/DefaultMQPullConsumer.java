@@ -92,6 +92,11 @@ public class DefaultMQPullConsumer extends ClientConfig implements MQPullConsume
      */
     private boolean autoUpdateTopicRoute = false;
 
+    /**
+     * Whether auto add subscription for pull topic.
+     */
+    private boolean autoAddSubscription = true;
+
     public DefaultMQPullConsumer() {
         this(MixAll.DEFAULT_CONSUMER_GROUP, null);
     }
@@ -429,5 +434,13 @@ public class DefaultMQPullConsumer extends ClientConfig implements MQPullConsume
 
     public void setAutoUpdateTopicRoute(boolean autoUpdateTopicRoute) {
         this.autoUpdateTopicRoute = autoUpdateTopicRoute;
+    }
+
+    public boolean isAutoAddSubscription() {
+        return autoAddSubscription;
+    }
+
+    public void setAutoAddSubscription(boolean autoAddSubscription) {
+        this.autoAddSubscription = autoAddSubscription;
     }
 }

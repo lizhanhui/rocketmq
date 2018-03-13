@@ -48,6 +48,7 @@ import org.apache.rocketmq.common.protocol.body.TopicConfigSerializeWrapper;
 import org.apache.rocketmq.common.protocol.body.TopicList;
 import org.apache.rocketmq.common.protocol.route.QueueData;
 import org.apache.rocketmq.common.protocol.route.TopicRouteData;
+import org.apache.rocketmq.common.protocol.route.TopicRouteDatas;
 import org.apache.rocketmq.common.subscription.SubscriptionGroupConfig;
 import org.apache.rocketmq.remoting.RPCHook;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
@@ -233,6 +234,12 @@ public class DefaultMQAdminExt extends ClientConfig implements MQAdminExt {
     public TopicRouteData examineTopicRouteInfo(
         String topic) throws RemotingException, MQClientException, InterruptedException {
         return defaultMQAdminExtImpl.examineTopicRouteInfo(topic);
+    }
+
+    @Override
+    public TopicRouteDatas examineTopicRouteInfo(List<String> topics)
+        throws RemotingException, MQClientException, InterruptedException {
+        return defaultMQAdminExtImpl.examineTopicRouteInfo(topics);
     }
 
     @Override

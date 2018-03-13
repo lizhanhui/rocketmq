@@ -364,6 +364,14 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
                 Collections.shuffle(addrs);
                 log.info("name server address updated. NEW : {} , OLD: {}", addrs, old);
                 this.namesrvAddrList.set(addrs);
+
+                // should close the channel if choosed addr is not exist.
+                if (this.namesrvAddrChoosed.get() != null && !addrs.contains(this.namesrvAddrChoosed.get())) {
+                    ChannelWrapper channelWrapper = this.channelTables.get(this.namesrvAddrChoosed.get());
+                    if (channelWrapper != null) {
+                        closeChannel(channelWrapper.getChannel());
+                    }
+                }
             }
         }
     }
