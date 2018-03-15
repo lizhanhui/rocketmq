@@ -182,5 +182,8 @@ public interface MQPullConsumer extends MQConsumer {
 
 	void ackMessage(String topic, String consumerGroup, String extraInfo) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 
+	void notificationPollingAsync(MessageQueue mq, String consumerGroup, long timeout, NotificationCallback callback)
+			throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+
 
 }

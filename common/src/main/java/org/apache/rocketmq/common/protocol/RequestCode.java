@@ -26,6 +26,7 @@ public class RequestCode {
     public static final int ACK_MESSAGE = 51;
     public static final int PEEK_MESSAGE = 52;
     public static final int CHANGE_MESSAGE_INVISIBLETIME = 53;
+    public static final int NOTIFICATION = 54;
 
     public static final int QUERY_MESSAGE = 12;
     public static final int QUERY_BROKER_OFFSET = 13;

@@ -64,7 +64,6 @@ import org.apache.rocketmq.common.constant.PermName;
 import org.apache.rocketmq.common.namesrv.RegisterBrokerResult;
 import org.apache.rocketmq.common.protocol.RequestCode;
 import org.apache.rocketmq.common.protocol.body.TopicConfigSerializeWrapper;
-import org.apache.rocketmq.common.protocol.header.ChangeInvisibleTimeRequestHeader;
 import org.apache.rocketmq.common.stats.MomentStatsItem;
 import org.apache.rocketmq.remoting.RPCHook;
 import org.apache.rocketmq.remoting.RemotingServer;
@@ -105,6 +104,7 @@ public class BrokerController {
     private final AckMessageProcessor ackMessageProcessor;
     private final ChangeInvisibleTimeProcessor changeInvisibleTimeProcessor;
     private final StatisticsMessagesProcessor statisticsMessagesProcessor;
+    private final NotificationProcessor notificationProcessor;
     
     private final PullRequestHoldService pullRequestHoldService;
     private final MessageArrivingListener messageArrivingListener;
@@ -159,12 +159,13 @@ public class BrokerController {
         this.pullMessageProcessor = new PullMessageProcessor(this);
         this.peekMessageProcessor=new PeekMessageProcessor(this);
         this.popMessageProcessor=new PopMessageProcessor(this);
+        this.notificationProcessor=new NotificationProcessor(this);
         this.ackMessageProcessor=new AckMessageProcessor(this);
         this.changeInvisibleTimeProcessor=new ChangeInvisibleTimeProcessor(this);
         this.statisticsMessagesProcessor = new StatisticsMessagesProcessor(this);
 
         this.pullRequestHoldService = new PullRequestHoldService(this);
-        this.messageArrivingListener = new NotifyMessageArrivingListener(this.pullRequestHoldService,this.popMessageProcessor);
+        this.messageArrivingListener = new NotifyMessageArrivingListener(this.pullRequestHoldService,this.popMessageProcessor,this.notificationProcessor);
         this.consumerIdsChangeListener = new DefaultConsumerIdsChangeListener(this);
         this.consumerManager = new ConsumerManager(this.consumerIdsChangeListener, this.brokerStatsManager);
         if (brokerConfig.isUseLockFreeProducerManager()) {
@@ -469,9 +470,14 @@ public class BrokerController {
          */   
         this.remotingServer.registerProcessor(RequestCode.CHANGE_MESSAGE_INVISIBLETIME, this.changeInvisibleTimeProcessor, this.pullMessageExecutor);
         /**
-         * PopMessageProcessor
+         * statisticsMessagesProcessor
          */
         this.remotingServer.registerProcessor(RequestCode.STATISTICS_MESSAGES, this.statisticsMessagesProcessor, this.pullMessageExecutor);
+        
+        /**
+         * notificationProcessor
+         */
+        this.remotingServer.registerProcessor(RequestCode.NOTIFICATION, this.notificationProcessor, this.pullMessageExecutor);
         
         /**
          * QueryMessageProcessor

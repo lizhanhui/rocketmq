@@ -660,6 +660,38 @@ public class MQClientAPIImpl {
                 }
             });
         }
+	public void notificationAsync(//
+			final String brokerName,
+			final String addr, //
+			final NotificationRequestHeader requestHeader, //
+			final long timeoutMillis ,//
+            final NotificationCallback callback//
+        ) throws RemotingException, InterruptedException {
+            final RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.NOTIFICATION, requestHeader);
+            this.remotingClient.invokeAsync(addr, request, timeoutMillis, new InvokeCallback() {
+                @Override
+                public void operationComplete(ResponseFuture responseFuture) {
+                    RemotingCommand response = responseFuture.getResponseCommand();
+                    if (response != null) {
+                        try {
+                    		    NotificationResponseHeader responseHeader = (NotificationResponseHeader) response.decodeCommandCustomHeader(NotificationResponseHeader.class);
+                             callback.onSuccess(responseHeader.isHasMsg());
+                        } catch (Exception e) {
+                        	callback.onException(e);
+                        }
+                    } else {
+                        if (!responseFuture.isSendRequestOK()) {
+                        	callback.onException(new MQClientException("send request failed to " + addr + ". Request: " + request, responseFuture.getCause()));
+                        } else if (responseFuture.isTimeout()) {
+                        	callback.onException(new MQClientException("wait response from " + addr + " timeout :" + responseFuture.getTimeoutMillis() + "ms" + ". Request: " + request,
+                                responseFuture.getCause()));
+                        } else {
+                        	callback.onException(new MQClientException("unknown reason. addr: " + addr + ", timeoutMillis: " + timeoutMillis + ". Request: " + request, responseFuture.getCause()));
+                        }
+                    }
+                }
+            });
+        }	
 	public void peekMessageAsync(//
 			final String brokerName,
 			final String addr, //

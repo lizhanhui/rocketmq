@@ -361,12 +361,13 @@ public class PopMessageProcessor implements NettyRequestProcessor {
     }
     private long popMsgFromQueue(boolean isRetry,GetMessageResult getMessageResult,PopMessageRequestHeader requestHeader,int queueId,long restNum,int reviveQid, Channel channel,long popTime){
 		String topic = isRetry ? KeyBuilder.buildPopRetryTopic(requestHeader.getTopic(), requestHeader.getConsumerGroup()) : requestHeader.getTopic();
+		long offset = getPopOffset(topic,requestHeader, queueId);
 		if (!LockManager.tryLock(LockManager.buildKey(topic, requestHeader.getConsumerGroup(), queueId), PopAckConstants.lockTime)) {
+			restNum = this.brokerController.getMessageStore().getMaxOffsetInQueue(topic, queueId) - offset + restNum;
 			return restNum;
 		}
 		GetMessageResult getMessageTmpResult;
 		try {
-			long offset = getPopOffset(topic,requestHeader, queueId);
 			if (getMessageResult.getMessageMapedList().size() >= requestHeader.getMaxMsgNums()) {
 				restNum = this.brokerController.getMessageStore().getMaxOffsetInQueue(topic, queueId) - offset + restNum;
 				return restNum;

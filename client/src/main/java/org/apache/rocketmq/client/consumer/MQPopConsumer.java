@@ -99,5 +99,6 @@ public interface MQPopConsumer {
 
 	void statisticsMessages(MessageQueue mq, String consumerGroup, long timeout, StatisticsMessagesCallback callback)
 			throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+	void notificationAsync(MessageQueue mq, String consumerGroup, long timeout, NotificationCallback callback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 
 }

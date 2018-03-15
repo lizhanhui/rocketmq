@@ -16,4 +16,7 @@ public class KeyBuilder {
 	public static String buildPollingKey(String topic, String cid, int queueId) {
 		return topic + PopAckConstants.SPLIT + cid + PopAckConstants.SPLIT + queueId;
 	}
+	public static String buildPollingNotificationKey(String topic, int queueId) {
+		return topic + PopAckConstants.SPLIT + queueId;
+	}
 }

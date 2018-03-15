@@ -21,6 +21,7 @@ import org.apache.rocketmq.client.Validators;
 import org.apache.rocketmq.client.consumer.AckCallback;
 import org.apache.rocketmq.client.consumer.DefaultMQPullConsumer;
 import org.apache.rocketmq.client.consumer.MQPopConsumer;
+import org.apache.rocketmq.client.consumer.NotificationCallback;
 import org.apache.rocketmq.client.consumer.PopCallback;
 import org.apache.rocketmq.client.consumer.PopResult;
 import org.apache.rocketmq.client.consumer.PullCallback;
@@ -783,6 +784,30 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner, MQPopConsumer
             }
             String brokerAddr = findBrokerResult.getBrokerAddr();
             this.mQClientFactory.getMQClientAPIImpl().popMessageAsync(mq.getBrokerName(), brokerAddr, requestHeader, timeout, popCallback);
+            return;
+        }
+        throw new MQClientException("The broker[" + mq.getBrokerName() + "] not exist", null);
+    }
+    @Override
+    public void notificationAsync(MessageQueue mq, String consumerGroup, long timeout, NotificationCallback callback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+        this.subscriptionAutomatically(mq.getTopic());
+        FindBrokerResult findBrokerResult = this.mQClientFactory.findBrokerAddressInSubscribe(mq.getBrokerName(), MixAll.MASTER_ID, true);
+        if (null == findBrokerResult) {
+            this.mQClientFactory.updateTopicRouteInfoFromNameServer(mq.getTopic());
+            findBrokerResult = this.mQClientFactory.findBrokerAddressInSubscribe(mq.getBrokerName(), MixAll.MASTER_ID, true);
+        }
+        if (findBrokerResult != null) {
+            NotificationRequestHeader requestHeader = new NotificationRequestHeader();
+            requestHeader.setConsumerGroup(consumerGroup);
+            requestHeader.setTopic(mq.getTopic());
+            requestHeader.setQueueId(mq.getQueueId());
+            //give 1000 ms for server response
+            requestHeader.setPollTime(timeout);
+            requestHeader.setBornTime(System.currentTimeMillis());
+            // timeout + 10s, fix the too earlier timeout of client when long polling.
+            timeout += 10 * 1000;
+            String brokerAddr = findBrokerResult.getBrokerAddr();
+            this.mQClientFactory.getMQClientAPIImpl().notificationAsync(mq.getBrokerName(), brokerAddr, requestHeader, timeout, callback);
             return;
         }
         throw new MQClientException("The broker[" + mq.getBrokerName() + "] not exist", null);
