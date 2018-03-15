@@ -258,6 +258,9 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner, MQPopConsumer
     }
 
     public void subscriptionAutomatically(final String topic) {
+        if (!this.defaultMQPullConsumer.isAutoAddSubscription()) {
+            return;
+        }
         if (!this.rebalanceImpl.getSubscriptionInner().containsKey(topic)) {
             try {
                 SubscriptionData subscriptionData = FilterAPI.buildSubscriptionData(this.defaultMQPullConsumer.getConsumerGroup(),

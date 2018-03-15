@@ -143,6 +143,7 @@ import org.apache.rocketmq.common.protocol.heartbeat.HeartbeatData;
 import org.apache.rocketmq.common.protocol.heartbeat.SubscriptionData;
 import org.apache.rocketmq.common.protocol.route.QueueData;
 import org.apache.rocketmq.common.protocol.route.TopicRouteData;
+import org.apache.rocketmq.common.protocol.route.TopicRouteDatas;
 import org.apache.rocketmq.common.subscription.SubscriptionGroupConfig;
 import org.apache.rocketmq.remoting.InvokeCallback;
 import org.apache.rocketmq.remoting.RPCHook;
@@ -1496,6 +1497,45 @@ public class MQClientAPIImpl {
         throws RemotingException, MQClientException, InterruptedException {
 
         return getTopicRouteInfoFromNameServer(topic, timeoutMillis, true);
+    }
+
+    public TopicRouteDatas getTopicRouteInfoFromNameServer(final List<String> topics, final long timeoutMillis)
+        throws RemotingException, MQClientException, InterruptedException {
+        if (topics.size() == 1) {
+            TopicRouteData topicRouteData = getTopicRouteInfoFromNameServer(topics.get(0), timeoutMillis, true);
+            TopicRouteDatas topicRouteDatas = new TopicRouteDatas();
+            topicRouteDatas.getTopics().put(topics.get(0), topicRouteData);
+
+            return topicRouteDatas;
+        }
+
+        GetRouteInfoRequestHeader requestHeader = new GetRouteInfoRequestHeader();
+        StringBuilder stringBuilder = new StringBuilder();
+        for (int i = 0; i < topics.size(); i++) {
+            stringBuilder.append(topics.get(i));
+            if (i < topics.size() - 1) {
+                stringBuilder.append(GetRouteInfoRequestHeader.split);
+            }
+        }
+        requestHeader.setTopic(stringBuilder.toString());
+
+        RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.GET_ROUTEINTO_BY_TOPIC, requestHeader);
+
+        RemotingCommand response = this.remotingClient.invokeSync(null, request, timeoutMillis);
+        assert response != null;
+        switch (response.getCode()) {
+            case ResponseCode.SUCCESS: {
+                byte[] body = response.getBody();
+                if (body != null) {
+                    return TopicRouteDatas.decode(body, TopicRouteDatas.class);
+                }
+            }
+            default:
+                break;
+        }
+
+        throw new MQClientException(response.getCode(), response.getRemark());
+
     }
 
     public TopicRouteData getTopicRouteInfoFromNameServer(final String topic, final long timeoutMillis,

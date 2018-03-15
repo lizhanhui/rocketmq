@@ -46,6 +46,7 @@ import org.apache.rocketmq.common.protocol.body.TopicConfigSerializeWrapper;
 import org.apache.rocketmq.common.protocol.body.TopicList;
 import org.apache.rocketmq.common.protocol.route.QueueData;
 import org.apache.rocketmq.common.protocol.route.TopicRouteData;
+import org.apache.rocketmq.common.protocol.route.TopicRouteDatas;
 import org.apache.rocketmq.common.subscription.SubscriptionGroupConfig;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 import org.apache.rocketmq.remoting.exception.RemotingConnectException;
@@ -107,6 +108,9 @@ public interface MQAdminExt extends MQAdmin {
 
     TopicRouteData examineTopicRouteInfo(
         final String topic) throws RemotingException, MQClientException, InterruptedException;
+
+    TopicRouteDatas examineTopicRouteInfo(final List<String> topics)
+        throws RemotingException, MQClientException, InterruptedException;
 
     ConsumerConnection examineConsumerConnectionInfo(final String consumerGroup) throws RemotingConnectException,
         RemotingSendRequestException, RemotingTimeoutException, InterruptedException, MQBrokerException, RemotingException,
