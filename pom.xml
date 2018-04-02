@@ -1,4 +1,5 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
+
 <!--
   Licensed to the Apache Software Foundation (ASF) under one or more
   contributor license agreements.  See the NOTICE file distributed with
@@ -15,13 +16,19 @@
   See the License for the specific language governing permissions and
   limitations under the License.
   -->
-
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
+    <!--
+      <parent>
+          <groupId>org.apache</groupId>
+          <artifactId>apache</artifactId>
+          <version>18</version>
+      </parent>
+  -->
     <parent>
         <groupId>com.taobao</groupId>
         <artifactId>parent</artifactId>
-        <version>1.0.3</version>
+        <version>1.0.2</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -29,7 +36,7 @@
     <inceptionYear>2012</inceptionYear>
     <groupId>org.apache.rocketmq</groupId>
     <artifactId>rocketmq-all</artifactId>
-    <version>4.2.2-SNAPSHOT</version>
+    <version>4.3.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>Apache RocketMQ ${project.version}</name>
     <url>http://rocketmq.apache.org/</url>
@@ -125,6 +132,7 @@
         <module>test</module>
         <module>distribution</module>
         <module>openmessaging</module>
+        <module>logging</module>
     </modules>
 
     <build>
@@ -505,6 +513,11 @@
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
+                <artifactId>rocketmq-openmessaging</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
                 <artifactId>rocketmq-test</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -530,7 +543,7 @@
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
-                <artifactId>rocketmq-openmessaging</artifactId>
+                <artifactId>rocketmq-logging</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
