@@ -30,7 +30,7 @@ import org.apache.rocketmq.common.protocol.ResponseCode;
  * Common Validator
  */
 public class Validators {
-    public static final String VALID_PATTERN_STR = "^[%|a-zA-Z0-9_-]+$";
+    public static final String VALID_PATTERN_STR = "^[%|a-zA-Z0-9._-]+$";
     public static final Pattern PATTERN = Pattern.compile(VALID_PATTERN_STR);
     public static final int CHARACTER_MAX_LENGTH = 255;
 
