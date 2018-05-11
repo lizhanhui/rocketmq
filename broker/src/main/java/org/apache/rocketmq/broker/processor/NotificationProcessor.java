@@ -71,11 +71,11 @@ public class NotificationProcessor implements NettyRequestProcessor {
 										break;
 									}
 									if (!tmPopRequest.isTimeout()) {
-										POP_LOGGER.info("not timeout , but wakeUp in advance: {}", tmPopRequest);
+										POP_LOGGER.info("not timeout , but wakeUp Notification in advance: {}", tmPopRequest);
 										wakeUp(tmPopRequest,false);
 										break;
 									} else {
-										POP_LOGGER.info("timeout , wakeUp : {}", tmPopRequest);
+										POP_LOGGER.info("timeout , wakeUp Notification : {}", tmPopRequest);
 										wakeUp(tmPopRequest,false);
 										tmPopRequest = popQ.peek();
 									}
@@ -85,7 +85,7 @@ public class NotificationProcessor implements NettyRequestProcessor {
 							}
 						}
 					} catch (Exception e) {
-						POP_LOGGER.error("checkPolling error", e);
+						POP_LOGGER.error("checkNotificationPolling error", e);
 					}
 				}
 			}

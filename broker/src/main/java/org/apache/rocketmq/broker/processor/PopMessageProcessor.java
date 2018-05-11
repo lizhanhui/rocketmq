@@ -26,8 +26,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Random;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingDeque;
 
 import org.apache.rocketmq.broker.BrokerController;
 import org.apache.rocketmq.broker.longpolling.PopRequest;
@@ -72,20 +72,23 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 	private String reviveTopic;
 	private static String BORN_TIME = "bornTime";
 	private static String POLLING = "POLLING";
-	private ConcurrentHashMap<String, ConcurrentHashMap<String,Byte>> topicCidMap=new ConcurrentHashMap<String, ConcurrentHashMap<String,Byte>>(100000); 
-	private ConcurrentLinkedHashMap<String, ArrayBlockingQueue<PopRequest>> pollingMap=new ConcurrentLinkedHashMap.Builder<String, ArrayBlockingQueue<PopRequest>>().maximumWeightedCapacity(100000).build();
+	private ConcurrentHashMap<String, ConcurrentHashMap<String,Byte>> topicCidMap;
+	private ConcurrentLinkedHashMap<String, LinkedBlockingDeque<PopRequest>> pollingMap;
     public PopMessageProcessor(final BrokerController brokerController) {
         this.brokerController = brokerController;
         this.reviveTopic=PopAckConstants.REVIVE_TOPIC + this.brokerController.getBrokerConfig().getBrokerClusterName();
+        // 100000 topic default,  100000 lru topic + cid + qid 
+		this.topicCidMap = new ConcurrentHashMap<String, ConcurrentHashMap<String, Byte>>(this.brokerController.getBrokerConfig().getPopPollingMapSize());
+		this.pollingMap = new ConcurrentLinkedHashMap.Builder<String, LinkedBlockingDeque<PopRequest>>().maximumWeightedCapacity(this.brokerController.getBrokerConfig().getPopPollingMapSize()).build();
         Thread t=new Thread(new Runnable() {
 			
 			@Override
 			public void run() {
 				while (true) {
 					try {
-						Thread.sleep(2000L);
-						Collection<ArrayBlockingQueue<PopRequest>> pops = pollingMap.values();
-						for (ArrayBlockingQueue<PopRequest> popQ : pops) {
+						Thread.sleep(100L);
+						Collection<LinkedBlockingDeque<PopRequest>> pops = pollingMap.values();
+						for (LinkedBlockingDeque<PopRequest> popQ : pops) {
 							PopRequest tmPopRequest = popQ.peek();
 							while (tmPopRequest != null) {
 								if (tmPopRequest.isTimeout()) {
@@ -94,11 +97,11 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 										break;
 									}
 									if (!tmPopRequest.isTimeout()) {
-										POP_LOGGER.info("not timeout , but wakeUp in advance: {}", tmPopRequest);
+										POP_LOGGER.info("not timeout , but wakeUp polling in advance: {}", tmPopRequest);
 										wakeUp(tmPopRequest);
 										break;
 									} else {
-										POP_LOGGER.info("timeout , wakeUp : {}", tmPopRequest);
+										POP_LOGGER.info("timeout , wakeUp polling : {}", tmPopRequest);
 										wakeUp(tmPopRequest);
 										tmPopRequest = popQ.peek();
 									}
@@ -137,7 +140,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 		}
 		if (cids != null) {
 			for (Entry<String, Byte> cid : cids.entrySet()) {
-				ArrayBlockingQueue<PopRequest> remotingCommands = pollingMap.get(KeyBuilder.buildPollingKey(topic, cid.getKey(), -1));
+				LinkedBlockingDeque<PopRequest> remotingCommands = pollingMap.get(KeyBuilder.buildPollingKey(topic, cid.getKey(), -1));
 				if (remotingCommands != null) {
 					PopRequest popRequest = remotingCommands.poll();
 					if (popRequest != null) {
@@ -157,7 +160,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 		}
 	}
     public void notifyMessageArriving(final String topic, final String cid,final int queueId) {
-		ArrayBlockingQueue<PopRequest> remotingCommands = pollingMap.get(KeyBuilder.buildPollingKey(topic, cid, queueId));
+    	LinkedBlockingDeque<PopRequest> remotingCommands = pollingMap.get(KeyBuilder.buildPollingKey(topic, cid, queueId));
 		if (remotingCommands==null||remotingCommands.isEmpty()) {
 			return;
 		}
@@ -425,15 +428,19 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 		long expired = requestHeader.getBornTime() + requestHeader.getPollTime();
 		final PopRequest request = new PopRequest(remotingCommand, channel, expired);
 		boolean result = false;
-		if (!request.isTimeout() && remotingCommand.getExtFields().get(POLLING) == null) {
+		if (!request.isTimeout()) {
 			String key = KeyBuilder.buildPollingKey(requestHeader.getTopic(), requestHeader.getConsumerGroup(), requestHeader.getQueueId());
-			ArrayBlockingQueue<PopRequest> queue = pollingMap.get(key);
+			LinkedBlockingDeque<PopRequest> queue = pollingMap.get(key);
 			if (queue == null) {
-				queue = new ArrayBlockingQueue<>(this.brokerController.getBrokerConfig().getPopPollingSize());
+				queue = new LinkedBlockingDeque<>(this.brokerController.getBrokerConfig().getPopPollingSize());
 				pollingMap.put(key, queue);
 				result = queue.offer(request);
 			} else {
-				result = queue.offer(request);
+				if (remotingCommand.getExtFields().get(POLLING) == null) {
+					result = queue.offer(request);
+				}else {
+					result = queue.offerFirst(request);
+				}
 			}
 			remotingCommand.addExtField(POLLING, POLLING);
 		}

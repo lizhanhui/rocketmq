@@ -17,12 +17,12 @@ public class Producer {
 		// producer.setNamesrvAddr("10.137.84.33:9876");
 		producer.start();
 		String topic = "longji-stress";
-		final String brokerName = "broker-01";
-		final MessageQueue mq = new MessageQueue(topic, brokerName, 1);
-		for (int i = 0; i < 10; i++) {
+		final String brokerName = "broker-a";
+		final MessageQueue mq = new MessageQueue(topic, brokerName, 0);
+		for (int i = 0; i < 5; i++) {
 			Message msg = new Message(topic, String.valueOf(i).getBytes());
-			SendResult result = producer.send(msg);
-			// SendResult result=producer.send(msg, mq);
+			//SendResult result = producer.send(msg);
+		    SendResult result=producer.send(msg, mq);
 			System.out.println(result);
 		}
 

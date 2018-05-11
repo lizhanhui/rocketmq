@@ -135,10 +135,18 @@ public class BrokerConfig {
     private boolean filterSupportRetry = false;
     private boolean enablePropertyFilter = false;
     private int  popPollingSize = 20;
+    private int  popPollingMapSize = 100000;
+
 	private int  reviveQueueNum = 8;
     private long  reviveInterval = 1000;
     private long  reviveMaxSlow = 10;
     private long  reviveScanTime = 10000;
+    public int getPopPollingMapSize() {
+		return popPollingMapSize;
+	}
+    public void setPopPollingMapSize(int popPollingMapSize) {
+		this.popPollingMapSize = popPollingMapSize;
+	}
     public long getReviveScanTime() {
 		return reviveScanTime;
 	}

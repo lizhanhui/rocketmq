@@ -23,7 +23,7 @@ public class PopRequest {
 		return remotingCommand;
 	}
 	public boolean isTimeout() {
-		return System.currentTimeMillis() > (expired - 3000);
+		return System.currentTimeMillis() > (expired - 10);
 	}
 	public boolean complete(){
 		return complete.compareAndSet(false, true);
