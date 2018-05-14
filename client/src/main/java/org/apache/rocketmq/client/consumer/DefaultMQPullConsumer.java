@@ -400,9 +400,9 @@ public class DefaultMQPullConsumer extends ClientConfig implements MQPullConsume
     }
 
     @Override
-    public void statisticsMessages(MessageQueue mq, String consumerGroup, long timeout, StatisticsMessagesCallback callback)
+    public void statisticsMessages(MessageQueue mq, String consumerGroup, long fromTime, long toTime, long timeout, StatisticsMessagesCallback callback)
         throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
-        this.defaultMQPullConsumerImpl.statisticsMessages(mq, consumerGroup, timeout, callback);
+        this.defaultMQPullConsumerImpl.statisticsMessages(mq, consumerGroup, fromTime, toTime, timeout, callback);
     }
 
     public OffsetStore getOffsetStore() {

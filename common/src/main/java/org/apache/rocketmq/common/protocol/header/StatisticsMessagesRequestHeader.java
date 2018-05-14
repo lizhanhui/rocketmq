@@ -32,6 +32,9 @@ public class StatisticsMessagesRequestHeader implements CommandCustomHeader {
     @CFNotNull
     private int queueId;
 
+    private long fromTime;
+    private long toTime;
+
     @Override
     public void checkFields() throws RemotingCommandException {
     }
@@ -61,5 +64,21 @@ public class StatisticsMessagesRequestHeader implements CommandCustomHeader {
 
     public void setQueueId(int queueId) {
         this.queueId = queueId;
+    }
+
+    public long getFromTime() {
+        return fromTime;
+    }
+
+    public void setFromTime(long fromTime) {
+        this.fromTime = fromTime;
+    }
+
+    public long getToTime() {
+        return toTime;
+    }
+
+    public void setToTime(long toTime) {
+        this.toTime = toTime;
     }
 }
