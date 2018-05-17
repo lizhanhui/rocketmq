@@ -21,13 +21,19 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.FileRegion;
+import io.netty.channel.socket.nio.NioSocketChannel;
+
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.rocketmq.broker.BrokerController;
 import org.apache.rocketmq.broker.longpolling.PopRequest;
@@ -68,12 +74,13 @@ import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap;
 public class PopMessageProcessor implements NettyRequestProcessor {
     private static final Logger POP_LOGGER = LoggerFactory.getLogger(LoggerName.ROCKETMQ_POP_LOGGER_NAME);
     private final BrokerController brokerController;
-    private Random random=new Random(System.currentTimeMillis());
+	private Random random = new Random(System.currentTimeMillis());
 	private String reviveTopic;
 	private static String BORN_TIME = "bornTime";
 	private static String POLLING = "POLLING";
 	private ConcurrentHashMap<String, ConcurrentHashMap<String,Byte>> topicCidMap;
 	private ConcurrentLinkedHashMap<String, LinkedBlockingDeque<PopRequest>> pollingMap;
+	private AtomicLong totalPollingNum = new AtomicLong(0);
     public PopMessageProcessor(final BrokerController brokerController) {
         this.brokerController = brokerController;
         this.reviveTopic=PopAckConstants.REVIVE_TOPIC + this.brokerController.getBrokerConfig().getBrokerClusterName();
@@ -84,11 +91,18 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 			
 			@Override
 			public void run() {
+				int i=0;
 				while (true) {
 					try {
 						Thread.sleep(100L);
-						Collection<LinkedBlockingDeque<PopRequest>> pops = pollingMap.values();
-						for (LinkedBlockingDeque<PopRequest> popQ : pops) {
+						i++;
+						Set<String> pollingKeys = pollingMap.keySet();
+						long tmpTotalPollingNum = 0;
+						for (String key : pollingKeys) {
+							LinkedBlockingDeque<PopRequest> popQ = pollingMap.get(key);
+							if (popQ == null) {
+								continue;
+							}
 							PopRequest tmPopRequest = popQ.peek();
 							while (tmPopRequest != null) {
 								if (tmPopRequest.isTimeout()) {
@@ -96,6 +110,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 									if (tmPopRequest == null) {
 										break;
 									}
+									totalPollingNum.decrementAndGet();
 									if (!tmPopRequest.isTimeout()) {
 										POP_LOGGER.info("not timeout , but wakeUp polling in advance: {}", tmPopRequest);
 										wakeUp(tmPopRequest);
@@ -109,6 +124,15 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 									break;
 								}
 							}
+							if (i >= 10) {
+								long tmpPollingNum = popQ.size();
+								tmpTotalPollingNum = tmpTotalPollingNum + tmpPollingNum;
+								POP_LOGGER.info("polling queue {} , size={} ", key, tmpPollingNum);
+							}
+						}
+						if (i >= 10) {
+							POP_LOGGER.info("tmpTotalSize={}, atomicTotalSize={}", tmpTotalPollingNum, totalPollingNum.get());
+							i = 0;
 						}
 					} catch (Exception e) {
 						POP_LOGGER.error("checkPolling error", e);
@@ -144,6 +168,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 				if (remotingCommands != null) {
 					PopRequest popRequest = remotingCommands.poll();
 					if (popRequest != null) {
+						totalPollingNum.decrementAndGet();
 						POP_LOGGER.info("new msg arrive , wakeUp : {}",popRequest);
 						wakeUp(popRequest);
 					}
@@ -152,6 +177,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 				if (remotingCommands != null) {
 					PopRequest popRequest = remotingCommands.poll();
 					if (popRequest != null) {
+						totalPollingNum.decrementAndGet();
 						POP_LOGGER.info("new msg arrive , wakeUp : {}",popRequest);
 						wakeUp(popRequest);
 					}
@@ -160,7 +186,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 		}
 	}
     public void notifyMessageArriving(final String topic, final String cid,final int queueId) {
-    	LinkedBlockingDeque<PopRequest> remotingCommands = pollingMap.get(KeyBuilder.buildPollingKey(topic, cid, queueId));
+     	LinkedBlockingDeque<PopRequest> remotingCommands = pollingMap.get(KeyBuilder.buildPollingKey(topic, cid, queueId));
 		if (remotingCommands==null||remotingCommands.isEmpty()) {
 			return;
 		}
@@ -168,6 +194,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 		if (popRequest==null) {
 			return ;
 		}
+		totalPollingNum.decrementAndGet();
 		POP_LOGGER.info("lock release , wakeUp : {}",popRequest);
 		wakeUp(popRequest);
     }
@@ -412,7 +439,26 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 		}
 		return offset;
 	}
-
+	public static void main(String[] args) {
+		Map<String, LinkedBlockingDeque<PopRequest>> map=new ConcurrentLinkedHashMap.Builder<String, LinkedBlockingDeque<PopRequest>>().maximumWeightedCapacity(100000).build();
+		Channel channel=new NioSocketChannel();
+		for (int i = 0; i < 100000; i++) {
+			String prefix="asdfasdfasdfasdfasdfewevcvcvsdfsxxxv2545678451sdfxvgdsdfsdf5454654587sdfsdf";
+			LinkedBlockingDeque<PopRequest> deque=new LinkedBlockingDeque<>(10204);
+			for (int j = 0; j < 2; j++) {
+				PopMessageRequestHeader pop=new PopMessageRequestHeader();
+				pop.setTopic(prefix+i);
+				pop.setConsumerGroup(prefix+"c"+i);
+				RemotingCommand remotingCommand=RemotingCommand.createRequestCommand(100, pop) ;
+				remotingCommand.addExtField("sdfs", j+"");
+				deque.add(new PopRequest(remotingCommand, channel, 100000));
+			}
+			map.put(prefix+i, deque);
+		}
+		for (LinkedBlockingDeque<PopRequest> entry : map.values()) {
+			System.out.println(entry.size());
+		}
+	}
 	private boolean polling(final Channel channel, RemotingCommand remotingCommand, final PopMessageRequestHeader requestHeader) {
 		if (requestHeader.getPollTime() <= 0) {
 			return false;
@@ -428,7 +474,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 		long expired = requestHeader.getBornTime() + requestHeader.getPollTime();
 		final PopRequest request = new PopRequest(remotingCommand, channel, expired);
 		boolean result = false;
-		if (!request.isTimeout()) {
+		if (!request.isTimeout() && totalPollingNum.get() < this.brokerController.getBrokerConfig().getMaxPopPollingSize()) {
 			String key = KeyBuilder.buildPollingKey(requestHeader.getTopic(), requestHeader.getConsumerGroup(), requestHeader.getQueueId());
 			LinkedBlockingDeque<PopRequest> queue = pollingMap.get(key);
 			if (queue == null) {
@@ -443,6 +489,9 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 				}
 			}
 			remotingCommand.addExtField(POLLING, POLLING);
+		}
+		if (result) {
+			totalPollingNum.incrementAndGet();
 		}
 		POP_LOGGER.info("polling {}, result {}", remotingCommand, result);
 		return result;

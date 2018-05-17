@@ -134,13 +134,20 @@ public class BrokerConfig {
     // whether do filter when retry.
     private boolean filterSupportRetry = false;
     private boolean enablePropertyFilter = false;
-    private int  popPollingSize = 20;
+    private int  popPollingSize = 1024;
     private int  popPollingMapSize = 100000;
-
+    // 20w cost 200M heap memory.
+    private long maxPopPollingSize=100000;
 	private int  reviveQueueNum = 8;
     private long  reviveInterval = 1000;
     private long  reviveMaxSlow = 10;
     private long  reviveScanTime = 10000;
+    public long getMaxPopPollingSize() {
+		return maxPopPollingSize;
+	}
+    public void setMaxPopPollingSize(long maxPopPollingSize) {
+		this.maxPopPollingSize = maxPopPollingSize;
+	}
     public int getPopPollingMapSize() {
 		return popPollingMapSize;
 	}
