@@ -931,7 +931,7 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner, MQPopConsumer
     }
 
     @Override
-    public void statisticsMessages(MessageQueue mq, String consumerGroup, long timeout, StatisticsMessagesCallback callback)
+    public void statisticsMessages(MessageQueue mq, String consumerGroup, long fromTime, long toTime, long timeout, StatisticsMessagesCallback callback)
             throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
         this.subscriptionAutomatically(mq.getTopic());
         FindBrokerResult findBrokerResult = this.mQClientFactory.findBrokerAddressInSubscribe(mq.getBrokerName(), MixAll.MASTER_ID, true);
@@ -944,6 +944,8 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner, MQPopConsumer
             requestHeader.setConsumerGroup(consumerGroup);
             requestHeader.setTopic(mq.getTopic());
             requestHeader.setQueueId(mq.getQueueId());
+            requestHeader.setFromTime(fromTime);
+            requestHeader.setToTime(toTime);
             String brokerAddr = findBrokerResult.getBrokerAddr();
             this.mQClientFactory.getMQClientAPIImpl().statisticsMessagesAsync(brokerAddr, requestHeader, timeout, callback);
             return ;

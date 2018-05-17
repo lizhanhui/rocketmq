@@ -59,6 +59,8 @@ public class StatisticsMessagesProcessor implements NettyRequestProcessor {
             (StatisticsMessagesRequestHeader) request.decodeCommandCustomHeader(StatisticsMessagesRequestHeader.class);
         String topicName = requestHeader.getTopic();
         String consumerGroup = requestHeader.getConsumerGroup();
+        long fromTime = requestHeader.getFromTime();
+        long toTime = requestHeader.getToTime();
 
         String remark = "";
         TopicConfig topicConfig = this.brokerController.getTopicConfigManager().selectTopicConfig(topicName);
@@ -72,12 +74,12 @@ public class StatisticsMessagesProcessor implements NettyRequestProcessor {
         StatisticsMessagesResult result = new StatisticsMessagesResult();
 
         getDelayMessages(topicName, consumerGroup, result);
-        getMessages(topicName, consumerGroup, topicConfig.getReadQueueNums(), result);
+        getMessages(topicName, consumerGroup, topicConfig.getReadQueueNums(), fromTime, toTime, result);
 
         String retryTopicName = KeyBuilder.buildPopRetryTopic(topicName, consumerGroup);
         TopicConfig retryTopicConfig = this.brokerController.getTopicConfigManager().selectTopicConfig(retryTopicName);
         if (retryTopicConfig != null) {
-            getMessages(retryTopicName, consumerGroup, retryTopicConfig.getReadQueueNums(), result);
+            getMessages(retryTopicName, consumerGroup, retryTopicConfig.getReadQueueNums(), fromTime, toTime, result);
         }
         response.setCode(ResponseCode.SUCCESS);
         response.setRemark(null);
@@ -90,15 +92,28 @@ public class StatisticsMessagesProcessor implements NettyRequestProcessor {
         result.setDelayMessages(result.getDelayMessages() + delayMessages);
     }
 
-    private void getMessages(String topicName, String consumerGroup, int queueNum, StatisticsMessagesResult result) {
+    private void getMessages(String topicName, String consumerGroup, int queueNum, long fromTime, long toTime, StatisticsMessagesResult result) {
         long activeMessages = 0;
         long totalMessages = 0;
         for (int i = 0; i < queueNum; i++) {
-            long maxOffset = this.brokerController.getMessageStore().getMaxOffsetInQueue(topicName, i);
+            long maxOffset;
+            if (toTime <= 0) {
+                maxOffset = this.brokerController.getMessageStore().getMaxOffsetInQueue(topicName, i);
+            } else {
+                maxOffset = this.brokerController.getMessageStore().getOffsetInQueueByTime(topicName, i, toTime);
+            }
+
             if (maxOffset < 0) {
                 maxOffset = 0;
             }
-            long minOffset = this.brokerController.getMessageStore().getMinOffsetInQueue(topicName, i);
+
+            long minOffset;
+            if (fromTime <= 0) {
+                minOffset = this.brokerController.getMessageStore().getMinOffsetInQueue(topicName, i);
+            } else {
+                minOffset = this.brokerController.getMessageStore().getOffsetInQueueByTime(topicName, i, fromTime);
+            }
+
             if (minOffset < 0) {
                 minOffset = 0;
             }
@@ -106,6 +121,14 @@ public class StatisticsMessagesProcessor implements NettyRequestProcessor {
             if (consumerOffset < 0) {
                 consumerOffset = minOffset;
             }
+
+            if (consumerOffset < minOffset) {
+                consumerOffset = minOffset;
+            }
+            if (consumerOffset > maxOffset) {
+                consumerOffset = maxOffset;
+            }
+
             activeMessages += maxOffset - consumerOffset;
             totalMessages += maxOffset - minOffset;
         }
