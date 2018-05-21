@@ -105,7 +105,7 @@ public class BrokerController {
     private final ChangeInvisibleTimeProcessor changeInvisibleTimeProcessor;
     private final StatisticsMessagesProcessor statisticsMessagesProcessor;
     private final NotificationProcessor notificationProcessor;
-    
+    private final PollingInfoProcessor pollingInfoProcessor; 
     private final PullRequestHoldService pullRequestHoldService;
     private final MessageArrivingListener messageArrivingListener;
     private final Broker2Client broker2Client;
@@ -160,6 +160,7 @@ public class BrokerController {
         this.peekMessageProcessor=new PeekMessageProcessor(this);
         this.popMessageProcessor=new PopMessageProcessor(this);
         this.notificationProcessor=new NotificationProcessor(this);
+        this.pollingInfoProcessor=new PollingInfoProcessor(this);
         this.ackMessageProcessor=new AckMessageProcessor(this);
         this.changeInvisibleTimeProcessor=new ChangeInvisibleTimeProcessor(this);
         this.statisticsMessagesProcessor = new StatisticsMessagesProcessor(this);
@@ -214,7 +215,7 @@ public class BrokerController {
     public BlockingQueue<Runnable> getQueryThreadPoolQueue() {
         return queryThreadPoolQueue;
     }
-
+    
     public boolean initialize() throws CloneNotSupportedException {
         boolean result = this.topicConfigManager.load();
 
@@ -489,6 +490,11 @@ public class BrokerController {
          * notificationProcessor
          */
         this.remotingServer.registerProcessor(RequestCode.NOTIFICATION, this.notificationProcessor, this.pullMessageExecutor);
+
+        /**
+         * pollingInfoProcessor
+         */
+        this.remotingServer.registerProcessor(RequestCode.POLLING_INFO, this.pollingInfoProcessor, this.pullMessageExecutor);
         
         /**
          * QueryMessageProcessor
@@ -654,7 +660,9 @@ public class BrokerController {
     public SubscriptionGroupManager getSubscriptionGroupManager() {
         return subscriptionGroupManager;
     }
-
+    public PopMessageProcessor getPopMessageProcessor() {
+		return popMessageProcessor;
+	}
     public void shutdown() {
         if (this.brokerStatsManager != null) {
             this.brokerStatsManager.shutdown();

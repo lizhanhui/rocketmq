@@ -156,7 +156,9 @@ public class PopMessageProcessor implements NettyRequestProcessor {
         return false;
     }
 
-
+    public ConcurrentLinkedHashMap<String, LinkedBlockingDeque<PopRequest>> getPollingMap() {
+		return pollingMap;
+	}
 	public void notifyMessageArriving(final String topic, final int queueId) {
 		ConcurrentHashMap<String,Byte> cids = topicCidMap.get(topic);
 		if (cids == null) {

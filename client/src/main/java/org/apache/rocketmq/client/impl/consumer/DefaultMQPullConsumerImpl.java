@@ -22,6 +22,7 @@ import org.apache.rocketmq.client.consumer.AckCallback;
 import org.apache.rocketmq.client.consumer.DefaultMQPullConsumer;
 import org.apache.rocketmq.client.consumer.MQPopConsumer;
 import org.apache.rocketmq.client.consumer.NotificationCallback;
+import org.apache.rocketmq.client.consumer.PollingInfoCallback;
 import org.apache.rocketmq.client.consumer.PopCallback;
 import org.apache.rocketmq.client.consumer.PopResult;
 import org.apache.rocketmq.client.consumer.PullCallback;
@@ -815,6 +816,25 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner, MQPopConsumer
         }
         throw new MQClientException("The broker[" + mq.getBrokerName() + "] not exist", null);
     }
+    @Override
+    public void getPollingNumAsync(MessageQueue mq, String consumerGroup, long timeout, PollingInfoCallback callback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+        this.subscriptionAutomatically(mq.getTopic());
+        FindBrokerResult findBrokerResult = this.mQClientFactory.findBrokerAddressInSubscribe(mq.getBrokerName(), MixAll.MASTER_ID, true);
+        if (null == findBrokerResult) {
+            this.mQClientFactory.updateTopicRouteInfoFromNameServer(mq.getTopic());
+            findBrokerResult = this.mQClientFactory.findBrokerAddressInSubscribe(mq.getBrokerName(), MixAll.MASTER_ID, true);
+        }
+        if (findBrokerResult != null) {
+            PollingInfoRequestHeader requestHeader = new PollingInfoRequestHeader();
+            requestHeader.setConsumerGroup(consumerGroup);
+            requestHeader.setTopic(mq.getTopic());
+            requestHeader.setQueueId(mq.getQueueId());
+            String brokerAddr = findBrokerResult.getBrokerAddr();
+            this.mQClientFactory.getMQClientAPIImpl().pollingInfoAsync(mq.getBrokerName(), brokerAddr, requestHeader, timeout, callback);
+            return;
+        }
+        throw new MQClientException("The broker[" + mq.getBrokerName() + "] not exist", null);
+    }    
 	@Override
 	public void peekAsync(MessageQueue mq,  int maxNums, String consumerGroup,  long timeout, PopCallback popCallback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
         this.subscriptionAutomatically(mq.getTopic());

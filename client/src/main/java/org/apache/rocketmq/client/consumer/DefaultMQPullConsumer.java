@@ -359,7 +359,10 @@ public class DefaultMQPullConsumer extends ClientConfig implements MQPullConsume
     public void notificationPollingAsync(MessageQueue mq, String consumerGroup, long timeout, NotificationCallback callback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
         this.defaultMQPullConsumerImpl.notificationAsync(mq, consumerGroup, timeout, callback);
     }
-    
+    @Override
+    public void getPollingInfoAsync(MessageQueue mq, String consumerGroup, long timeout, PollingInfoCallback callback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+        this.defaultMQPullConsumerImpl.getPollingNumAsync(mq, consumerGroup, timeout, callback);
+    }   
     @Override
     public void peekAsync(MessageQueue mq, int maxNums, String consumerGroup, long timeout, PopCallback popCallback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
         this.defaultMQPullConsumerImpl.peekAsync(mq, maxNums, consumerGroup, timeout, popCallback);

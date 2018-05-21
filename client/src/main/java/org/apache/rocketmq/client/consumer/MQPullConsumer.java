@@ -185,5 +185,7 @@ public interface MQPullConsumer extends MQConsumer {
 	void notificationPollingAsync(MessageQueue mq, String consumerGroup, long timeout, NotificationCallback callback)
 			throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 
+	void getPollingInfoAsync(MessageQueue mq, String consumerGroup, long timeout, PollingInfoCallback callback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+
 
 }
