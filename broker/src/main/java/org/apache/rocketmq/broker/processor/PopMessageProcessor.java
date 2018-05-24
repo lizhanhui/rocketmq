@@ -97,6 +97,9 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 						Thread.sleep(100L);
 						i++;
 						Set<String> pollingKeys = pollingMap.keySet();
+						if (pollingKeys == null) {
+							continue;
+						}
 						long tmpTotalPollingNum = 0;
 						for (String key : pollingKeys) {
 							LinkedBlockingDeque<PopRequest> popQ = pollingMap.get(key);
@@ -131,7 +134,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 							}
 						}
 						if (i >= 10) {
-							POP_LOGGER.info("tmpTotalSize={}, atomicTotalSize={}", tmpTotalPollingNum, totalPollingNum.get());
+							POP_LOGGER.info("pollingMapSize={},tmpTotalSize={},atomicTotalSize={},diffSize={}", pollingKeys.size(),tmpTotalPollingNum, totalPollingNum.get(), Math.abs(totalPollingNum.get() - tmpTotalPollingNum));
 							i = 0;
 						}
 					} catch (Exception e) {
@@ -481,14 +484,15 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 			LinkedBlockingDeque<PopRequest> queue = pollingMap.get(key);
 			if (queue == null) {
 				queue = new LinkedBlockingDeque<>(this.brokerController.getBrokerConfig().getPopPollingSize());
-				pollingMap.put(key, queue);
+				LinkedBlockingDeque<PopRequest> old = pollingMap.putIfAbsent(key, queue);
+				if (old != null) {
+					queue = old;
+				}
+			}
+			if (remotingCommand.getExtFields().get(POLLING) == null) {
 				result = queue.offer(request);
 			} else {
-				if (remotingCommand.getExtFields().get(POLLING) == null) {
-					result = queue.offer(request);
-				}else {
-					result = queue.offerFirst(request);
-				}
+				result = queue.offerFirst(request);
 			}
 			remotingCommand.addExtField(POLLING, POLLING);
 		}
