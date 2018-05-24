@@ -37,6 +37,7 @@ import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.client.impl.MQClientManager;
 import org.apache.rocketmq.client.impl.factory.MQClientInstance;
 import org.apache.rocketmq.client.log.ClientLogger;
+import org.apache.rocketmq.common.KeyBuilder;
 import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.common.ServiceState;
 import org.apache.rocketmq.common.TopicConfig;
@@ -253,8 +254,25 @@ public class DefaultMQAdminExtImpl implements MQAdminExt, MQAdminExtInner {
     public ConsumeStats examineConsumeStats(String consumerGroup,
         String topic) throws RemotingException, MQClientException,
         InterruptedException, MQBrokerException {
-        String retryTopic = MixAll.getRetryTopic(consumerGroup);
-        TopicRouteData topicRouteData = this.examineTopicRouteInfo(retryTopic);
+        TopicRouteData topicRouteData = null;
+        List<String> routeTopics = new ArrayList<>();
+        routeTopics.add(MixAll.getRetryTopic(consumerGroup));
+        if (topic != null) {
+            routeTopics.add(topic);
+            routeTopics.add(KeyBuilder.buildPopRetryTopic(topic, consumerGroup));
+        }
+        for (int i = 0; i < routeTopics.size(); i++) {
+            try {
+                topicRouteData = this.examineTopicRouteInfo(routeTopics.get(i));
+                if (topicRouteData != null) {
+                    break;
+                }
+            } catch (Throwable e) {
+                if (i == routeTopics.size() - 1) {
+                    throw e;
+                }
+            }
+        }
         ConsumeStats result = new ConsumeStats();
 
         for (BrokerData bd : topicRouteData.getBrokerDatas()) {
