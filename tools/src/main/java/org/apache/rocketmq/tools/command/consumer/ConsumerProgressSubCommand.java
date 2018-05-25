@@ -64,6 +64,10 @@ public class ConsumerProgressSubCommand implements SubCommand {
         opt.setRequired(false);
         options.addOption(opt);
 
+        opt = new Option("t", "topicName", true, "topic name");
+        opt.setRequired(false);
+        options.addOption(opt);
+
         return options;
     }
 
@@ -94,7 +98,13 @@ public class ConsumerProgressSubCommand implements SubCommand {
             defaultMQAdminExt.start();
             if (commandLine.hasOption('g')) {
                 String consumerGroup = commandLine.getOptionValue('g').trim();
-                ConsumeStats consumeStats = defaultMQAdminExt.examineConsumeStats(consumerGroup);
+                String topicName = commandLine.hasOption('t') ? commandLine.getOptionValue('t').trim() : null;
+                ConsumeStats consumeStats;
+                if (topicName == null) {
+                    consumeStats = defaultMQAdminExt.examineConsumeStats(consumerGroup);
+                } else {
+                    consumeStats = defaultMQAdminExt.examineConsumeStats(consumerGroup, topicName);
+                }
                 List<MessageQueue> mqList = new LinkedList<MessageQueue>();
                 mqList.addAll(consumeStats.getOffsetTable().keySet());
                 Collections.sort(mqList);
