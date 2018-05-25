@@ -17,6 +17,7 @@
 package org.apache.rocketmq.namesrv.routeinfo;
 
 import io.netty.channel.Channel;
+
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -28,6 +29,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import org.apache.rocketmq.common.DataVersion;
 import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.common.TopicConfig;
@@ -52,15 +54,15 @@ public class RouteInfoManager {
     private final HashMap<String/* topic */, List<QueueData>> topicQueueTable;
     private final HashMap<String/* brokerName */, BrokerData> brokerAddrTable;
     private final HashMap<String/* clusterName */, Set<String/* brokerName */>> clusterAddrTable;
-    private final HashMap<BrokerUniqAddr/* brokerAddr */, BrokerLiveInfo> brokerLiveTable;
-    private final HashMap<BrokerUniqAddr/* brokerAddr */, List<String>/* Filter Server */> filterServerTable;
+    private final HashMap<BrokerAddrInfo/* brokerAddr */, BrokerLiveInfo> brokerLiveTable;
+    private final HashMap<BrokerAddrInfo/* brokerAddr */, List<String>/* Filter Server */> filterServerTable;
 
     public RouteInfoManager() {
         this.topicQueueTable = new HashMap<String, List<QueueData>>(1024);
         this.brokerAddrTable = new HashMap<String, BrokerData>(128);
         this.clusterAddrTable = new HashMap<String, Set<String>>(32);
-        this.brokerLiveTable = new HashMap<BrokerUniqAddr, BrokerLiveInfo>(256);
-        this.filterServerTable = new HashMap<BrokerUniqAddr, List<String>>(256);
+        this.brokerLiveTable = new HashMap<BrokerAddrInfo, BrokerLiveInfo>(256);
+        this.filterServerTable = new HashMap<BrokerAddrInfo, List<String>>(256);
     }
 
     public byte[] getAllClusterInfo() {
@@ -156,32 +158,32 @@ public class RouteInfoManager {
                     }
                 }
 
-                BrokerUniqAddr brokerUniqAddr = new BrokerUniqAddr(clusterName, brokerAddr);
-                BrokerLiveInfo prevBrokerLiveInfo = this.brokerLiveTable.put(brokerUniqAddr,
+                BrokerAddrInfo brokerAddrInfo = new BrokerAddrInfo(clusterName, brokerAddr);
+                BrokerLiveInfo prevBrokerLiveInfo = this.brokerLiveTable.put(brokerAddrInfo,
                     new BrokerLiveInfo(
                         System.currentTimeMillis(),
                         topicConfigWrapper.getDataVersion(),
                         channel,
                         haServerAddr));
                 if (null == prevBrokerLiveInfo) {
-                    log.info("new broker registered, {} HAServer: {}", brokerAddr, haServerAddr);
+                    log.info("new broker registered, {} HAServer: {}", brokerAddrInfo, haServerAddr);
                 }
 
                 if (filterServerList != null) {
                     if (filterServerList.isEmpty()) {
-                        this.filterServerTable.remove(brokerUniqAddr);
+                        this.filterServerTable.remove(brokerAddrInfo);
                     } else {
-                        this.filterServerTable.put(brokerUniqAddr, filterServerList);
+                        this.filterServerTable.put(brokerAddrInfo, filterServerList);
                     }
                 }
 
                 if (MixAll.MASTER_ID != brokerId) {
                     String masterAddr = brokerData.getBrokerAddrs().get(MixAll.MASTER_ID);
                     if (masterAddr != null) {
-                        BrokerUniqAddr masterUniqAddr = new BrokerUniqAddr(clusterName, masterAddr);
-                        BrokerLiveInfo brokerLiveInfo = this.brokerLiveTable.get(masterUniqAddr);
-                        if (brokerLiveInfo != null) {
-                            result.setHaServerAddr(brokerLiveInfo.getHaServerAddr());
+                        BrokerAddrInfo masterAddrInfo = new BrokerAddrInfo(clusterName, masterAddr);
+                        BrokerLiveInfo masterLiveInfo = this.brokerLiveTable.get(masterAddrInfo);
+                        if (masterLiveInfo != null) {
+                            result.setHaServerAddr(masterLiveInfo.getHaServerAddr());
                             result.setMasterAddr(masterAddr);
                         }
                     }
@@ -196,14 +198,15 @@ public class RouteInfoManager {
         return result;
     }
 
-    public boolean isBrokerTopicConfigChanged(final String clusterName, final String brokerAddr, final DataVersion dataVersion) {
+    public boolean isBrokerTopicConfigChanged(final String clusterName, final String brokerAddr,
+        final DataVersion dataVersion) {
         DataVersion prev = queryBrokerTopicConfig(clusterName, brokerAddr);
         return null == prev || !prev.equals(dataVersion);
     }
 
     public DataVersion queryBrokerTopicConfig(final String clusterName, final String brokerAddr) {
-        BrokerUniqAddr uniqAddr = new BrokerUniqAddr(clusterName, brokerAddr);
-        BrokerLiveInfo prev = this.brokerLiveTable.get(uniqAddr);
+        BrokerAddrInfo addrInfo = new BrokerAddrInfo(clusterName, brokerAddr);
+        BrokerLiveInfo prev = this.brokerLiveTable.get(addrInfo);
         if (prev != null) {
             return prev.getDataVersion();
         }
@@ -211,8 +214,8 @@ public class RouteInfoManager {
     }
 
     public void updateBrokerInfoUpdateTimestamp(final String clusterName, final String brokerAddr) {
-        BrokerUniqAddr uniqAddr = new BrokerUniqAddr(clusterName, brokerAddr);
-        BrokerLiveInfo prev = this.brokerLiveTable.get(uniqAddr);
+        BrokerAddrInfo addrInfo = new BrokerAddrInfo(clusterName, brokerAddr);
+        BrokerLiveInfo prev = this.brokerLiveTable.get(addrInfo);
         if (prev != null) {
             prev.setLastUpdateTimestamp(System.currentTimeMillis());
         }
@@ -299,16 +302,16 @@ public class RouteInfoManager {
         final long brokerId) {
         try {
             try {
-                BrokerUniqAddr brokerUniqAddr = new BrokerUniqAddr(clusterName, brokerAddr);
+                BrokerAddrInfo brokerAddrInfo = new BrokerAddrInfo(clusterName, brokerAddr);
 
                 this.lock.writeLock().lockInterruptibly();
-                BrokerLiveInfo brokerLiveInfo = this.brokerLiveTable.remove(brokerUniqAddr);
+                BrokerLiveInfo brokerLiveInfo = this.brokerLiveTable.remove(brokerAddrInfo);
                 log.info("unregisterBroker, remove from brokerLiveTable {}, {}",
                     brokerLiveInfo != null ? "OK" : "Failed",
-                        brokerUniqAddr
+                    brokerAddrInfo
                 );
 
-                this.filterServerTable.remove(brokerUniqAddr);
+                this.filterServerTable.remove(brokerAddrInfo);
 
                 boolean removeBrokerName = false;
                 BrokerData brokerData = this.brokerAddrTable.get(brokerName);
@@ -316,7 +319,7 @@ public class RouteInfoManager {
                     String addr = brokerData.getBrokerAddrs().remove(brokerId);
                     log.info("unregisterBroker, remove addr from brokerAddrTable {}, {}",
                         addr != null ? "OK" : "Failed",
-                            brokerUniqAddr
+                        brokerAddrInfo
                     );
 
                     if (brokerData.getBrokerAddrs().isEmpty()) {
@@ -410,8 +413,8 @@ public class RouteInfoManager {
                             brokerDataList.add(brokerDataClone);
                             foundBrokerData = true;
                             for (final String brokerAddr : brokerDataClone.getBrokerAddrs().values()) {
-                                BrokerUniqAddr brokerUniqAddr = new BrokerUniqAddr(brokerDataClone.getCluster(), brokerAddr);
-                                List<String> filterServerList = this.filterServerTable.get(brokerUniqAddr);
+                                BrokerAddrInfo brokerAddrInfo = new BrokerAddrInfo(brokerDataClone.getCluster(), brokerAddr);
+                                List<String> filterServerList = this.filterServerTable.get(brokerAddrInfo);
                                 filterServerMap.put(brokerAddr, filterServerList);
                             }
                         }
@@ -434,9 +437,9 @@ public class RouteInfoManager {
     }
 
     public void scanNotActiveBroker() {
-        Iterator<Entry<BrokerUniqAddr, BrokerLiveInfo>> it = this.brokerLiveTable.entrySet().iterator();
+        Iterator<Entry<BrokerAddrInfo, BrokerLiveInfo>> it = this.brokerLiveTable.entrySet().iterator();
         while (it.hasNext()) {
-            Entry<BrokerUniqAddr, BrokerLiveInfo> next = it.next();
+            Entry<BrokerAddrInfo, BrokerLiveInfo> next = it.next();
             long last = next.getValue().getLastUpdateTimestamp();
             if ((last + BROKER_CHANNEL_EXPIRED_TIME) < System.currentTimeMillis()) {
                 RemotingUtil.closeChannel(next.getValue().getChannel());
@@ -448,15 +451,15 @@ public class RouteInfoManager {
     }
 
     public void onChannelDestroy(String remoteAddr, Channel channel) {
-        BrokerUniqAddr brokerAddrFound = null;
+        BrokerAddrInfo brokerAddrFound = null;
         if (channel != null) {
             try {
                 try {
                     this.lock.readLock().lockInterruptibly();
-                    Iterator<Entry<BrokerUniqAddr, BrokerLiveInfo>> itBrokerLiveTable =
+                    Iterator<Entry<BrokerAddrInfo, BrokerLiveInfo>> itBrokerLiveTable =
                         this.brokerLiveTable.entrySet().iterator();
                     while (itBrokerLiveTable.hasNext()) {
-                        Entry<BrokerUniqAddr, BrokerLiveInfo> entry = itBrokerLiveTable.next();
+                        Entry<BrokerAddrInfo, BrokerLiveInfo> entry = itBrokerLiveTable.next();
                         if (entry.getValue().getChannel() == channel) {
                             brokerAddrFound = entry.getKey();
                             break;
@@ -470,14 +473,8 @@ public class RouteInfoManager {
             }
         }
 
-        if (null == brokerAddrFound) {
-            // TODO cannot find, should return?
-            brokerAddrFound = new BrokerUniqAddr("", remoteAddr);
-        } else {
-            log.info("the broker's channel destroyed, {}, clean it's data structure at once", brokerAddrFound);
-        }
-
         if (brokerAddrFound != null && !brokerAddrFound.isEmpty()) {
+            log.info("the broker's channel destroyed, {}, clean it's data structure at once", brokerAddrFound);
 
             try {
                 try {
@@ -597,9 +594,9 @@ public class RouteInfoManager {
 
                 {
                     log.info("brokerLiveTable SIZE: {}", this.brokerLiveTable.size());
-                    Iterator<Entry<BrokerUniqAddr, BrokerLiveInfo>> it = this.brokerLiveTable.entrySet().iterator();
+                    Iterator<Entry<BrokerAddrInfo, BrokerLiveInfo>> it = this.brokerLiveTable.entrySet().iterator();
                     while (it.hasNext()) {
-                        Entry<BrokerUniqAddr, BrokerLiveInfo> next = it.next();
+                        Entry<BrokerAddrInfo, BrokerLiveInfo> next = it.next();
                         log.info("brokerLiveTable brokerAddr: {} {}", next.getKey(), next.getValue());
                     }
                 }
@@ -763,17 +760,16 @@ public class RouteInfoManager {
     }
 }
 
-
 /**
- * broker unique address
+ * broker address information
  */
-class BrokerUniqAddr {
+class BrokerAddrInfo {
     private String clusterName;
     private String brokerAddr;
 
     private int hash;
 
-    public BrokerUniqAddr(String clusterName, String brokerAddr) {
+    public BrokerAddrInfo(String clusterName, String brokerAddr) {
         this.clusterName = clusterName;
         this.brokerAddr = brokerAddr;
     }
@@ -799,9 +795,9 @@ class BrokerUniqAddr {
             return false;
         }
 
-        if (obj instanceof BrokerUniqAddr) {
-            BrokerUniqAddr addr = (BrokerUniqAddr) obj;
-            return clusterName == addr.clusterName && brokerAddr == addr.brokerAddr;
+        if (obj instanceof BrokerAddrInfo) {
+            BrokerAddrInfo addr = (BrokerAddrInfo) obj;
+            return clusterName.equals(addr.clusterName) && brokerAddr.equals(addr.brokerAddr);
         }
         return false;
     }
@@ -824,7 +820,7 @@ class BrokerUniqAddr {
 
     @Override
     public String toString() {
-        return "BrokerUniqAddr [clusterName=" + clusterName + ", brokerAddr=" + brokerAddr + "]";
+        return "BrokerAddrInfo [clusterName=" + clusterName + ", brokerAddr=" + brokerAddr + "]";
     }
 }
 
