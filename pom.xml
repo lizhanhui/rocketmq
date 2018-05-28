@@ -36,7 +36,7 @@
     <inceptionYear>2012</inceptionYear>
     <groupId>org.apache.rocketmq</groupId>
     <artifactId>rocketmq-all</artifactId>
-    <version>4.2.2</version>
+    <version>4.2.3-namesrv_same_broker_addr_in_diff_clusters-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>Apache RocketMQ ${project.version}</name>
     <url>http://rocketmq.apache.org/</url>
@@ -239,7 +239,7 @@
                         <id>verify</id>
                         <phase>verify</phase>
                         <configuration>
-                            <configLocation>style/rmq_checkstyle.xml</configLocation>
+                            <configLocation>/Users/liangbin/Documents/workspace/rocketmq/rocketmq-all-alibaba/style/rmq_checkstyle.xml</configLocation>
                             <encoding>UTF-8</encoding>
                             <consoleOutput>true</consoleOutput>
                             <failsOnError>true</failsOnError>
