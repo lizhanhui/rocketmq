@@ -682,6 +682,22 @@ public class BrokerController {
         if (this.consumerFilterManager != null) {
             this.consumerFilterManager.persist();
         }
+
+        if (this.clientManageExecutor != null) {
+            this.clientManageExecutor.shutdown();
+        }
+
+        if (this.queryMessageExecutor != null) {
+            this.queryMessageExecutor.shutdown();
+        }
+
+        if (this.consumerManageExecutor != null) {
+            this.consumerManageExecutor.shutdown();
+        }
+
+        if (this.fileWatchService != null) {
+            this.fileWatchService.shutdown();
+        }
     }
 
     private void unregisterBrokerAll() {
@@ -741,7 +757,7 @@ public class BrokerController {
                     log.error("registerBrokerAll Exception", e);
                 }
             }
-        }, 1000 * 10, 1000 * 30, TimeUnit.MILLISECONDS);
+        }, 1000 * 10, Math.max(10000, Math.min(brokerConfig.getRegisterNameServerPeriod(), 60000)), TimeUnit.MILLISECONDS);
 
         if (this.brokerStatsManager != null) {
             this.brokerStatsManager.start();
