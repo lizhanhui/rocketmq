@@ -20,6 +20,7 @@ import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.common.UtilAll;
 import org.apache.rocketmq.remoting.common.RemotingUtil;
 import org.apache.rocketmq.remoting.netty.TlsSystemConfig;
+import org.apache.rocketmq.remoting.protocol.LanguageCode;
 
 /**
  * Client Common configuration
@@ -55,6 +56,8 @@ public class ClientConfig {
     private boolean decodeDecompressBody = Boolean.parseBoolean(System.getProperty(DECODE_DECOMPRESS_BODY, "true"));
 
     private boolean useTLS = TlsSystemConfig.tlsEnable;
+
+    private LanguageCode language = LanguageCode.JAVA;
 
     public String buildMQClientId() {
         StringBuilder sb = new StringBuilder();
@@ -106,6 +109,7 @@ public class ClientConfig {
         this.decodeReadBody = cc.decodeReadBody;
         this.decodeDecompressBody = cc.decodeDecompressBody;
         this.useTLS = cc.useTLS;
+        this.language = cc.language;
     }
 
     public ClientConfig cloneClientConfig() {
@@ -123,6 +127,7 @@ public class ClientConfig {
         cc.decodeReadBody = decodeReadBody;
         cc.decodeDecompressBody = decodeDecompressBody;
         cc.useTLS = useTLS;
+        cc.language = language;
         return cc;
     }
 
@@ -214,6 +219,14 @@ public class ClientConfig {
         this.useTLS = useTLS;
     }
 
+    public LanguageCode getLanguage() {
+        return language;
+    }
+
+    public void setLanguage(LanguageCode language) {
+        this.language = language;
+    }
+
     @Override
     public String toString() {
         return "ClientConfig [namesrvAddr=" + namesrvAddr + ", clientIP=" + clientIP + ", instanceName=" + instanceName
@@ -221,6 +234,6 @@ public class ClientConfig {
             + ", heartbeatBrokerInterval=" + heartbeatBrokerInterval + ", persistConsumerOffsetInterval="
             + persistConsumerOffsetInterval + ", unitMode=" + unitMode + ", unitName=" + unitName + ", vipChannelEnabled="
             + vipChannelEnabled + ", decodeReadBody=" + decodeReadBody + ", decodeDecompressBody=" + decodeDecompressBody
-            + ", useTLS=" + useTLS + "]";
+            + ", useTLS=" + useTLS +", language=" + language.name() + "]";
     }
 }

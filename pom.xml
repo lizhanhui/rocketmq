@@ -542,11 +542,6 @@
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>${project.groupId}</groupId>
-                <artifactId>rocketmq-logging</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
                 <version>1.7.7</version>
@@ -599,7 +594,7 @@
             <dependency>
                 <groupId>io.openmessaging</groupId>
                 <artifactId>openmessaging-api</artifactId>
-                <version>0.1.0-alpha</version>
+                <version>0.3.1-alpha-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>log4j</groupId>
@@ -618,4 +613,11 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
+
+    <repositories>
+        <repository>
+            <id>snapshot@oss.sonatype.org</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+        </repository>
+    </repositories>
 </project>
