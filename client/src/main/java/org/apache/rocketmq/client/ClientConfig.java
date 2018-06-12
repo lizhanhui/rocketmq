@@ -234,6 +234,6 @@ public class ClientConfig {
             + ", heartbeatBrokerInterval=" + heartbeatBrokerInterval + ", persistConsumerOffsetInterval="
             + persistConsumerOffsetInterval + ", unitMode=" + unitMode + ", unitName=" + unitName + ", vipChannelEnabled="
             + vipChannelEnabled + ", decodeReadBody=" + decodeReadBody + ", decodeDecompressBody=" + decodeDecompressBody
-            + ", useTLS=" + useTLS +", language=" + language.name() + "]";
+            + ", useTLS=" + useTLS + ", language=" + language.name() + "]";
     }
 }
