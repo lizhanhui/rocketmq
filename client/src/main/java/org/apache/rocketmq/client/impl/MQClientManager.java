@@ -52,7 +52,7 @@ public class MQClientManager {
     }
 
     public MQClientInstance getAndCreateMQClientInstance(final ClientConfig clientConfig, RPCHook rpcHook,
-                                                         final EventLoopGroup eventLoopGroup, final EventExecutorGroup eventExecutorGroup) {
+        final EventLoopGroup eventLoopGroup, final EventExecutorGroup eventExecutorGroup) {
         String clientId = clientConfig.buildMQClientId();
         MQClientInstance instance = this.factoryTable.get(clientId);
         if (null == instance) {

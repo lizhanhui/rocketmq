@@ -180,13 +180,12 @@ public class MQClientAPIImpl {
     }
 
     public MQClientAPIImpl(final NettyClientConfig nettyClientConfig,
-                           final ClientRemotingProcessor clientRemotingProcessor,
-                           RPCHook rpcHook, final ClientConfig clientConfig,
-                           final EventLoopGroup eventLoopGroup, final EventExecutorGroup eventExecutorGroup) {
+        final ClientRemotingProcessor clientRemotingProcessor,
+        RPCHook rpcHook, final ClientConfig clientConfig,
+        final EventLoopGroup eventLoopGroup, final EventExecutorGroup eventExecutorGroup) {
         this.clientConfig = clientConfig;
         topAddressing = new TopAddressing(MixAll.getWSAddr(), clientConfig.getUnitName());
         this.remotingClient = new NettyRemotingClient(nettyClientConfig, null, eventLoopGroup, eventExecutorGroup);
-//        this.remotingClient = new NettyRemotingClient(nettyClientConfig, null);
         this.clientRemotingProcessor = clientRemotingProcessor;
 
         this.remotingClient.registerRPCHook(rpcHook);
