@@ -27,6 +27,10 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import io.netty.channel.Channel;
+import io.netty.channel.EventLoopGroup;
+import io.netty.util.concurrent.EventExecutorGroup;
 import org.apache.rocketmq.client.ClientConfig;
 import org.apache.rocketmq.client.consumer.PullCallback;
 import org.apache.rocketmq.client.consumer.PullResult;
@@ -136,6 +140,7 @@ import org.apache.rocketmq.common.protocol.heartbeat.SubscriptionData;
 import org.apache.rocketmq.common.protocol.route.TopicRouteData;
 import org.apache.rocketmq.common.subscription.SubscriptionGroupConfig;
 import org.apache.rocketmq.logging.InternalLogger;
+import org.apache.rocketmq.remoting.ChannelEventListener;
 import org.apache.rocketmq.remoting.InvokeCallback;
 import org.apache.rocketmq.remoting.RPCHook;
 import org.apache.rocketmq.remoting.RemotingClient;
@@ -171,9 +176,17 @@ public class MQClientAPIImpl {
     public MQClientAPIImpl(final NettyClientConfig nettyClientConfig,
         final ClientRemotingProcessor clientRemotingProcessor,
         RPCHook rpcHook, final ClientConfig clientConfig) {
+        this(nettyClientConfig, clientRemotingProcessor, rpcHook, clientConfig, null, null);
+    }
+
+    public MQClientAPIImpl(final NettyClientConfig nettyClientConfig,
+                           final ClientRemotingProcessor clientRemotingProcessor,
+                           RPCHook rpcHook, final ClientConfig clientConfig,
+                           final EventLoopGroup eventLoopGroup, final EventExecutorGroup eventExecutorGroup) {
         this.clientConfig = clientConfig;
         topAddressing = new TopAddressing(MixAll.getWSAddr(), clientConfig.getUnitName());
-        this.remotingClient = new NettyRemotingClient(nettyClientConfig, null);
+        this.remotingClient = new NettyRemotingClient(nettyClientConfig, null, eventLoopGroup, eventExecutorGroup);
+//        this.remotingClient = new NettyRemotingClient(nettyClientConfig, null);
         this.clientRemotingProcessor = clientRemotingProcessor;
 
         this.remotingClient.registerRPCHook(rpcHook);

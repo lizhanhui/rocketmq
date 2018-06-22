@@ -20,6 +20,13 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.util.concurrent.DefaultEventExecutorGroup;
+import io.netty.util.concurrent.EventExecutorGroup;
 import org.apache.rocketmq.client.ClientConfig;
 import org.apache.rocketmq.client.impl.CommunicationMode;
 import org.apache.rocketmq.client.impl.FindBrokerResult;
@@ -31,6 +38,7 @@ import org.apache.rocketmq.client.impl.factory.MQClientInstance;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.message.MessageQueue;
 import org.apache.rocketmq.common.protocol.header.PullMessageRequestHeader;
+import org.apache.rocketmq.remoting.netty.NettyRemotingClient;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -155,6 +163,58 @@ public class DefaultMQPullConsumerTest {
 
             }
         });
+    }
+
+    @Test
+    public void testSetEventLoopGroup() throws Exception {
+        String group = "newGroup" + System.currentTimeMillis();
+        DefaultMQPullConsumer pullConsumer = new DefaultMQPullConsumer(group);
+        pullConsumer.setInstanceName(group);
+        pullConsumer.setNamesrvAddr("127.0.0.1:9876");
+        EventLoopGroup eventLoopGroup = new NioEventLoopGroup(1, new ThreadFactory() {
+            private AtomicInteger threadIndex = new AtomicInteger(0);
+            @Override
+            public Thread newThread(Runnable r) {
+                return new Thread(r, String.format("NettyClientSelector_%d", this.threadIndex.incrementAndGet()));
+            }
+        });
+        pullConsumer.setEventLoopGroup(eventLoopGroup);
+        pullConsumer.start();
+
+        NettyRemotingClient remotingClient = (NettyRemotingClient) pullConsumer.getDefaultMQPullConsumerImpl()
+                .getRebalanceImpl().getmQClientFactory().getMQClientAPIImpl().getRemotingClient();
+        Field field = NettyRemotingClient.class.getDeclaredField("eventLoopGroupWorker");
+        field.setAccessible(true);
+        EventLoopGroup eventLoopGroupWorker = (EventLoopGroup) field.get(remotingClient);
+        assertThat(eventLoopGroup).isEqualTo(eventLoopGroupWorker);
+        pullConsumer.shutdown();
+    }
+
+    @Test
+    public void testSetEventExecutorGroup() throws Exception {
+        String group = "newGroup" + System.currentTimeMillis();
+        DefaultMQPullConsumer pullConsumer = new DefaultMQPullConsumer(group);
+        pullConsumer.setInstanceName(group);
+        pullConsumer.setNamesrvAddr("127.0.0.1:9876");
+        EventExecutorGroup eventExecutorGroup = new DefaultEventExecutorGroup(
+                4,
+                new ThreadFactory() {
+                    private AtomicInteger threadIndex = new AtomicInteger(0);
+                    @Override
+                    public Thread newThread(Runnable r) {
+                        return new Thread(r, "NettyClientWorkerThread_" + this.threadIndex.incrementAndGet());
+                    }
+                });
+        pullConsumer.setEventExecutorGroup(eventExecutorGroup);
+        pullConsumer.start();
+
+        NettyRemotingClient remotingClient = (NettyRemotingClient) pullConsumer.getDefaultMQPullConsumerImpl()
+                .getRebalanceImpl().getmQClientFactory().getMQClientAPIImpl().getRemotingClient();
+        Field field = NettyRemotingClient.class.getDeclaredField("defaultEventExecutorGroup");
+        field.setAccessible(true);
+        EventExecutorGroup defaultEventExecutorGroup = (EventExecutorGroup) field.get(remotingClient);
+        assertThat(eventExecutorGroup).isEqualTo(defaultEventExecutorGroup);
+        pullConsumer.shutdown();
     }
 
     private PullResultExt createPullResult(PullMessageRequestHeader requestHeader, PullStatus pullStatus,

@@ -18,6 +18,9 @@ package org.apache.rocketmq.client.consumer;
 
 import java.util.HashSet;
 import java.util.Set;
+
+import io.netty.channel.EventLoopGroup;
+import io.netty.util.concurrent.EventExecutorGroup;
 import org.apache.rocketmq.client.ClientConfig;
 import org.apache.rocketmq.client.QueryResult;
 import org.apache.rocketmq.client.consumer.rebalance.AllocateMessageQueueAveragely;
@@ -354,5 +357,21 @@ public class DefaultMQPullConsumer extends ClientConfig implements MQPullConsume
 
     public void setMaxReconsumeTimes(final int maxReconsumeTimes) {
         this.maxReconsumeTimes = maxReconsumeTimes;
+    }
+
+    public EventLoopGroup getEventLoopGroup() {
+        return this.defaultMQPullConsumerImpl.getEventLoopGroup();
+    }
+
+    public void setEventLoopGroup(EventLoopGroup eventLoopGroup) {
+        this.defaultMQPullConsumerImpl.setEventLoopGroup(eventLoopGroup);
+    }
+
+    public EventExecutorGroup getEventExecutorGroup() {
+        return this.defaultMQPullConsumerImpl.getEventExecutorGroup();
+    }
+
+    public void setEventExecutorGroup(EventExecutorGroup eventExecutorGroup) {
+        this.defaultMQPullConsumerImpl.setEventExecutorGroup(eventExecutorGroup);
     }
 }

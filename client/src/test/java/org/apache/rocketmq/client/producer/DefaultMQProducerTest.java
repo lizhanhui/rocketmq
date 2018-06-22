@@ -24,6 +24,13 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.util.concurrent.DefaultEventExecutorGroup;
+import io.netty.util.concurrent.EventExecutorGroup;
 import org.apache.rocketmq.client.ClientConfig;
 import org.apache.rocketmq.client.exception.MQBrokerException;
 import org.apache.rocketmq.client.exception.MQClientException;
@@ -261,6 +268,60 @@ public class DefaultMQProducerTest {
             .getmQClientFactory().getMQClientAPIImpl().getRemotingClient();
 
         assertThat(remotingClient.getCallbackExecutor()).isEqualTo(customized);
+    }
+
+    @Test
+    public void testSetEventLoopGroup() throws Exception {
+        String producerGroupTemp = producerGroupPrefix + System.currentTimeMillis();
+        producer = new DefaultMQProducer(producerGroupTemp);
+        producer.setInstanceName(producerGroupTemp);
+        producer.setNamesrvAddr("127.0.0.1:9876");
+        EventLoopGroup eventLoopGroup = new NioEventLoopGroup(1, new ThreadFactory() {
+            private AtomicInteger threadIndex = new AtomicInteger(0);
+            @Override
+            public Thread newThread(Runnable r) {
+                return new Thread(r, String.format("NettyClientSelector_%d", this.threadIndex.incrementAndGet()));
+            }
+        });
+        producer.setEventLoopGroup(eventLoopGroup);
+        producer.start();
+
+        NettyRemotingClient remotingClient = (NettyRemotingClient) producer.getDefaultMQProducerImpl()
+                .getmQClientFactory().getMQClientAPIImpl().getRemotingClient();
+        Field field = NettyRemotingClient.class.getDeclaredField("eventLoopGroupWorker");
+        field.setAccessible(true);
+        EventLoopGroup eventLoopGroupWorker = (EventLoopGroup) field.get(remotingClient);
+        assertThat(eventLoopGroup).isEqualTo(eventLoopGroupWorker);
+        producer.shutdown();
+    }
+
+    @Test
+    public void testSetEventExecutorGroup() throws Exception {
+        String producerGroupTemp = producerGroupPrefix + System.currentTimeMillis();
+        producer = new DefaultMQProducer(producerGroupTemp);
+        producer.setInstanceName(producerGroupTemp);
+        producer.setNamesrvAddr("127.0.0.1:9876");
+        EventExecutorGroup eventExecutorGroup = new DefaultEventExecutorGroup(
+                4,
+                new ThreadFactory() {
+
+                    private AtomicInteger threadIndex = new AtomicInteger(0);
+
+                    @Override
+                    public Thread newThread(Runnable r) {
+                        return new Thread(r, "NettyClientWorkerThread_" + this.threadIndex.incrementAndGet());
+                    }
+                });
+        producer.setEventExecutorGroup(eventExecutorGroup);
+        producer.start();
+
+        NettyRemotingClient remotingClient = (NettyRemotingClient) producer.getDefaultMQProducerImpl()
+                .getmQClientFactory().getMQClientAPIImpl().getRemotingClient();
+        Field field = NettyRemotingClient.class.getDeclaredField("defaultEventExecutorGroup");
+        field.setAccessible(true);
+        EventExecutorGroup defaultEventExecutorGroup = (EventExecutorGroup) field.get(remotingClient);
+        assertThat(eventExecutorGroup).isEqualTo(defaultEventExecutorGroup);
+        producer.shutdown();
     }
 
     public static TopicRouteData createTopicRoute() {

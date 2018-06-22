@@ -19,6 +19,9 @@ package org.apache.rocketmq.client.producer;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
+
+import io.netty.channel.EventLoopGroup;
+import io.netty.util.concurrent.EventExecutorGroup;
 import org.apache.rocketmq.client.ClientConfig;
 import org.apache.rocketmq.client.QueryResult;
 import org.apache.rocketmq.client.Validators;
@@ -763,5 +766,21 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
 
     public void setRetryTimesWhenSendAsyncFailed(final int retryTimesWhenSendAsyncFailed) {
         this.retryTimesWhenSendAsyncFailed = retryTimesWhenSendAsyncFailed;
+    }
+
+    public EventLoopGroup getEventLoopGroup() {
+        return this.defaultMQProducerImpl.getEventLoopGroup();
+    }
+
+    public void setEventLoopGroup(EventLoopGroup eventLoopGroup) {
+        this.defaultMQProducerImpl.setEventLoopGroup(eventLoopGroup);
+    }
+
+    public EventExecutorGroup getEventExecutorGroup() {
+        return this.defaultMQProducerImpl.getEventExecutorGroup();
+    }
+
+    public void setEventExecutorGroup(EventExecutorGroup eventExecutorGroup) {
+        this.defaultMQProducerImpl.setEventExecutorGroup(eventExecutorGroup);
     }
 }

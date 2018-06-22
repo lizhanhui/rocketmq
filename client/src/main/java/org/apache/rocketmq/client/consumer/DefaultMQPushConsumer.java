@@ -19,6 +19,9 @@ package org.apache.rocketmq.client.consumer;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+
+import io.netty.channel.EventLoopGroup;
+import io.netty.util.concurrent.EventExecutorGroup;
 import org.apache.rocketmq.client.ClientConfig;
 import org.apache.rocketmq.client.QueryResult;
 import org.apache.rocketmq.client.consumer.listener.MessageListener;
@@ -713,5 +716,21 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
 
     public void setConsumeTimeout(final long consumeTimeout) {
         this.consumeTimeout = consumeTimeout;
+    }
+
+    public EventLoopGroup getEventLoopGroup() {
+        return this.defaultMQPushConsumerImpl.getEventLoopGroup();
+    }
+
+    public void setEventLoopGroup(EventLoopGroup eventLoopGroup) {
+        this.defaultMQPushConsumerImpl.setEventLoopGroup(eventLoopGroup);
+    }
+
+    public EventExecutorGroup getEventExecutorGroup() {
+        return this.defaultMQPushConsumerImpl.getEventExecutorGroup();
+    }
+
+    public void setEventExecutorGroup(EventExecutorGroup eventExecutorGroup) {
+        this.defaultMQPushConsumerImpl.setEventExecutorGroup(eventExecutorGroup);
     }
 }
