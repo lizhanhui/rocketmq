@@ -174,14 +174,18 @@ public abstract class NettyRemotingAbstract {
                 @Override
                 public void run() {
                     try {
-                        RPCHook rpcHook = NettyRemotingAbstract.this.getRPCHook();
-                        if (rpcHook != null) {
-                            rpcHook.doBeforeRequest(RemotingHelper.parseChannelRemoteAddr(ctx.channel()), cmd);
+                        List<RPCHook> rpcHookList = NettyRemotingAbstract.this.getRPCHook();
+                        if (!rpcHookList.isEmpty()) {
+                            for (RPCHook rpcHook: rpcHookList) {
+                                rpcHook.doBeforeRequest(RemotingHelper.parseChannelRemoteAddr(ctx.channel()), cmd);
+                            }
                         }
 
                         final RemotingCommand response = pair.getObject1().processRequest(ctx, cmd);
-                        if (rpcHook != null) {
-                            rpcHook.doAfterResponse(RemotingHelper.parseChannelRemoteAddr(ctx.channel()), cmd, response);
+                        if (!rpcHookList.isEmpty()) {
+                            for (RPCHook rpcHook : rpcHookList) {
+                                rpcHook.doAfterResponse(RemotingHelper.parseChannelRemoteAddr(ctx.channel()), cmd, response);
+                            }
                         }
 
                         if (!cmd.isOnewayRPC()) {
@@ -319,7 +323,7 @@ public abstract class NettyRemotingAbstract {
      *
      * @return RPC hook if specified; null otherwise.
      */
-    public abstract RPCHook getRPCHook();
+    public abstract List<RPCHook> getRPCHook();
 
     /**
      * This method specifies thread pool to use while invoking callback methods.
