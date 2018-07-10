@@ -24,7 +24,6 @@ import io.netty.channel.FileRegion;
 import io.netty.channel.socket.nio.NioSocketChannel;
 
 import java.nio.ByteBuffer;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -32,7 +31,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.rocketmq.broker.BrokerController;
@@ -78,7 +76,13 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 	private String reviveTopic;
 	private static String BORN_TIME = "bornTime";
 	private static String POLLING = "POLLING";
-	private ConcurrentHashMap<String, ConcurrentHashMap<String,Byte>> topicCidMap;
+
+	private static final int POLLING_SUC = 0;
+	private static final int POLLING_FULL = 1;
+	private static final int POLLING_TIMEOUT = 2;
+	private static final int NOT_POLLING = 3;
+  
+    private ConcurrentHashMap<String, ConcurrentHashMap<String,Byte>> topicCidMap;
 	private ConcurrentLinkedHashMap<String, LinkedBlockingDeque<PopRequest>> pollingMap;
 	private AtomicLong totalPollingNum = new AtomicLong(0);
     public PopMessageProcessor(final BrokerController brokerController) {
@@ -255,10 +259,14 @@ public class PopMessageProcessor implements NettyRequestProcessor {
         if (POP_LOGGER.isDebugEnabled()) {
             POP_LOGGER.debug("receive PopMessage request command, {}", request);
         }
-
+        if (requestHeader.isTimeoutTooMuch()) {
+			response.setCode(POLLING_TIMEOUT);
+            response.setRemark(String.format("the broker[%s] poping message is timeout too much", this.brokerController.getBrokerConfig().getBrokerIP1()));
+            return response;
+		}
         if (!PermName.isReadable(this.brokerController.getBrokerConfig().getBrokerPermission())) {
             response.setCode(ResponseCode.NO_PERMISSION);
-            response.setRemark(String.format("the broker[%s] peeking message is forbidden", this.brokerController.getBrokerConfig().getBrokerIP1()));
+            response.setRemark(String.format("the broker[%s] poping message is forbidden", this.brokerController.getBrokerConfig().getBrokerIP1()));
             return response;
         }
 
@@ -338,12 +346,16 @@ public class PopMessageProcessor implements NettyRequestProcessor {
             	// all queue pop can not notify specified queue pop, and vice versa
                 notifyMessageArriving(requestHeader.getTopic(), requestHeader.getConsumerGroup(),requestHeader.getQueueId());
 			}
-		}else{
-			if (polling(channel, request, requestHeader)) {
+		} else {
+			int pollingResult = polling(channel, request, requestHeader);
+			if (POLLING_SUC == pollingResult) {
 				return null;
+			} else if (POLLING_FULL == pollingResult) {
+				response.setCode(ResponseCode.POLLING_FULL);
+			} else {
+				response.setCode(ResponseCode.POLLING_TIMEOUT);
 			}
-            response.setCode(ResponseCode.PULL_NOT_FOUND);
-            getMessageResult.setStatus(GetMessageStatus.NO_MESSAGE_IN_QUEUE);
+			getMessageResult.setStatus(GetMessageStatus.NO_MESSAGE_IN_QUEUE);
 		}
 		responseHeader.setInvisibleTime(requestHeader.getInvisibleTime());
 		responseHeader.setPopTime(popTime);
@@ -464,9 +476,16 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 			System.out.println(entry.size());
 		}
 	}
-	private boolean polling(final Channel channel, RemotingCommand remotingCommand, final PopMessageRequestHeader requestHeader) {
+	/**
+	 * 
+	 * @param channel
+	 * @param remotingCommand
+	 * @param requestHeader
+	 * @return
+	 */
+	private int polling(final Channel channel, RemotingCommand remotingCommand, final PopMessageRequestHeader requestHeader) {
 		if (requestHeader.getPollTime() <= 0) {
-			return false;
+			return NOT_POLLING;
 		}
 		ConcurrentHashMap<String, Byte> cids = topicCidMap.get(requestHeader.getTopic());
 		if (cids == null) {
@@ -478,30 +497,40 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 		}
 		long expired = requestHeader.getBornTime() + requestHeader.getPollTime();
 		final PopRequest request = new PopRequest(remotingCommand, channel, expired);
-		boolean result = false;
-		if (!request.isTimeout() && totalPollingNum.get() < this.brokerController.getBrokerConfig().getMaxPopPollingSize()) {
-			String key = KeyBuilder.buildPollingKey(requestHeader.getTopic(), requestHeader.getConsumerGroup(), requestHeader.getQueueId());
-			LinkedBlockingDeque<PopRequest> queue = pollingMap.get(key);
-			if (queue == null) {
-				queue = new LinkedBlockingDeque<>(this.brokerController.getBrokerConfig().getPopPollingSize());
-				LinkedBlockingDeque<PopRequest> old = pollingMap.putIfAbsent(key, queue);
-				if (old != null) {
-					queue = old;
-				}
-			}
-			if (remotingCommand.getExtFields().get(POLLING) == null) {
-				result = queue.offer(request);
-			} else {
-				result = queue.offerFirst(request);
-			}
-			remotingCommand.addExtField(POLLING, POLLING);
+		boolean isFull=(totalPollingNum.get() >= this.brokerController.getBrokerConfig().getMaxPopPollingSize());
+		if (isFull) {
+			POP_LOGGER.info("polling {}, result POLLING_FULL", remotingCommand);
+			return POLLING_FULL;
 		}
-		if (result) {
+		boolean isTimeout=request.isTimeout();
+		if (isTimeout) {
+			POP_LOGGER.info("polling {}, result POLLING_TIMEOUT", remotingCommand);
+			return POLLING_TIMEOUT;
+		}
+		boolean offerResult = false;
+		String key = KeyBuilder.buildPollingKey(requestHeader.getTopic(), requestHeader.getConsumerGroup(), requestHeader.getQueueId());
+		LinkedBlockingDeque<PopRequest> queue = pollingMap.get(key);
+		if (queue == null) {
+			queue = new LinkedBlockingDeque<>(this.brokerController.getBrokerConfig().getPopPollingSize());
+			LinkedBlockingDeque<PopRequest> old = pollingMap.putIfAbsent(key, queue);
+			if (old != null) {
+				queue = old;
+			}
+		}
+		if (remotingCommand.getExtFields().get(POLLING) == null) {
+			offerResult = queue.offer(request);
+		} else {
+			offerResult = queue.offerFirst(request);
+		}
+		remotingCommand.addExtField(POLLING, POLLING);
+		if (offerResult) {
 			totalPollingNum.incrementAndGet();
+			POP_LOGGER.info("polling {}, result POLLING_SUC", remotingCommand);
+			return POLLING_SUC;
+		}else {
+			POP_LOGGER.info("polling {}, result POLLING_FULL", remotingCommand);
+			return POLLING_FULL;
 		}
-		POP_LOGGER.info("polling {}, result {}", remotingCommand, result);
-		return result;
-
 	}
 
 	private void appendCheckPoint(final Channel channel, final PopMessageRequestHeader requestHeader,String topic, int reviveQid, int queueId, long offset,

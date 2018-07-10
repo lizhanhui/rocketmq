@@ -85,12 +85,12 @@ public class PopMessageRequestHeader implements CommandCustomHeader {
         this.topic = topic;
     }
 
-    public int getQueueId() {
-    	if (queueId < 0) {
+	public int getQueueId() {
+		if (queueId < 0) {
 			return -1;
 		}
-        return queueId;
-    }
+		return queueId;
+	}
 
     public void setQueueId(int queueId) {
         this.queueId = queueId;
@@ -104,5 +104,9 @@ public class PopMessageRequestHeader implements CommandCustomHeader {
     public void setMaxMsgNums(int maxMsgNums) {
         this.maxMsgNums = maxMsgNums;
     }
+
+	public boolean isTimeoutTooMuch() {
+		return System.currentTimeMillis() - bornTime - pollTime > 500;
+	}
 
 }

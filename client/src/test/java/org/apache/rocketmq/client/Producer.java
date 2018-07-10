@@ -21,8 +21,8 @@ public class Producer {
 		final MessageQueue mq = new MessageQueue(topic, brokerName, 0);
 		for (int i = 0; i < 5; i++) {
 			Message msg = new Message(topic, String.valueOf(i).getBytes());
-			//SendResult result = producer.send(msg);
-		    SendResult result=producer.send(msg, mq);
+			SendResult result = producer.send(msg);
+		    //SendResult result=producer.send(msg, mq);
 			System.out.println(result);
 		}
 

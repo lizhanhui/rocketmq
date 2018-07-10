@@ -36,8 +36,15 @@ public class ConsumerShortPolling {
 		String topic="longji-stress";
         //final String brokerName="xigutestdaily-02";
         final String brokerName="broker-a";
-		final MessageQueue mq=new MessageQueue(topic, brokerName, 0);
-		//PopResult popResult=pullConsumer.peekMessage(mq, 2, 1000);
+		final MessageQueue mq=new MessageQueue(topic, brokerName, -1);
+		PopResult popResult=pullConsumer.peekMessage(mq, 2,consumerGroup, 1000);
+		System.out.println(popResult);
+		if (popResult.getPopStatus()==PopStatus.FOUND) {
+			for (final MessageExt msg : popResult.getMsgFoundList()) {
+				System.out.println(new Date()+",peek delay time:"+(System.currentTimeMillis()-msg.getBornTimestamp())+",msg topic is "+msg.getTopic()+" msg id:"+new String(msg.getBody())+",born time:"+ new Date(msg.getBornTimestamp())+",retry time:"+msg.getReconsumeTimes()+",1st pop time:"+ msg.getProperty(MessageConst.PROPERTY_FIRST_POP_TIME));
+				//pullConsumer.ackMessage(msg.getTopic(), consumerGroup, msg.getProperty(MessageConst.PROPERTY_POP_CK));
+			}
+		}		
 		//popResult=pullConsumer.pop(mq, 50000, 4, consumerGroup, 10000000,ConsumeInitMode.MAX);
 		//System.out.println("sync pop:"+popResult);
 		final long timeOut=10000;
@@ -65,7 +72,7 @@ public class ConsumerShortPolling {
 					//System.out.println(new Date()+"     "+popResult);
 					if (popResult.getPopStatus()==PopStatus.FOUND) {
 						for (final MessageExt msg : popResult.getMsgFoundList()) {
-							System.out.println(new Date()+",delay time:"+(System.currentTimeMillis()-msg.getBornTimestamp())+" msg id:"+new String(msg.getBody())+",born time:"+ new Date(msg.getBornTimestamp())+",retry time:"+msg.getReconsumeTimes()+",1st pop time:"+ msg.getProperty(MessageConst.PROPERTY_FIRST_POP_TIME));
+							System.out.println(new Date()+",delay time:"+(System.currentTimeMillis()-msg.getBornTimestamp())+",msg topic is "+msg.getTopic()+" msg id:"+new String(msg.getBody())+",born time:"+ new Date(msg.getBornTimestamp())+",retry time:"+msg.getReconsumeTimes()+",1st pop time:"+ msg.getProperty(MessageConst.PROPERTY_FIRST_POP_TIME));
 							pullConsumer.ackMessage(msg.getTopic(), consumerGroup, msg.getProperty(MessageConst.PROPERTY_POP_CK));
 						}
 					}
