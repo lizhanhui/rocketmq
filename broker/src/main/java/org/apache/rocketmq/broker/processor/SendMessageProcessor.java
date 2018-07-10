@@ -176,8 +176,10 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
             maxReconsumeTimes = requestHeader.getMaxReconsumeTimes();
         }
 
+        boolean isDLQ = false;
         if (msgExt.getReconsumeTimes() >= maxReconsumeTimes
             || delayLevel < 0) {
+            isDLQ = true;
             newTopic = MixAll.getDLQTopic(requestHeader.getGroup());
             queueIdInt = Math.abs(this.random.nextInt() % 99999999) % DLQ_NUMS_PER_GROUP;
 
@@ -217,6 +219,12 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         MessageAccessor.setOriginMessageId(msgInner, UtilAll.isBlank(originMsgId) ? msgExt.getMsgId() : originMsgId);
 
         PutMessageResult putMessageResult = this.brokerController.getMessageStore().putMessage(msgInner);
+        if (isDLQ) {
+            log.info("send msg to DLQ {}, result={}, {}",
+                    newTopic,
+                    putMessageResult == null ? "null" : putMessageResult.getPutMessageStatus().toString(),
+                    msgInner.toString());
+        }
         if (putMessageResult != null) {
             switch (putMessageResult.getPutMessageStatus()) {
                 case PUT_OK:
