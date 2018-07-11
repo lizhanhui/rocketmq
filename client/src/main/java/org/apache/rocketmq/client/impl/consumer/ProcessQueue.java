@@ -134,7 +134,7 @@ public class ProcessQueue {
                     if (null == old) {
                         validMsgCnt++;
                         this.queueOffsetMax = msg.getQueueOffset();
-                        msgSize.addAndGet(msg.getBody().length);
+                        msgSize.addAndGet(msg.getBody() != null ? msg.getBody().length : 0);
                     }
                 }
                 msgCount.addAndGet(validMsgCnt);
@@ -195,7 +195,7 @@ public class ProcessQueue {
                         MessageExt prev = msgTreeMap.remove(msg.getQueueOffset());
                         if (prev != null) {
                             removedCnt--;
-                            msgSize.addAndGet(0 - msg.getBody().length);
+                            msgSize.addAndGet(msg.getBody() != null ? 0 - msg.getBody().length : 0);
                         }
                     }
                     msgCount.addAndGet(removedCnt);
@@ -263,7 +263,7 @@ public class ProcessQueue {
                 Long offset = this.consumingMsgOrderlyTreeMap.lastKey();
                 msgCount.addAndGet(0 - this.consumingMsgOrderlyTreeMap.size());
                 for (MessageExt msg : this.consumingMsgOrderlyTreeMap.values()) {
-                    msgSize.addAndGet(0 - msg.getBody().length);
+                    msgSize.addAndGet(msg.getBody() != null ? 0 - msg.getBody().length : 0);
                 }
                 this.consumingMsgOrderlyTreeMap.clear();
                 if (offset != null) {
