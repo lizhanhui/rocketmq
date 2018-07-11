@@ -1024,6 +1024,10 @@ public class DefaultMQProducerImpl implements MQProducerInner {
         transactionSendResult.setQueueOffset(sendResult.getQueueOffset());
         transactionSendResult.setTransactionId(sendResult.getTransactionId());
         transactionSendResult.setLocalTransactionState(localTransactionState);
+        if (localException != null) {
+            transactionSendResult.setErrorMessage("executeLocalTransactionBranch error. " + localException.getMessage());
+            transactionSendResult.setRuntimeException(new RuntimeException(localException));
+        }
         return transactionSendResult;
     }
 
