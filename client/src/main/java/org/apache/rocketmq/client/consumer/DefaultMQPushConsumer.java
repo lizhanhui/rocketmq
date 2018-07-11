@@ -33,6 +33,7 @@ import org.apache.rocketmq.client.exception.MQBrokerException;
 import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.client.impl.consumer.DefaultMQPushConsumerImpl;
 import org.apache.rocketmq.common.MixAll;
+import org.apache.rocketmq.common.ServiceState;
 import org.apache.rocketmq.common.UtilAll;
 import org.apache.rocketmq.common.consumer.ConsumeFromWhere;
 import org.apache.rocketmq.common.message.MessageDecoder;
@@ -722,7 +723,10 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
         return this.defaultMQPushConsumerImpl.getEventLoopGroup();
     }
 
-    public void setEventLoopGroup(EventLoopGroup eventLoopGroup) {
+    public void setEventLoopGroup(EventLoopGroup eventLoopGroup) throws MQClientException {
+        if (this.defaultMQPushConsumerImpl.getServiceState() != ServiceState.CREATE_JUST) {
+            throw new MQClientException("The consumer service state not OK", null);
+        }
         this.defaultMQPushConsumerImpl.setEventLoopGroup(eventLoopGroup);
     }
 
@@ -730,7 +734,10 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
         return this.defaultMQPushConsumerImpl.getEventExecutorGroup();
     }
 
-    public void setEventExecutorGroup(EventExecutorGroup eventExecutorGroup) {
+    public void setEventExecutorGroup(EventExecutorGroup eventExecutorGroup) throws MQClientException {
+        if (this.defaultMQPushConsumerImpl.getServiceState() != ServiceState.CREATE_JUST) {
+            throw new MQClientException("The consumer service state not OK", null);
+        }
         this.defaultMQPushConsumerImpl.setEventExecutorGroup(eventExecutorGroup);
     }
 }

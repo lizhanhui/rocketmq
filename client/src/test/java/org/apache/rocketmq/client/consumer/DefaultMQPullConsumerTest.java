@@ -28,6 +28,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
 import org.apache.rocketmq.client.ClientConfig;
+import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.client.impl.CommunicationMode;
 import org.apache.rocketmq.client.impl.FindBrokerResult;
 import org.apache.rocketmq.client.impl.MQClientAPIImpl;
@@ -187,6 +188,36 @@ public class DefaultMQPullConsumerTest {
         field.setAccessible(true);
         EventLoopGroup eventLoopGroupWorker = (EventLoopGroup) field.get(remotingClient);
         assertThat(eventLoopGroup).isEqualTo(eventLoopGroupWorker);
+        pullConsumer.shutdown();
+    }
+
+    @Test
+    public void testSetEventLoopGroup_afterStartUp() throws Exception {
+        String group = "newGroup" + System.currentTimeMillis();
+        DefaultMQPullConsumer pullConsumer = new DefaultMQPullConsumer(group);
+        pullConsumer.setInstanceName(group);
+        pullConsumer.setNamesrvAddr("127.0.0.1:9876");
+        EventLoopGroup eventLoopGroup = new NioEventLoopGroup(1, new ThreadFactory() {
+            private AtomicInteger threadIndex = new AtomicInteger(0);
+            @Override
+            public Thread newThread(Runnable r) {
+                return new Thread(r, String.format("NettyClientSelector_%d", this.threadIndex.incrementAndGet()));
+            }
+        });
+        pullConsumer.start();
+        Exception exception = null;
+        try {
+            pullConsumer.setEventLoopGroup(eventLoopGroup);
+        } catch (Exception e) {
+            exception = e;
+        }
+        Assert.assertTrue(exception instanceof MQClientException);
+        NettyRemotingClient remotingClient = (NettyRemotingClient) pullConsumer.getDefaultMQPullConsumerImpl()
+                .getRebalanceImpl().getmQClientFactory().getMQClientAPIImpl().getRemotingClient();
+        Field field = NettyRemotingClient.class.getDeclaredField("eventLoopGroupWorker");
+        field.setAccessible(true);
+        EventLoopGroup eventLoopGroupWorker = (EventLoopGroup) field.get(remotingClient);
+        assertThat(eventLoopGroup).isNotEqualTo(eventLoopGroupWorker);
         pullConsumer.shutdown();
     }
 

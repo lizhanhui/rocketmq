@@ -29,6 +29,7 @@ import org.apache.rocketmq.client.exception.MQBrokerException;
 import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.client.impl.producer.DefaultMQProducerImpl;
 import org.apache.rocketmq.common.MixAll;
+import org.apache.rocketmq.common.ServiceState;
 import org.apache.rocketmq.common.message.Message;
 import org.apache.rocketmq.common.message.MessageBatch;
 import org.apache.rocketmq.common.message.MessageClientIDSetter;
@@ -772,7 +773,10 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
         return this.defaultMQProducerImpl.getEventLoopGroup();
     }
 
-    public void setEventLoopGroup(EventLoopGroup eventLoopGroup) {
+    public void setEventLoopGroup(EventLoopGroup eventLoopGroup) throws MQClientException {
+        if (this.defaultMQProducerImpl.getServiceState() != ServiceState.CREATE_JUST) {
+            throw new MQClientException("The producer service state not OK", null);
+        }
         this.defaultMQProducerImpl.setEventLoopGroup(eventLoopGroup);
     }
 
@@ -780,7 +784,10 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
         return this.defaultMQProducerImpl.getEventExecutorGroup();
     }
 
-    public void setEventExecutorGroup(EventExecutorGroup eventExecutorGroup) {
+    public void setEventExecutorGroup(EventExecutorGroup eventExecutorGroup) throws MQClientException {
+        if (this.defaultMQProducerImpl.getServiceState() != ServiceState.CREATE_JUST) {
+            throw new MQClientException("The producer service state not OK", null);
+        }
         this.defaultMQProducerImpl.setEventExecutorGroup(eventExecutorGroup);
     }
 }

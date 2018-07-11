@@ -294,6 +294,44 @@ public class DefaultMQPushConsumerTest {
     }
 
     @Test
+    public void testSetEventLoopGroup_afterStartUp() throws Exception {
+        String group = "newGroup" + System.currentTimeMillis();
+        DefaultMQPushConsumer pushConsumer = new DefaultMQPushConsumer(group);
+        pushConsumer.setInstanceName(group);
+        pushConsumer.setNamesrvAddr("127.0.0.1:9876");
+        pushConsumer.setPullInterval(60 * 1000);
+        pushConsumer.registerMessageListener(new MessageListenerConcurrently() {
+            @Override
+            public ConsumeConcurrentlyStatus consumeMessage(List<MessageExt> msgs,
+                                                            ConsumeConcurrentlyContext context) {
+                return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;
+            }
+        });
+        EventLoopGroup eventLoopGroup = new NioEventLoopGroup(1, new ThreadFactory() {
+            private AtomicInteger threadIndex = new AtomicInteger(0);
+            @Override
+            public Thread newThread(Runnable r) {
+                return new Thread(r, String.format("NettyClientSelector_%d", this.threadIndex.incrementAndGet()));
+            }
+        });
+        pushConsumer.start();
+        Exception exception = null;
+        try {
+            pushConsumer.setEventLoopGroup(eventLoopGroup);
+        } catch (Exception e) {
+            exception = e;
+        }
+        Assert.assertTrue(exception instanceof MQClientException);
+        NettyRemotingClient remotingClient = (NettyRemotingClient) pushConsumer.getDefaultMQPushConsumerImpl()
+                .getmQClientFactory().getMQClientAPIImpl().getRemotingClient();
+        Field field = NettyRemotingClient.class.getDeclaredField("eventLoopGroupWorker");
+        field.setAccessible(true);
+        EventLoopGroup eventLoopGroupWorker = (EventLoopGroup) field.get(remotingClient);
+        assertThat(eventLoopGroup).isNotEqualTo(eventLoopGroupWorker);
+        pushConsumer.shutdown();
+    }
+
+    @Test
     public void testSetEventExecutorGroup() throws Exception {
         String group = "newGroup" + System.currentTimeMillis();
         DefaultMQPushConsumer pushConsumer = new DefaultMQPushConsumer(group);

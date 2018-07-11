@@ -50,6 +50,7 @@ import org.apache.rocketmq.common.protocol.route.TopicRouteData;
 import org.apache.rocketmq.remoting.exception.RemotingException;
 import org.apache.rocketmq.remoting.netty.NettyRemotingClient;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -292,6 +293,36 @@ public class DefaultMQProducerTest {
         field.setAccessible(true);
         EventLoopGroup eventLoopGroupWorker = (EventLoopGroup) field.get(remotingClient);
         assertThat(eventLoopGroup).isEqualTo(eventLoopGroupWorker);
+        producer.shutdown();
+    }
+
+    @Test
+    public void testSetEventLoopGroup_afterStartUp() throws Exception {
+        String producerGroupTemp = producerGroupPrefix + System.currentTimeMillis();
+        producer = new DefaultMQProducer(producerGroupTemp);
+        producer.setInstanceName(producerGroupTemp);
+        producer.setNamesrvAddr("127.0.0.1:9876");
+        EventLoopGroup eventLoopGroup = new NioEventLoopGroup(1, new ThreadFactory() {
+            private AtomicInteger threadIndex = new AtomicInteger(0);
+            @Override
+            public Thread newThread(Runnable r) {
+                return new Thread(r, String.format("NettyClientSelector_%d", this.threadIndex.incrementAndGet()));
+            }
+        });
+        producer.start();
+        Exception exception = null;
+        try {
+            producer.setEventLoopGroup(eventLoopGroup);
+        } catch (Exception e) {
+           exception = e;
+        }
+        Assert.assertTrue(exception instanceof MQClientException);
+        NettyRemotingClient remotingClient = (NettyRemotingClient) producer.getDefaultMQProducerImpl()
+                .getmQClientFactory().getMQClientAPIImpl().getRemotingClient();
+        Field field = NettyRemotingClient.class.getDeclaredField("eventLoopGroupWorker");
+        field.setAccessible(true);
+        EventLoopGroup eventLoopGroupWorker = (EventLoopGroup) field.get(remotingClient);
+        assertThat(eventLoopGroup).isNotEqualTo(eventLoopGroupWorker);
         producer.shutdown();
     }
 
