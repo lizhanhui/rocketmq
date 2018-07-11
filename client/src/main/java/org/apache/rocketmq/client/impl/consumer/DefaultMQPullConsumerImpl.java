@@ -16,6 +16,8 @@
  */
 package org.apache.rocketmq.client.impl.consumer;
 
+import io.netty.channel.EventLoopGroup;
+import io.netty.util.concurrent.EventExecutorGroup;
 import org.apache.rocketmq.client.QueryResult;
 import org.apache.rocketmq.client.Validators;
 import org.apache.rocketmq.client.consumer.DefaultMQPullConsumer;
@@ -76,6 +78,8 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner {
     private PullAPIWrapper pullAPIWrapper;
     private OffsetStore offsetStore;
     private RebalanceImpl rebalanceImpl = new RebalancePullImpl(this);
+    private EventLoopGroup eventLoopGroup;
+    private EventExecutorGroup eventExecutorGroup;
 
     public DefaultMQPullConsumerImpl(final DefaultMQPullConsumer defaultMQPullConsumer, final RPCHook rpcHook) {
         this.defaultMQPullConsumer = defaultMQPullConsumer;
@@ -567,7 +571,7 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner {
                     this.defaultMQPullConsumer.changeInstanceNameToPID();
                 }
 
-                this.mQClientFactory = MQClientManager.getInstance().getAndCreateMQClientInstance(this.defaultMQPullConsumer, this.rpcHook);
+                this.mQClientFactory = MQClientManager.getInstance().getAndCreateMQClientInstance(this.defaultMQPullConsumer, this.rpcHook, this.eventLoopGroup, this.eventExecutorGroup);
 
                 this.rebalanceImpl.setConsumerGroup(this.defaultMQPullConsumer.getConsumerGroup());
                 this.rebalanceImpl.setMessageModel(this.defaultMQPullConsumer.getMessageModel());
@@ -733,5 +737,21 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner {
 
     public RebalanceImpl getRebalanceImpl() {
         return rebalanceImpl;
+    }
+
+    public EventLoopGroup getEventLoopGroup() {
+        return eventLoopGroup;
+    }
+
+    public void setEventLoopGroup(EventLoopGroup eventLoopGroup) {
+        this.eventLoopGroup = eventLoopGroup;
+    }
+
+    public EventExecutorGroup getEventExecutorGroup() {
+        return eventExecutorGroup;
+    }
+
+    public void setEventExecutorGroup(EventExecutorGroup eventExecutorGroup) {
+        this.eventExecutorGroup = eventExecutorGroup;
     }
 }

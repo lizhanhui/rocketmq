@@ -18,6 +18,9 @@ package org.apache.rocketmq.client.consumer;
 
 import java.util.HashSet;
 import java.util.Set;
+
+import io.netty.channel.EventLoopGroup;
+import io.netty.util.concurrent.EventExecutorGroup;
 import org.apache.rocketmq.client.ClientConfig;
 import org.apache.rocketmq.client.QueryResult;
 import org.apache.rocketmq.client.consumer.rebalance.AllocateMessageQueueAveragely;
@@ -26,6 +29,7 @@ import org.apache.rocketmq.client.exception.MQBrokerException;
 import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.client.impl.consumer.DefaultMQPullConsumerImpl;
 import org.apache.rocketmq.common.MixAll;
+import org.apache.rocketmq.common.ServiceState;
 import org.apache.rocketmq.common.message.MessageDecoder;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.message.MessageQueue;
@@ -354,5 +358,27 @@ public class DefaultMQPullConsumer extends ClientConfig implements MQPullConsume
 
     public void setMaxReconsumeTimes(final int maxReconsumeTimes) {
         this.maxReconsumeTimes = maxReconsumeTimes;
+    }
+
+    public EventLoopGroup getEventLoopGroup() {
+        return this.defaultMQPullConsumerImpl.getEventLoopGroup();
+    }
+
+    public void setEventLoopGroup(EventLoopGroup eventLoopGroup) throws MQClientException {
+        if (this.defaultMQPullConsumerImpl.getServiceState() != ServiceState.CREATE_JUST) {
+            throw new MQClientException("The consumer service state not OK", null);
+        }
+        this.defaultMQPullConsumerImpl.setEventLoopGroup(eventLoopGroup);
+    }
+
+    public EventExecutorGroup getEventExecutorGroup() {
+        return this.defaultMQPullConsumerImpl.getEventExecutorGroup();
+    }
+
+    public void setEventExecutorGroup(EventExecutorGroup eventExecutorGroup) throws MQClientException {
+        if (this.defaultMQPullConsumerImpl.getServiceState() != ServiceState.CREATE_JUST) {
+            throw new MQClientException("The consumer service state not OK", null);
+        }
+        this.defaultMQPullConsumerImpl.setEventExecutorGroup(eventExecutorGroup);
     }
 }
