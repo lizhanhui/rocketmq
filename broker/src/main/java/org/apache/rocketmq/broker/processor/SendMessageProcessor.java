@@ -236,6 +236,10 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
 
                     this.brokerController.getBrokerStatsManager().incSendBackNums(requestHeader.getGroup(), backTopic);
 
+                    if (isDLQ) {
+                        this.brokerController.getBrokerStatsManager().incDLQPutNums(requestHeader.getGroup(), newTopic);
+                    }
+
                     response.setCode(ResponseCode.SUCCESS);
                     response.setRemark(null);
 
