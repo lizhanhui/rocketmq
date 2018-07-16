@@ -67,12 +67,12 @@ import org.apache.rocketmq.common.TopicConfig;
 import org.apache.rocketmq.common.UtilAll;
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.common.constant.PermName;
-import org.apache.rocketmq.logging.InternalLogger;
-import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.common.namesrv.RegisterBrokerResult;
 import org.apache.rocketmq.common.protocol.RequestCode;
 import org.apache.rocketmq.common.protocol.body.TopicConfigSerializeWrapper;
 import org.apache.rocketmq.common.stats.MomentStatsItem;
+import org.apache.rocketmq.logging.InternalLogger;
+import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.remoting.RPCHook;
 import org.apache.rocketmq.remoting.RemotingServer;
 import org.apache.rocketmq.remoting.common.TlsMode;
@@ -119,6 +119,7 @@ public class BrokerController {
     private final BlockingQueue<Runnable> pullThreadPoolQueue;
     private final BlockingQueue<Runnable> queryThreadPoolQueue;
     private final BlockingQueue<Runnable> clientManagerThreadPoolQueue;
+    private final BlockingQueue<Runnable> heartbeatThreadPoolQueue;
     private final BlockingQueue<Runnable> consumerManagerThreadPoolQueue;
     private final FilterServerManager filterServerManager;
     private final BrokerStatsManager brokerStatsManager;
@@ -133,6 +134,7 @@ public class BrokerController {
     private ExecutorService queryMessageExecutor;
     private ExecutorService adminBrokerExecutor;
     private ExecutorService clientManageExecutor;
+    private ExecutorService heartbeatExecutor;
     private ExecutorService consumerManageExecutor;
     private boolean updateMasterHAServerAddrPeriodically = false;
     private BrokerStats brokerStats;
@@ -178,6 +180,7 @@ public class BrokerController {
         this.queryThreadPoolQueue = new LinkedBlockingQueue<Runnable>(this.brokerConfig.getQueryThreadPoolQueueCapacity());
         this.clientManagerThreadPoolQueue = new LinkedBlockingQueue<Runnable>(this.brokerConfig.getClientManagerThreadPoolQueueCapacity());
         this.consumerManagerThreadPoolQueue = new LinkedBlockingQueue<Runnable>(this.brokerConfig.getConsumerManagerThreadPoolQueueCapacity());
+        this.heartbeatThreadPoolQueue = new LinkedBlockingQueue<Runnable>(this.brokerConfig.getHeartbeatThreadPoolQueueCapacity());
 
         this.setStoreHost(new InetSocketAddress(this.getBrokerConfig().getBrokerIP1(), this.getNettyServerConfig().getListenPort()));
 
@@ -270,6 +273,15 @@ public class BrokerController {
                 TimeUnit.MILLISECONDS,
                 this.clientManagerThreadPoolQueue,
                 new ThreadFactoryImpl("ClientManageThread_"));
+
+            this.heartbeatExecutor = new BrokerFixedThreadPoolExecutor(
+                this.brokerConfig.getHeartbeatThreadPoolNums(),
+                this.brokerConfig.getHeartbeatThreadPoolNums(),
+                1000 * 60,
+                TimeUnit.MILLISECONDS,
+                this.heartbeatThreadPoolQueue,
+                new ThreadFactoryImpl("HeartbeatThread_",true));
+
 
             this.consumerManageExecutor =
                 Executors.newFixedThreadPool(this.brokerConfig.getConsumerManageThreadPoolNums(), new ThreadFactoryImpl(
@@ -475,11 +487,11 @@ public class BrokerController {
          * ClientManageProcessor
          */
         ClientManageProcessor clientProcessor = new ClientManageProcessor(this);
-        this.remotingServer.registerProcessor(RequestCode.HEART_BEAT, clientProcessor, this.clientManageExecutor);
+        this.remotingServer.registerProcessor(RequestCode.HEART_BEAT, clientProcessor, this.heartbeatExecutor);
         this.remotingServer.registerProcessor(RequestCode.UNREGISTER_CLIENT, clientProcessor, this.clientManageExecutor);
         this.remotingServer.registerProcessor(RequestCode.CHECK_CLIENT_CONFIG, clientProcessor, this.clientManageExecutor);
 
-        this.fastRemotingServer.registerProcessor(RequestCode.HEART_BEAT, clientProcessor, this.clientManageExecutor);
+        this.fastRemotingServer.registerProcessor(RequestCode.HEART_BEAT, clientProcessor, this.heartbeatExecutor);
         this.fastRemotingServer.registerProcessor(RequestCode.UNREGISTER_CLIENT, clientProcessor, this.clientManageExecutor);
         this.fastRemotingServer.registerProcessor(RequestCode.CHECK_CLIENT_CONFIG, clientProcessor, this.clientManageExecutor);
 
@@ -541,8 +553,9 @@ public class BrokerController {
             slowTimeMills = rt == null ? 0 : this.messageStore.now() - rt.getCreateTimestamp();
         }
 
-        if (slowTimeMills < 0)
+        if (slowTimeMills < 0) {
             slowTimeMills = 0;
+        }
 
         return slowTimeMills;
     }
@@ -933,5 +946,9 @@ public class BrokerController {
 
     public Configuration getConfiguration() {
         return this.configuration;
+    }
+
+    public BlockingQueue<Runnable> getHeartbeatThreadPoolQueue() {
+        return heartbeatThreadPoolQueue;
     }
 }
