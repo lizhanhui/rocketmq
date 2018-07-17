@@ -82,6 +82,12 @@ public class DefaultPullMessageResultHandler implements PullMessageResultHandler
                 this.brokerController.getBrokerStatsManager().incBrokerGetNums(getMessageResult.getMessageCount());
 
                 if (this.brokerController.getBrokerConfig().isTransferMsgByHeap()) {
+
+                    if(!checkChannelWritable(channel,requestHeader)){
+                        //忽略此次pull请求
+                        return null;
+                    }
+
                     final long beginTimeMills = this.brokerController.getMessageStore().now();
                     final byte[] r = this.readGetMessageResult(getMessageResult, requestHeader.getConsumerGroup(), requestHeader.getTopic(), requestHeader.getQueueId());
                     this.brokerController.getBrokerStatsManager().incGroupGetLatency(requestHeader.getConsumerGroup(),
@@ -91,6 +97,11 @@ public class DefaultPullMessageResultHandler implements PullMessageResultHandler
                     return response;
                 } else {
                     try {
+                        if(!checkChannelWritable(channel,requestHeader)){
+                            //忽略此次pull请求
+                            return null;
+                        }
+
                         FileRegion fileRegion =
                                 new ManyMessageTransfer(response.encodeHeader(getMessageResult.getBufferTotalSize()), getMessageResult);
                         channel.writeAndFlush(fileRegion).addListener(new ChannelFutureListener() {
@@ -161,6 +172,17 @@ public class DefaultPullMessageResultHandler implements PullMessageResultHandler
         }
 
         return response;
+    }
+
+    private boolean checkChannelWritable(Channel channel, PullMessageRequestHeader requestHeader) {
+        if (this.brokerController.getBrokerConfig().isNetWorkFlowController()) {
+            if (!channel.isWritable()) {
+                log.warn("channel {} not writable ,cid {}", channel.remoteAddress(), requestHeader.getConsumerGroup());
+                return false;
+            }
+
+        }
+        return true;
     }
 
     protected byte[] readGetMessageResult(final GetMessageResult getMessageResult, final String group, final String topic, final int queueId) {

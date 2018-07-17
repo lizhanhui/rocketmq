@@ -153,6 +153,8 @@ public class BrokerConfig {
      */
     private int registerNameServerPeriod = 1000 * 30;
 
+    private boolean netWorkFlowController = true;
+
     public boolean isTraceOn() {
         return traceOn;
     }
@@ -681,5 +683,13 @@ public class BrokerConfig {
 
     public void setRegisterNameServerPeriod(int registerNameServerPeriod) {
         this.registerNameServerPeriod = registerNameServerPeriod;
+    }
+
+    public boolean isNetWorkFlowController() {
+        return netWorkFlowController;
+    }
+
+    public void setNetWorkFlowController(boolean netWorkFlowController) {
+        this.netWorkFlowController = netWorkFlowController;
     }
 }
