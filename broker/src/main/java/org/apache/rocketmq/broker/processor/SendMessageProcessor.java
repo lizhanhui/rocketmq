@@ -163,9 +163,10 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
             return response;
         }
 
-        final String retryTopic = msgExt.getProperty(MessageConst.PROPERTY_RETRY_TOPIC);
-        if (null == retryTopic) {
-            MessageAccessor.putProperty(msgExt, MessageConst.PROPERTY_RETRY_TOPIC, msgExt.getTopic());
+        String originalTopic = msgExt.getProperty(MessageConst.PROPERTY_RETRY_TOPIC);
+        if (null == originalTopic) {
+            originalTopic = msgExt.getTopic();
+            MessageAccessor.putProperty(msgExt, MessageConst.PROPERTY_RETRY_TOPIC, originalTopic);
         }
         msgExt.setWaitStoreMsgOK(false);
 
@@ -215,16 +216,13 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         msgInner.setStoreHost(this.getStoreHost());
         msgInner.setReconsumeTimes(msgExt.getReconsumeTimes() + 1);
 
-        String originMsgId = MessageAccessor.getOriginMessageId(msgExt);
-        MessageAccessor.setOriginMessageId(msgInner, UtilAll.isBlank(originMsgId) ? msgExt.getMsgId() : originMsgId);
+        String originalMsgId = MessageAccessor.getOriginMessageId(msgExt);
+        if (UtilAll.isBlank(originalMsgId)) {
+            originalMsgId = msgExt.getMsgId();
+            MessageAccessor.setOriginMessageId(msgInner, originalMsgId);
+        }
 
         PutMessageResult putMessageResult = this.brokerController.getMessageStore().putMessage(msgInner);
-        if (isDLQ) {
-            log.info("send msg to DLQ {}, result={}, {}",
-                    newTopic,
-                    putMessageResult == null ? "null" : putMessageResult.getPutMessageStatus().toString(),
-                    msgInner.toString());
-        }
         if (putMessageResult != null) {
             switch (putMessageResult.getPutMessageStatus()) {
                 case PUT_OK:
@@ -237,7 +235,16 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
                     this.brokerController.getBrokerStatsManager().incSendBackNums(requestHeader.getGroup(), backTopic);
 
                     if (isDLQ) {
-                        this.brokerController.getBrokerStatsManager().incDLQPutNums(requestHeader.getGroup(), newTopic);
+                        this.brokerController.getBrokerStatsManager().incDLQPutNums(requestHeader.getGroup(), backTopic);
+
+                        log.info("send msg to DLQ {}, result={}, msgId={}, storeTimestamp={}, originalTopic={}, originalMsgId={}, consumerId={}",
+                                newTopic,
+                                putMessageResult.getPutMessageStatus().toString(),
+                                putMessageResult.getAppendMessageResult().getMsgId(),
+                                putMessageResult.getAppendMessageResult().getStoreTimestamp(),
+                                originalTopic,
+                                originalMsgId,
+                                requestHeader.getGroup());
                     }
 
                     response.setCode(ResponseCode.SUCCESS);
@@ -246,6 +253,15 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
                     return response;
                 default:
                     break;
+            }
+
+            if (isDLQ) {
+                log.info("failed to send msg to DLQ {}, result={}, originalTopic={}, originalMsgId={}, consumerId={}",
+                        newTopic,
+                        putMessageResult == null ? "null" : putMessageResult.getPutMessageStatus().toString(),
+                        originalTopic,
+                        originalMsgId,
+                        requestHeader.getGroup());
             }
 
             response.setCode(ResponseCode.SYSTEM_ERROR);
