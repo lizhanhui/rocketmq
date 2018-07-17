@@ -261,7 +261,14 @@
                         <exclude>CONTRIBUTING.md</exclude>
                         <exclude>bin/README.md</exclude>
                         <exclude>.github/*</exclude>
+                        <exclude>pom.xml</exclude>
+                        <exclude>style/**</exclude>
+                        <exclude>README.md</exclude>
+                        <exclude>dev/merge_rocketmq_pr.py</exclude>
                         <exclude>src/test/resources/certs/*</exclude>
+                        <exclude>BUILDING</exclude>
+                        <exclude>LICENSE</exclude>
+                        <exclude>NOTICE</exclude>
                     </excludes>
                 </configuration>
             </plugin>
