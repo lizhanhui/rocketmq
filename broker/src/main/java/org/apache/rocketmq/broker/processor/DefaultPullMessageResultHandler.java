@@ -83,8 +83,8 @@ public class DefaultPullMessageResultHandler implements PullMessageResultHandler
 
                 if (this.brokerController.getBrokerConfig().isTransferMsgByHeap()) {
 
-                    if(!checkChannelWritable(channel,requestHeader)){
-                        //忽略此次pull请求
+                    if (!channelIsWritable(channel, requestHeader)) {
+                        //ignore pull request
                         return null;
                     }
 
@@ -97,8 +97,8 @@ public class DefaultPullMessageResultHandler implements PullMessageResultHandler
                     return response;
                 } else {
                     try {
-                        if(!checkChannelWritable(channel,requestHeader)){
-                            //忽略此次pull请求
+                        if (!channelIsWritable(channel, requestHeader)) {
+                            //ignore pull request
                             return null;
                         }
 
@@ -174,7 +174,7 @@ public class DefaultPullMessageResultHandler implements PullMessageResultHandler
         return response;
     }
 
-    private boolean checkChannelWritable(Channel channel, PullMessageRequestHeader requestHeader) {
+    private boolean channelIsWritable(Channel channel, PullMessageRequestHeader requestHeader) {
         if (this.brokerController.getBrokerConfig().isNetWorkFlowController()) {
             if (!channel.isWritable()) {
                 log.warn("channel {} not writable ,cid {}", channel.remoteAddress(), requestHeader.getConsumerGroup());
