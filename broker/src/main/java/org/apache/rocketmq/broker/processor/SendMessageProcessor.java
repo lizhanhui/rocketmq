@@ -28,6 +28,7 @@ import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.common.TopicConfig;
 import org.apache.rocketmq.common.TopicFilterType;
 import org.apache.rocketmq.common.UtilAll;
+import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.common.constant.PermName;
 import org.apache.rocketmq.common.help.FAQUrl;
 import org.apache.rocketmq.common.message.MessageAccessor;
@@ -43,6 +44,8 @@ import org.apache.rocketmq.common.protocol.header.SendMessageResponseHeader;
 import org.apache.rocketmq.common.subscription.SubscriptionGroupConfig;
 import org.apache.rocketmq.common.sysflag.MessageSysFlag;
 import org.apache.rocketmq.common.sysflag.TopicSysFlag;
+import org.apache.rocketmq.logging.InternalLogger;
+import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 import org.apache.rocketmq.remoting.netty.NettyRequestProcessor;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
@@ -52,6 +55,7 @@ import org.apache.rocketmq.store.config.StorePathConfigHelper;
 import org.apache.rocketmq.store.stats.BrokerStatsManager;
 
 public class SendMessageProcessor extends AbstractSendMessageProcessor implements NettyRequestProcessor {
+    private static final InternalLogger dlqlog = InternalLoggerFactory.getLogger(LoggerName.DLQ_LOGGER_NAME);
 
     private List<ConsumeMessageHook> consumeMessageHookList;
 
@@ -235,16 +239,24 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
                     this.brokerController.getBrokerStatsManager().incSendBackNums(requestHeader.getGroup(), backTopic);
 
                     if (isDLQ) {
-                        this.brokerController.getBrokerStatsManager().incDLQPutNums(requestHeader.getGroup(), backTopic);
+                        String owner = request.getExtFields().get(BrokerStatsManager.COMMERCIAL_OWNER);
+                        String uniqKey = msgInner.getProperties().get(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX);
 
-                        log.info("send msg to DLQ {}, result={}, msgId={}, storeTimestamp={}, originalTopic={}, originalMsgId={}, consumerId={}",
-                                newTopic,
-                                putMessageResult.getPutMessageStatus().toString(),
-                                putMessageResult.getAppendMessageResult().getMsgId(),
-                                putMessageResult.getAppendMessageResult().getStoreTimestamp(),
-                                originalTopic,
-                                originalMsgId,
-                                requestHeader.getGroup());
+                        this.brokerController.getBrokerStatsManager().incDLQStatValue(
+                            BrokerStatsManager.SNDBCK2DLQ_TIMES,
+                            owner,
+                            requestHeader.getGroup(),
+                            requestHeader.getOriginTopic(),
+                            BrokerStatsManager.StatsType.SEND_BACK_TO_DLQ.name(),
+                            1);
+
+                        dlqlog.info("send msg to DLQ {}, owner={}, originalTopic={}, consumerId={}, msgUniqKey={}, storeTimestamp={}",
+                            newTopic,
+                            owner,
+                            originalTopic,
+                            requestHeader.getGroup(),
+                            uniqKey,
+                            putMessageResult.getAppendMessageResult().getStoreTimestamp());
                     }
 
                     response.setCode(ResponseCode.SUCCESS);
@@ -255,18 +267,21 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
                     break;
             }
 
-            if (isDLQ) {
-                log.info("failed to send msg to DLQ {}, result={}, originalTopic={}, originalMsgId={}, consumerId={}",
-                        newTopic,
-                        putMessageResult == null ? "null" : putMessageResult.getPutMessageStatus().toString(),
-                        originalTopic,
-                        originalMsgId,
-                        requestHeader.getGroup());
-            }
-
             response.setCode(ResponseCode.SYSTEM_ERROR);
             response.setRemark(putMessageResult.getPutMessageStatus().name());
             return response;
+        }
+
+        if (isDLQ) {
+            String owner = request.getExtFields().get(BrokerStatsManager.COMMERCIAL_OWNER);
+            String uniqKey = msgInner.getProperties().get(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX);
+            dlqlog.info("failed to send msg to DLQ {}, owner={}, originalTopic={}, consumerId={}, msgUniqKey={}, result={}",
+                newTopic,
+                owner,
+                originalTopic,
+                requestHeader.getGroup(),
+                uniqKey,
+                putMessageResult == null ? "null" : putMessageResult.getPutMessageStatus().toString());
         }
 
         response.setCode(ResponseCode.SYSTEM_ERROR);
