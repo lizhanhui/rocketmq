@@ -606,6 +606,24 @@ public class DefaultMQAdminExtImpl implements MQAdminExt, MQAdminExtInner {
     }
 
     @Override
+    public SubscriptionData querySubscription(String group, String topic)
+        throws InterruptedException, MQBrokerException, RemotingException, MQClientException {
+        TopicRouteData topicRouteData = this.examineTopicRouteInfo(topic);
+
+        for (BrokerData bd : topicRouteData.getBrokerDatas()) {
+            String addr = bd.selectBrokerAddr();
+            if (addr != null) {
+                return this.mqClientInstance.getMQClientAPIImpl().querySubscriptionByConsumer(addr, group, topic,
+                    timeoutMillis);
+            }
+
+            break;
+        }
+
+        return null;
+    }
+
+    @Override
     public TopicList queryTopicsByConsumer(String group)
         throws InterruptedException, MQBrokerException, RemotingException, MQClientException {
         String retryTopic = MixAll.getRetryTopic(group);
