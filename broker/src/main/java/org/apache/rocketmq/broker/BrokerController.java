@@ -576,12 +576,13 @@ public class BrokerController {
         // SQS: Send Queue Size, STM: Send Slow Time, PQS: Pull Queue Size, PTM: Pull Slow Time
         // QQS: Query Queue Size, QTM: Query Slow Time
         // CQS: Client Queue Size, CTM: Client Slow Time, PMS: Producer Manager Size
-        LOG_WATER_MARK.info("[WATERMARK] SQS:{} STM:{} PQS:{} PTM:{} QQS:{} QTM:{} CQS:{} CTM:{} PMS:{}",
+        //HQS: heatbeat Queue Size ,HTM:HeatBEta Slow Time
+        LOG_WATER_MARK.info("[WATERMARK] SQS:{} STM:{} PQS:{} PTM:{} QQS:{} QTM:{} CQS:{} CTM:{} PMS:{} HQS:{} HTM:{}",
             this.sendThreadPoolQueue.size(), headSlowTimeMills4SendThreadPoolQueue(),
             this.pullThreadPoolQueue.size(), headSlowTimeMills4PullThreadPoolQueue(),
             this.queryThreadPoolQueue.size(), headSlowTimeMills4QueryThreadPoolQueue(),
             this.clientManagerThreadPoolQueue.size(), this.headSlowTimeMills(this.clientManagerThreadPoolQueue),
-            this.producerManager.groupSize());
+            this.producerManager.groupSize(), this.heartbeatThreadPoolQueue.size(), this.headSlowTimeMills(this.heartbeatThreadPoolQueue));
     }
 
     public MessageStore getMessageStore() {
