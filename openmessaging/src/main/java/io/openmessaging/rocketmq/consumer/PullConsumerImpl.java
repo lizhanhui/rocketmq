@@ -78,7 +78,7 @@ public class PullConsumerImpl implements PullConsumer {
         this.rocketmqPullConsumer.setInstanceName(consumerId);
         properties.put(OMSBuiltinKeys.CONSUMER_ID, consumerId);
 
-        this.rocketmqPullConsumer.setLanguage(LanguageCode.OMS);
+        this.rocketmqPullConsumer.setLanguage(LanguageCode.CPP);
 
         this.localMessageCache = new LocalMessageCache(this.rocketmqPullConsumer, clientConfig);
     }

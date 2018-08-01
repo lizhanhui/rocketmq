@@ -68,7 +68,7 @@ abstract class AbstractOMSProducer implements ServiceLifecycle, MessageFactory {
         this.rocketmqProducer.setSendMsgTimeout(clientConfig.getOperationTimeout());
         this.rocketmqProducer.setInstanceName(producerId);
         this.rocketmqProducer.setMaxMessageSize(1024 * 1024 * 4);
-        this.rocketmqProducer.setLanguage(LanguageCode.OMS);
+        this.rocketmqProducer.setLanguage(LanguageCode.CPP);
         properties.put(OMSBuiltinKeys.PRODUCER_ID, producerId);
     }
 
