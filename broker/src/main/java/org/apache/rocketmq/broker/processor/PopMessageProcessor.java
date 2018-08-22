@@ -519,11 +519,11 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 			}
 		}
 		if (remotingCommand.getExtFields().get(POLLING) == null) {
+			remotingCommand.addExtField(POLLING, POLLING);
 			offerResult = queue.offer(request);
 		} else {
 			offerResult = queue.offerFirst(request);
 		}
-		remotingCommand.addExtField(POLLING, POLLING);
 		if (offerResult) {
 			totalPollingNum.incrementAndGet();
 			POP_LOGGER.info("polling {}, result POLLING_SUC", remotingCommand);
