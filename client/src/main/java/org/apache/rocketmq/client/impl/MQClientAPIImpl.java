@@ -1543,7 +1543,7 @@ public class MQClientAPIImpl {
         MQBrokerException {
         QuerySubscriptionByConsumerRequestHeader requestHeader = new QuerySubscriptionByConsumerRequestHeader();
         requestHeader.setGroup(group);
-        requestHeader.setGroup(topic);
+        requestHeader.setTopic(topic);
 
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.QUERY_SUBSCRIPTION_BY_CONSUMER, requestHeader);
 
