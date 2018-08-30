@@ -31,6 +31,7 @@ public class LoggerName {
     public static final String ROCKETMQ_STATS_LOGGER_NAME = "RocketmqStats";
     public static final String DLQ_STATS_LOGGER_NAME = "RocketmqDLQStats";
     public static final String DLQ_LOGGER_NAME = "RocketmqDLQ";
+    public static final String CONSUMER_STATS_LOGGER_NAME = "RocketmqConsumerStats";
     public static final String COMMERCIAL_LOGGER_NAME = "RocketmqCommercial";
     public static final String FLOW_CONTROL_LOGGER_NAME = "RocketmqFlowControl";
     public static final String ROCKETMQ_AUTHORIZE_LOGGER_NAME = "RocketmqAuthorize";
