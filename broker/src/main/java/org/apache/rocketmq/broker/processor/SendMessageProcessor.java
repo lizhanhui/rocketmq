@@ -55,7 +55,7 @@ import org.apache.rocketmq.store.config.StorePathConfigHelper;
 import org.apache.rocketmq.store.stats.BrokerStatsManager;
 
 public class SendMessageProcessor extends AbstractSendMessageProcessor implements NettyRequestProcessor {
-    private static final InternalLogger dlqlog = InternalLoggerFactory.getLogger(LoggerName.DLQ_LOGGER_NAME);
+    private static final InternalLogger DLQ_LOG = InternalLoggerFactory.getLogger(LoggerName.DLQ_LOGGER_NAME);
 
     private List<ConsumeMessageHook> consumeMessageHookList;
 
@@ -250,7 +250,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
                             BrokerStatsManager.StatsType.SEND_BACK_TO_DLQ.name(),
                             1);
 
-                        dlqlog.info("send msg to DLQ {}, owner={}, originalTopic={}, consumerId={}, msgUniqKey={}, storeTimestamp={}",
+                        DLQ_LOG.info("send msg to DLQ {}, owner={}, originalTopic={}, consumerId={}, msgUniqKey={}, storeTimestamp={}",
                             newTopic,
                             owner,
                             originalTopic,
@@ -275,7 +275,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         if (isDLQ) {
             String owner = request.getExtFields().get(BrokerStatsManager.COMMERCIAL_OWNER);
             String uniqKey = msgInner.getProperties().get(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX);
-            dlqlog.info("failed to send msg to DLQ {}, owner={}, originalTopic={}, consumerId={}, msgUniqKey={}, result={}",
+            DLQ_LOG.info("failed to send msg to DLQ {}, owner={}, originalTopic={}, consumerId={}, msgUniqKey={}, result={}",
                 newTopic,
                 owner,
                 originalTopic,
