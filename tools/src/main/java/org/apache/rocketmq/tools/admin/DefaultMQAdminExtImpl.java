@@ -1051,9 +1051,44 @@ public class DefaultMQAdminExtImpl implements MQAdminExt, MQAdminExtInner {
     }
 
     @Override
+    public String getBrokerMasterIp(String topicName, String brokerName)
+            throws RemotingException, MQClientException, InterruptedException {
+        TopicRouteData topicRouteData = this.examineTopicRouteInfo(topicName);
+        for (BrokerData bd : topicRouteData.getBrokerDatas()) {
+            if(!brokerName.equals(bd.getBrokerName())) {
+                continue;
+            }
+            HashMap<Long, String> brokerAddrs = bd.getBrokerAddrs();
+            if(brokerAddrs == null || !brokerAddrs.containsKey(MixAll.MASTER_ID)) {
+                continue;
+            }
+            return brokerAddrs.get(MixAll.MASTER_ID);
+        }
+        return null;
+    }
+
+    @Override
     public ConsumeStats getConsumeStats(final String brokerAddr, final String consumerGroup,
                                         final String topicName, final long timeoutMillis)
             throws InterruptedException, RemotingTimeoutException, RemotingSendRequestException, RemotingConnectException, MQBrokerException {
         return this.mqClientInstance.getMQClientAPIImpl().getConsumeStats(brokerAddr, consumerGroup, topicName, timeoutMillis);
+    }
+
+    @Override
+    public long searchOffset(final String brokerAddr, final String topicName, final int queueId, final long timestamp,
+                             final long timeoutMillis) throws RemotingException, MQBrokerException, InterruptedException {
+        return this.mqClientInstance.getMQClientAPIImpl().searchOffset(brokerAddr, topicName, queueId, timestamp, timeoutMillis);
+    }
+
+    @Override
+    public void resetOffsetByQueueId(String brokerAddr, String consumeGroup, String topicName,
+                                     int queueId, long resetOffset)
+            throws RemotingException, InterruptedException, MQBrokerException {
+        UpdateConsumerOffsetRequestHeader requestHeader = new UpdateConsumerOffsetRequestHeader();
+        requestHeader.setConsumerGroup(consumeGroup);
+        requestHeader.setTopic(topicName);
+        requestHeader.setQueueId(queueId);
+        requestHeader.setCommitOffset(resetOffset);
+        this.mqClientInstance.getMQClientAPIImpl().updateConsumerOffset(brokerAddr, requestHeader, timeoutMillis);
     }
 }

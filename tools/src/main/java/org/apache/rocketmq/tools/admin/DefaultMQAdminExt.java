@@ -550,10 +550,25 @@ public class DefaultMQAdminExt extends ClientConfig implements MQAdminExt {
     }
 
     @Override
-    public RollbackStats resetOffsetConsumeOffset(final String brokerAddr, final String consumerGroup, final MessageQueue queue,
-                                           final OffsetWrapper offsetWrapper, final long timestamp, boolean force)
+    public void resetOffsetByQueueId(final String brokerAddr, final String consumerGroup,
+                                     final String topicName, final int queueId, long resetOffset)
             throws RemotingException, InterruptedException, MQBrokerException {
-        return this.defaultMQAdminExtImpl.resetOffsetConsumeOffset(brokerAddr, consumerGroup,
-                queue, offsetWrapper, timestamp, true);
+        this.defaultMQAdminExtImpl.resetOffsetByQueueId(brokerAddr, consumerGroup, topicName, queueId, resetOffset);
+    }
+
+    @Override
+    public String getBrokerMasterIp(String topicName, String brokerName)
+            throws RemotingException, MQClientException, InterruptedException {
+        if(topicName == null || brokerName == null) {
+            return null;
+        }
+        return this.defaultMQAdminExtImpl.getBrokerMasterIp(topicName, brokerName);
+    }
+
+    @Override
+    public long searchOffset(final String brokerAddr, final String topicName,
+                             final int queueId, final long timestamp, final long timeoutMillis)
+            throws RemotingException, MQBrokerException, InterruptedException {
+        return this.defaultMQAdminExtImpl.searchOffset(brokerAddr, topicName, queueId, timestamp, timeoutMillis);
     }
 }

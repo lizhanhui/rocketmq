@@ -17,10 +17,8 @@
 package org.apache.rocketmq.tools.admin;
 
 import java.io.UnsupportedEncodingException;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
+import java.util.*;
+
 import org.apache.rocketmq.client.MQAdmin;
 import org.apache.rocketmq.client.exception.MQBrokerException;
 import org.apache.rocketmq.client.exception.MQClientException;
@@ -45,6 +43,7 @@ import org.apache.rocketmq.common.protocol.body.QueueTimeSpan;
 import org.apache.rocketmq.common.protocol.body.SubscriptionGroupWrapper;
 import org.apache.rocketmq.common.protocol.body.TopicConfigSerializeWrapper;
 import org.apache.rocketmq.common.protocol.body.TopicList;
+import org.apache.rocketmq.common.protocol.route.BrokerData;
 import org.apache.rocketmq.common.protocol.route.QueueData;
 import org.apache.rocketmq.common.protocol.route.TopicRouteData;
 import org.apache.rocketmq.common.protocol.route.TopicRouteDatas;
@@ -276,11 +275,18 @@ public interface MQAdminExt extends MQAdmin {
         final long index, final int count, final String consumerGroup)
         throws InterruptedException, RemotingTimeoutException, RemotingSendRequestException, RemotingConnectException, MQClientException;
 
+    String getBrokerMasterIp(String topicName, String brokerName)
+            throws RemotingException, MQClientException, InterruptedException;
+
     ConsumeStats getConsumeStats(final String brokerAddr, final String consumerGroup,
                                  final String topicName, final long timeoutMillis)
             throws InterruptedException, RemotingTimeoutException, RemotingSendRequestException, RemotingConnectException, MQBrokerException;
 
-    RollbackStats resetOffsetConsumeOffset(final String brokerAddr, final String consumerGroup, final MessageQueue queue,
-                                           final OffsetWrapper offsetWrapper, final long timestamp, final boolean force)
+    long searchOffset(final String brokerAddr, final String topicName,
+                      final int queueId, final long timestamp, final long timeoutMillis)
+            throws RemotingException, MQBrokerException, InterruptedException;
+
+    void resetOffsetByQueueId(final String brokerAddr, final String consumerGroup,
+                              final String topicName, final int queueId, long resetOffset)
             throws RemotingException, InterruptedException, MQBrokerException;
 }
