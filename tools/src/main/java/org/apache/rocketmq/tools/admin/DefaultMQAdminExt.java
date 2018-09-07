@@ -543,20 +543,6 @@ public class DefaultMQAdminExt extends ClientConfig implements MQAdminExt {
     }
 
     @Override
-    public ConsumeStats getConsumeStats(final String brokerAddr, final String consumerGroup,
-                                        final String topicName, final long timeoutMillis)
-            throws InterruptedException, RemotingTimeoutException, RemotingSendRequestException, RemotingConnectException, MQBrokerException {
-        return this.defaultMQAdminExtImpl.getConsumeStats(brokerAddr, consumerGroup, topicName, timeoutMillis);
-    }
-
-    @Override
-    public void resetOffsetByQueueId(final String brokerAddr, final String consumerGroup,
-                                     final String topicName, final int queueId, long resetOffset)
-            throws RemotingException, InterruptedException, MQBrokerException {
-        this.defaultMQAdminExtImpl.resetOffsetByQueueId(brokerAddr, consumerGroup, topicName, queueId, resetOffset);
-    }
-
-    @Override
     public String getBrokerMasterIp(String topicName, String brokerName)
             throws RemotingException, MQClientException, InterruptedException {
         if(topicName == null || brokerName == null) {
@@ -566,9 +552,23 @@ public class DefaultMQAdminExt extends ClientConfig implements MQAdminExt {
     }
 
     @Override
+    public ConsumeStats getConsumeStats(final String brokerAddr, final String consumerGroup,
+                                        final String topicName, final long timeoutMillis)
+            throws InterruptedException, RemotingTimeoutException, RemotingSendRequestException, RemotingConnectException, MQBrokerException {
+        return this.defaultMQAdminExtImpl.getConsumeStats(brokerAddr, consumerGroup, topicName, timeoutMillis);
+    }
+
+    @Override
     public long searchOffset(final String brokerAddr, final String topicName,
                              final int queueId, final long timestamp, final long timeoutMillis)
             throws RemotingException, MQBrokerException, InterruptedException {
         return this.defaultMQAdminExtImpl.searchOffset(brokerAddr, topicName, queueId, timestamp, timeoutMillis);
+    }
+
+    @Override
+    public void resetOffsetByQueueId(final String brokerAddr, final String consumerGroup,
+                                     final String topicName, final int queueId, long resetOffset)
+            throws RemotingException, InterruptedException, MQBrokerException {
+        this.defaultMQAdminExtImpl.resetOffsetByQueueId(brokerAddr, consumerGroup, topicName, queueId, resetOffset);
     }
 }
