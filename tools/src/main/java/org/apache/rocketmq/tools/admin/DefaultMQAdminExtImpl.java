@@ -1051,7 +1051,7 @@ public class DefaultMQAdminExtImpl implements MQAdminExt, MQAdminExtInner {
     }
 
     @Override
-    public String getBrokerMasterIp(String topicName, String brokerName)
+    public String getBrokerMasterIp(final String topicName, final String brokerName)
             throws RemotingException, MQClientException, InterruptedException {
         TopicRouteData topicRouteData = this.examineTopicRouteInfo(topicName);
         for (BrokerData bd : topicRouteData.getBrokerDatas()) {
@@ -1075,14 +1075,15 @@ public class DefaultMQAdminExtImpl implements MQAdminExt, MQAdminExtInner {
     }
 
     @Override
-    public long searchOffset(final String brokerAddr, final String topicName, final int queueId, final long timestamp,
-                             final long timeoutMillis) throws RemotingException, MQBrokerException, InterruptedException {
+    public long searchOffset(final String brokerAddr, final String topicName, final int queueId,
+                             final long timestamp, final long timeoutMillis)
+            throws RemotingException, MQBrokerException, InterruptedException {
         return this.mqClientInstance.getMQClientAPIImpl().searchOffset(brokerAddr, topicName, queueId, timestamp, timeoutMillis);
     }
 
     @Override
-    public void resetOffsetByQueueId(String brokerAddr, String consumeGroup, String topicName,
-                                     int queueId, long resetOffset)
+    public void resetOffsetByQueueId(final String brokerAddr, final String consumeGroup, final String topicName,
+                                     final int queueId, final long resetOffset)
             throws RemotingException, InterruptedException, MQBrokerException {
         UpdateConsumerOffsetRequestHeader requestHeader = new UpdateConsumerOffsetRequestHeader();
         requestHeader.setConsumerGroup(consumeGroup);

@@ -567,7 +567,7 @@ public class DefaultMQAdminExt extends ClientConfig implements MQAdminExt {
 
     @Override
     public void resetOffsetByQueueId(final String brokerAddr, final String consumerGroup,
-                                     final String topicName, final int queueId, long resetOffset)
+                                     final String topicName, final int queueId, final long resetOffset)
             throws RemotingException, InterruptedException, MQBrokerException {
         this.defaultMQAdminExtImpl.resetOffsetByQueueId(brokerAddr, consumerGroup, topicName, queueId, resetOffset);
     }

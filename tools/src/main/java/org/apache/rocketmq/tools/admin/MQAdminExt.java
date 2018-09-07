@@ -275,7 +275,7 @@ public interface MQAdminExt extends MQAdmin {
         final long index, final int count, final String consumerGroup)
         throws InterruptedException, RemotingTimeoutException, RemotingSendRequestException, RemotingConnectException, MQClientException;
 
-    String getBrokerMasterIp(String topicName, String brokerName)
+    String getBrokerMasterIp(final String topicName, final String brokerName)
             throws RemotingException, MQClientException, InterruptedException;
 
     ConsumeStats getConsumeStats(final String brokerAddr, final String consumerGroup,
@@ -287,6 +287,6 @@ public interface MQAdminExt extends MQAdmin {
             throws RemotingException, MQBrokerException, InterruptedException;
 
     void resetOffsetByQueueId(final String brokerAddr, final String consumerGroup,
-                              final String topicName, final int queueId, long resetOffset)
+                              final String topicName, final int queueId, final long resetOffset)
             throws RemotingException, InterruptedException, MQBrokerException;
 }
