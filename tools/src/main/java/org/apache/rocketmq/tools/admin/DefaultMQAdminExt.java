@@ -28,6 +28,7 @@ import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.common.TopicConfig;
 import org.apache.rocketmq.common.admin.ConsumeStats;
+import org.apache.rocketmq.common.admin.OffsetWrapper;
 import org.apache.rocketmq.common.admin.RollbackStats;
 import org.apache.rocketmq.common.admin.TopicStatsTable;
 import org.apache.rocketmq.common.message.MessageExt;
@@ -531,6 +532,7 @@ public class DefaultMQAdminExt extends ClientConfig implements MQAdminExt {
         return this.defaultMQAdminExtImpl.getNameServerConfig(nameServers);
     }
 
+
     @Override
     public QueryConsumeQueueResponseBody queryConsumeQueue(String brokerAddr, String topic, int queueId, long index,
         int count, String consumerGroup)
@@ -538,5 +540,20 @@ public class DefaultMQAdminExt extends ClientConfig implements MQAdminExt {
         return this.defaultMQAdminExtImpl.queryConsumeQueue(
             brokerAddr, topic, queueId, index, count, consumerGroup
         );
+    }
+
+    @Override
+    public ConsumeStats getConsumeStats(final String brokerAddr, final String consumerGroup,
+                                        final String topicName, final long timeoutMillis)
+            throws InterruptedException, RemotingTimeoutException, RemotingSendRequestException, RemotingConnectException, MQBrokerException {
+        return this.defaultMQAdminExtImpl.getConsumeStats(brokerAddr, consumerGroup, topicName, timeoutMillis);
+    }
+
+    @Override
+    public RollbackStats resetOffsetConsumeOffset(final String brokerAddr, final String consumerGroup, final MessageQueue queue,
+                                           final OffsetWrapper offsetWrapper, final long timestamp, boolean force)
+            throws RemotingException, InterruptedException, MQBrokerException {
+        return this.defaultMQAdminExtImpl.resetOffsetConsumeOffset(brokerAddr, consumerGroup,
+                queue, offsetWrapper, timestamp, true);
     }
 }

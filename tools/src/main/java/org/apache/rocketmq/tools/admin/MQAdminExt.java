@@ -26,6 +26,7 @@ import org.apache.rocketmq.client.exception.MQBrokerException;
 import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.common.TopicConfig;
 import org.apache.rocketmq.common.admin.ConsumeStats;
+import org.apache.rocketmq.common.admin.OffsetWrapper;
 import org.apache.rocketmq.common.admin.RollbackStats;
 import org.apache.rocketmq.common.admin.TopicStatsTable;
 import org.apache.rocketmq.common.message.MessageExt;
@@ -274,4 +275,12 @@ public interface MQAdminExt extends MQAdmin {
         final String topic, final int queueId,
         final long index, final int count, final String consumerGroup)
         throws InterruptedException, RemotingTimeoutException, RemotingSendRequestException, RemotingConnectException, MQClientException;
+
+    ConsumeStats getConsumeStats(final String brokerAddr, final String consumerGroup,
+                                 final String topicName, final long timeoutMillis)
+            throws InterruptedException, RemotingTimeoutException, RemotingSendRequestException, RemotingConnectException, MQBrokerException;
+
+    RollbackStats resetOffsetConsumeOffset(final String brokerAddr, final String consumerGroup, final MessageQueue queue,
+                                           final OffsetWrapper offsetWrapper, final long timestamp, final boolean force)
+            throws RemotingException, InterruptedException, MQBrokerException;
 }
