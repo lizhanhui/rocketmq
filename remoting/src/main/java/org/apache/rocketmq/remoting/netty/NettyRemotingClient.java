@@ -38,6 +38,7 @@ import java.io.IOException;
 import java.net.SocketAddress;
 import java.security.cert.CertificateException;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -605,6 +606,25 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
     @Override
     public void setCallbackExecutor(final ExecutorService callbackExecutor) {
         this.callbackExecutor = callbackExecutor;
+    }
+
+    @Override
+    public void refreshChannels() {
+
+        Iterator<String> iterator = channelTables.keySet().iterator();
+        while (iterator.hasNext()) {
+            String address = iterator.next();
+            iterator.remove();
+            try {
+                createChannel(address);
+            } catch (InterruptedException e) {
+                log.warn("Establishing connection to {} during refresh is interrupted", address);
+            }
+        }
+
+        for (ConcurrentMap.Entry<Integer, ResponseFuture> entry : responseTable.entrySet()) {
+            entry.getValue().putResponse(null);
+        }
     }
 
     static class ChannelWrapper {

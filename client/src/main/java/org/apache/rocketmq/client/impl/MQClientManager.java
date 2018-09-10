@@ -16,6 +16,7 @@
  */
 package org.apache.rocketmq.client.impl;
 
+import com.taobao.serverless.common.annotations.PostRestore;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -65,5 +66,18 @@ public class MQClientManager {
 
     public void removeClientFactory(final String clientId) {
         this.factoryTable.remove(clientId);
+    }
+
+
+    private void refreshClientConnections() {
+        for (ConcurrentMap.Entry<String, MQClientInstance> entry : factoryTable.entrySet()) {
+            entry.getValue().getMQClientAPIImpl().getRemotingClient().refreshChannels();
+            entry.getValue().sendHeartbeatToAllBrokerWithLock();
+        }
+    }
+
+    @PostRestore
+    public static void doRefresh() {
+        getInstance().refreshClientConnections();
     }
 }
