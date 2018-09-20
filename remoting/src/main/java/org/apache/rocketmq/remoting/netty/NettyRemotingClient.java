@@ -45,6 +45,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -96,7 +97,7 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
     private ExecutorService callbackExecutor;
     private final ChannelEventListener channelEventListener;
     private EventExecutorGroup defaultEventExecutorGroup;
-    private RPCHook rpcHook;
+    private List<RPCHook> rpcHookList = new CopyOnWriteArrayList();
 
     public NettyRemotingClient(final NettyClientConfig nettyClientConfig) {
         this(nettyClientConfig, null);
@@ -307,7 +308,9 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
 
     @Override
     public void registerRPCHook(RPCHook rpcHook) {
-        this.rpcHook = rpcHook;
+        if (!rpcHookList.contains(rpcHook)) {
+            rpcHookList.add(rpcHook);
+        }
     }
 
     public void closeChannel(final Channel channel) {
@@ -387,12 +390,13 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
         final Channel channel = this.getAndCreateChannel(addr);
         if (channel != null && channel.isActive()) {
             try {
-                if (this.rpcHook != null) {
-                    this.rpcHook.doBeforeRequest(addr, request);
+                for (RPCHook rpcHook: rpcHookList) {
+                    rpcHook.doBeforeRequest(addr, request);
                 }
                 RemotingCommand response = this.invokeSyncImpl(channel, request, timeoutMillis);
-                if (this.rpcHook != null) {
-                    this.rpcHook.doAfterResponse(RemotingHelper.parseChannelRemoteAddr(channel), request, response);
+
+                for (RPCHook rpcHook: rpcHookList) {
+                    rpcHook.doAfterResponse(RemotingHelper.parseChannelRemoteAddr(channel), request, response);
                 }
                 this.updateChannelLastResponseTime(addr);
                 return response;
@@ -554,8 +558,8 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
         final Channel channel = this.getAndCreateChannel(addr);
         if (channel != null && channel.isActive()) {
             try {
-                if (this.rpcHook != null) {
-                    this.rpcHook.doBeforeRequest(addr, request);
+                for (RPCHook rpcHook: rpcHookList) {
+                    rpcHook.doBeforeRequest(addr, request);
                 }
                 this.invokeAsyncImpl(channel, request, timeoutMillis, new InvokeCallbackWrapper(invokeCallback, addr));
             } catch (RemotingSendRequestException e) {
@@ -575,8 +579,8 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
         final Channel channel = this.getAndCreateChannel(addr);
         if (channel != null && channel.isActive()) {
             try {
-                if (this.rpcHook != null) {
-                    this.rpcHook.doBeforeRequest(addr, request);
+                for (RPCHook rpcHook: rpcHookList) {
+                    rpcHook.doBeforeRequest(addr, request);
                 }
                 this.invokeOnewayImpl(channel, request, timeoutMillis);
             } catch (RemotingSendRequestException e) {
@@ -621,8 +625,8 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
     }
 
     @Override
-    public RPCHook getRPCHook() {
-        return this.rpcHook;
+    public List<RPCHook> getRPCHook() {
+        return rpcHookList;
     }
 
     @Override
