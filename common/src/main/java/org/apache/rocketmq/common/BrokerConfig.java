@@ -59,6 +59,7 @@ public class BrokerConfig {
      */
     private int sendMessageThreadPoolNums = 1; //16 + Runtime.getRuntime().availableProcessors() * 4;
     private int pullMessageThreadPoolNums = 16 + Runtime.getRuntime().availableProcessors() * 2;
+    private int ackMessageThreadPoolNums = 1;
     private int queryMessageThreadPoolNums = 8 + Runtime.getRuntime().availableProcessors();
 
     private int adminBrokerThreadPoolNums = 16;
@@ -75,6 +76,7 @@ public class BrokerConfig {
     private boolean fetchNamesrvAddrByAddressServer = false;
     private int sendThreadPoolQueueCapacity = 10000;
     private int pullThreadPoolQueueCapacity = 100000;
+    private int ackThreadPoolQueueCapacity = 10000;
     private int queryThreadPoolQueueCapacity = 20000;
     private int clientManagerThreadPoolQueueCapacity = 1000000;
     private int consumerManagerThreadPoolQueueCapacity = 1000000;
@@ -142,30 +144,48 @@ public class BrokerConfig {
     private long  reviveInterval = 1000;
     private long  reviveMaxSlow = 10;
     private long  reviveScanTime = 10000;
+    private boolean enablePopLog = false;
+
     public long getMaxPopPollingSize() {
-		return maxPopPollingSize;
-	}
+        return maxPopPollingSize;
+    }
+
     public void setMaxPopPollingSize(long maxPopPollingSize) {
-		this.maxPopPollingSize = maxPopPollingSize;
-	}
+        this.maxPopPollingSize = maxPopPollingSize;
+    }
+
     public int getPopPollingMapSize() {
-		return popPollingMapSize;
-	}
+        return popPollingMapSize;
+    }
+
     public void setPopPollingMapSize(int popPollingMapSize) {
-		this.popPollingMapSize = popPollingMapSize;
-	}
+        this.popPollingMapSize = popPollingMapSize;
+    }
+
     public long getReviveScanTime() {
-		return reviveScanTime;
-	}
+        return reviveScanTime;
+    }
+
     public void setReviveScanTime(long reviveScanTime) {
-		this.reviveScanTime = reviveScanTime;
-	}
+        this.reviveScanTime = reviveScanTime;
+    }
+
     public long getReviveMaxSlow() {
-		return reviveMaxSlow;
-	}
+        return reviveMaxSlow;
+    }
+
     public void setReviveMaxSlow(long reviveMaxSlow) {
-		this.reviveMaxSlow = reviveMaxSlow;
-	}
+        this.reviveMaxSlow = reviveMaxSlow;
+    }
+
+    public boolean isEnablePopLog() {
+        return enablePopLog;
+    }
+
+    public void setEnablePopLog(boolean enablePopLog) {
+        this.enablePopLog = enablePopLog;
+    }
+
     public boolean isTraceOn() {
         return traceOn;
     }
@@ -344,6 +364,14 @@ public class BrokerConfig {
         this.pullMessageThreadPoolNums = pullMessageThreadPoolNums;
     }
 
+    public int getAckMessageThreadPoolNums() {
+        return ackMessageThreadPoolNums;
+    }
+
+    public void setAckMessageThreadPoolNums(int ackMessageThreadPoolNums) {
+        this.ackMessageThreadPoolNums = ackMessageThreadPoolNums;
+    }
+
     public int getQueryMessageThreadPoolNums() {
         return queryMessageThreadPoolNums;
     }
@@ -438,6 +466,14 @@ public class BrokerConfig {
 
     public void setPullThreadPoolQueueCapacity(int pullThreadPoolQueueCapacity) {
         this.pullThreadPoolQueueCapacity = pullThreadPoolQueueCapacity;
+    }
+
+    public int getAckThreadPoolQueueCapacity() {
+        return ackThreadPoolQueueCapacity;
+    }
+
+    public void setAckThreadPoolQueueCapacity(int ackThreadPoolQueueCapacity) {
+        this.ackThreadPoolQueueCapacity = ackThreadPoolQueueCapacity;
     }
 
     public int getQueryThreadPoolQueueCapacity() {

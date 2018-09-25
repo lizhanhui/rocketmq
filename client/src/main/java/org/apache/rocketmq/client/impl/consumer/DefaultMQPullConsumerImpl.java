@@ -892,7 +892,7 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner, MQPopConsumer
 			requestHeader.setOffset(offset);
 			requestHeader.setConsumerGroup(consumerGroup);
 			requestHeader.setExtraInfo(extraInfo);
-			String brokerAddr = findBrokerResult.getBrokerAddr();
+			String brokerAddr = MixAll.brokerVIPChannel(this.defaultMQPullConsumer.isVipChannelEnabled(), findBrokerResult.getBrokerAddr());
 			this.mQClientFactory.getMQClientAPIImpl().ackMessage(brokerAddr, requestHeader);
 			return ;
 		}
@@ -914,7 +914,7 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner, MQPopConsumer
 			requestHeader.setOffset(offset);
 			requestHeader.setConsumerGroup(consumerGroup);
 			requestHeader.setExtraInfo(extraInfo);
-			String brokerAddr = findBrokerResult.getBrokerAddr();
+            String brokerAddr = MixAll.brokerVIPChannel(this.defaultMQPullConsumer.isVipChannelEnabled(), findBrokerResult.getBrokerAddr());
 			this.mQClientFactory.getMQClientAPIImpl().ackMessageAsync(brokerAddr, timeOut, callback, requestHeader);
 			return ;
 		}
@@ -939,7 +939,7 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner, MQPopConsumer
 			requestHeader.setConsumerGroup(consumerGroup);
 			requestHeader.setExtraInfo(extraInfo);
 			requestHeader.setInvisibleTime(invisibleTime);
-			String brokerAddr = findBrokerResult.getBrokerAddr();
+            String brokerAddr = MixAll.brokerVIPChannel(this.defaultMQPullConsumer.isVipChannelEnabled(), findBrokerResult.getBrokerAddr());
 			this.mQClientFactory.getMQClientAPIImpl().changeInvisibleTimeAsync(mq.getBrokerName(), brokerAddr, requestHeader, timeoutMillis, callback);
 			return ;
 		}
