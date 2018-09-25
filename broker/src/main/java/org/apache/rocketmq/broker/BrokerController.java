@@ -159,12 +159,12 @@ public class BrokerController {
         this.consumerOffsetManager = new ConsumerOffsetManager(this);
         this.topicConfigManager = new TopicConfigManager(this);
         this.pullMessageProcessor = new PullMessageProcessor(this);
-        this.peekMessageProcessor=new PeekMessageProcessor(this);
-        this.popMessageProcessor=new PopMessageProcessor(this);
-        this.notificationProcessor=new NotificationProcessor(this);
-        this.pollingInfoProcessor=new PollingInfoProcessor(this);
-        this.ackMessageProcessor=new AckMessageProcessor(this);
-        this.changeInvisibleTimeProcessor=new ChangeInvisibleTimeProcessor(this);
+        this.peekMessageProcessor = new PeekMessageProcessor(this);
+        this.popMessageProcessor = new PopMessageProcessor(this);
+        this.notificationProcessor = new NotificationProcessor(this);
+        this.pollingInfoProcessor = new PollingInfoProcessor(this);
+        this.ackMessageProcessor = new AckMessageProcessor(this);
+        this.changeInvisibleTimeProcessor = new ChangeInvisibleTimeProcessor(this);
         this.statisticsMessagesProcessor = new StatisticsMessagesProcessor(this);
 
         this.pullRequestHoldService = new PullRequestHoldService(this);
@@ -218,7 +218,7 @@ public class BrokerController {
     public BlockingQueue<Runnable> getQueryThreadPoolQueue() {
         return queryThreadPoolQueue;
     }
-    
+
     public boolean initialize() throws CloneNotSupportedException {
         boolean result = this.topicConfigManager.load();
 
@@ -491,7 +491,7 @@ public class BrokerController {
         this.fastRemotingServer.registerProcessor(RequestCode.ACK_MESSAGE, this.ackMessageProcessor, this.ackMessageExecutor);
         /**
          * ChangeInvisibleTimeProcessor
-         */   
+         */
         this.remotingServer.registerProcessor(RequestCode.CHANGE_MESSAGE_INVISIBLETIME, this.changeInvisibleTimeProcessor, this.ackMessageExecutor);
         this.fastRemotingServer.registerProcessor(RequestCode.CHANGE_MESSAGE_INVISIBLETIME, this.changeInvisibleTimeProcessor, this.ackMessageExecutor);
         /**
@@ -609,14 +609,16 @@ public class BrokerController {
 
     public void printWaterMark() {
         // SQS: Send Queue Size, STM: Send Slow Time, PQS: Pull Queue Size, PTM: Pull Slow Time
+        // AQS: Ack Queue Size, AQM: Ack Slow Time
         // QQS: Query Queue Size, QTM: Query Slow Time
         // CQS: Client Queue Size, CTM: Client Slow Time, PMS: Producer Manager Size
-        LOG_WATER_MARK.info("[WATERMARK] SQS:{} STM:{} PQS:{} PTM:{} QQS:{} QTM:{} CQS:{} CTM:{} PMS:{}",
+        LOG_WATER_MARK.info("[WATERMARK] SQS:{} STM:{} PQS:{} PTM:{} QQS:{} QTM:{} CQS:{} CTM:{} PMS:{} AQS:{} AQM:{} ",
             this.sendThreadPoolQueue.size(), headSlowTimeMills4SendThreadPoolQueue(),
             this.pullThreadPoolQueue.size(), headSlowTimeMills4PullThreadPoolQueue(),
             this.queryThreadPoolQueue.size(), headSlowTimeMills4QueryThreadPoolQueue(),
             this.clientManagerThreadPoolQueue.size(), this.headSlowTimeMills(this.clientManagerThreadPoolQueue),
-            this.producerManager.groupSize());
+            this.producerManager.groupSize(),
+            this.ackThreadPoolQueue.size(), headSlowTimeMills(this.ackThreadPoolQueue));
     }
 
     public MessageStore getMessageStore() {
@@ -881,6 +883,10 @@ public class BrokerController {
 
     public BlockingQueue<Runnable> getSendThreadPoolQueue() {
         return sendThreadPoolQueue;
+    }
+
+    public BlockingQueue<Runnable> getAckThreadPoolQueue() {
+        return ackThreadPoolQueue;
     }
 
     public FilterServerManager getFilterServerManager() {

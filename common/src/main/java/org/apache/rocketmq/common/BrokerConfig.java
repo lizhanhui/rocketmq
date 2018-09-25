@@ -109,6 +109,7 @@ public class BrokerConfig {
     private long consumerFallbehindThreshold = 1024L * 1024 * 1024 * 16;
 
     private long waitTimeMillsInSendQueue = 200;
+    private long waitTimeMillsInAckQueue = 200;
 
     private long startAcceptSendRequestTimeStamp = 0L;
 
@@ -208,6 +209,14 @@ public class BrokerConfig {
 
     public void setWaitTimeMillsInSendQueue(final long waitTimeMillsInSendQueue) {
         this.waitTimeMillsInSendQueue = waitTimeMillsInSendQueue;
+    }
+
+    public long getWaitTimeMillsInAckQueue() {
+        return waitTimeMillsInAckQueue;
+    }
+
+    public void setWaitTimeMillsInAckQueue(long waitTimeMillsInAckQueue) {
+        this.waitTimeMillsInAckQueue = waitTimeMillsInAckQueue;
     }
 
     public long getConsumerFallbehindThreshold() {
