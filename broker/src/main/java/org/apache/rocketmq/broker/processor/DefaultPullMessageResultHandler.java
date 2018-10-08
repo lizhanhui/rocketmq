@@ -17,6 +17,9 @@
 
 package org.apache.rocketmq.broker.processor;
 
+import java.nio.ByteBuffer;
+import java.util.List;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -30,6 +33,7 @@ import org.apache.rocketmq.common.TopicFilterType;
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.common.message.MessageDecoder;
 import org.apache.rocketmq.common.message.MessageQueue;
+import org.apache.rocketmq.common.protocol.NamespaceUtil;
 import org.apache.rocketmq.common.protocol.ResponseCode;
 import org.apache.rocketmq.common.protocol.header.PullMessageRequestHeader;
 import org.apache.rocketmq.common.protocol.header.PullMessageResponseHeader;
@@ -45,9 +49,6 @@ import org.apache.rocketmq.store.MessageFilter;
 import org.apache.rocketmq.store.config.BrokerRole;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.nio.ByteBuffer;
-import java.util.List;
 
 public class DefaultPullMessageResultHandler implements PullMessageResultHandler {
 
@@ -71,13 +72,12 @@ public class DefaultPullMessageResultHandler implements PullMessageResultHandler
 
         final PullMessageResponseHeader responseHeader = (PullMessageResponseHeader) response.readCustomHeader();
 
+        String consumerGroup = NamespaceUtil.withNamespace(request, requestHeader.getConsumerGroup());
+        String topic = NamespaceUtil.withNamespace(request, requestHeader.getTopic());
         switch (response.getCode()) {
             case ResponseCode.SUCCESS:
-                this.brokerController.getBrokerStatsManager().incGroupGetNums(requestHeader.getConsumerGroup(), requestHeader.getTopic(),
-                        getMessageResult.getMessageCount());
-
-                this.brokerController.getBrokerStatsManager().incGroupGetSize(requestHeader.getConsumerGroup(), requestHeader.getTopic(),
-                        getMessageResult.getBufferTotalSize());
+                this.brokerController.getBrokerStatsManager().incGroupGetNums(consumerGroup, topic, getMessageResult.getMessageCount());
+                this.brokerController.getBrokerStatsManager().incGroupGetSize(consumerGroup, topic, getMessageResult.getBufferTotalSize());
 
                 this.brokerController.getBrokerStatsManager().incBrokerGetNums(getMessageResult.getMessageCount());
 
@@ -89,9 +89,8 @@ public class DefaultPullMessageResultHandler implements PullMessageResultHandler
                     }
 
                     final long beginTimeMills = this.brokerController.getMessageStore().now();
-                    final byte[] r = this.readGetMessageResult(getMessageResult, requestHeader.getConsumerGroup(), requestHeader.getTopic(), requestHeader.getQueueId());
-                    this.brokerController.getBrokerStatsManager().incGroupGetLatency(requestHeader.getConsumerGroup(),
-                            requestHeader.getTopic(), requestHeader.getQueueId(),
+                    final byte[] r = this.readGetMessageResult(getMessageResult, consumerGroup, topic, requestHeader.getQueueId());
+                    this.brokerController.getBrokerStatsManager().incGroupGetLatency(consumerGroup, topic, requestHeader.getQueueId(),
                             (int) (this.brokerController.getMessageStore().now() - beginTimeMills));
                     response.setBody(r);
                     return response;
@@ -129,7 +128,6 @@ public class DefaultPullMessageResultHandler implements PullMessageResultHandler
                         pollingTimeMills = this.brokerController.getBrokerConfig().getShortPollingTimeMills();
                     }
 
-                    String topic = requestHeader.getTopic();
                     long offset = requestHeader.getQueueOffset();
                     int queueId = requestHeader.getQueueId();
                     PullRequest pullRequest = new PullRequest(request, channel, pollingTimeMills,
@@ -143,26 +141,24 @@ public class DefaultPullMessageResultHandler implements PullMessageResultHandler
                 if (this.brokerController.getMessageStoreConfig().getBrokerRole() != BrokerRole.SLAVE
                         || this.brokerController.getMessageStoreConfig().isOffsetCheckInSlave()) {
                     MessageQueue mq = new MessageQueue();
-                    mq.setTopic(requestHeader.getTopic());
+                    mq.setTopic(topic);
                     mq.setQueueId(requestHeader.getQueueId());
                     mq.setBrokerName(this.brokerController.getBrokerConfig().getBrokerName());
 
                     OffsetMovedEvent event = new OffsetMovedEvent();
-                    event.setConsumerGroup(requestHeader.getConsumerGroup());
+                    event.setConsumerGroup(consumerGroup);
                     event.setMessageQueue(mq);
                     event.setOffsetRequest(requestHeader.getQueueOffset());
                     event.setOffsetNew(getMessageResult.getNextBeginOffset());
                     this.generateOffsetMovedEvent(event);
                     log.warn(
                             "PULL_OFFSET_MOVED:correction offset. topic={}, groupId={}, requestOffset={}, newOffset={}, suggestBrokerId={}",
-                            requestHeader.getTopic(), requestHeader.getConsumerGroup(), event.getOffsetRequest(), event.getOffsetNew(),
-                            responseHeader.getSuggestWhichBrokerId());
+                            topic, consumerGroup, event.getOffsetRequest(), event.getOffsetNew(), responseHeader.getSuggestWhichBrokerId());
                 } else {
                     responseHeader.setSuggestWhichBrokerId(subscriptionGroupConfig.getBrokerId());
                     response.setCode(ResponseCode.PULL_RETRY_IMMEDIATELY);
                     log.warn("PULL_OFFSET_MOVED:none correction. topic={}, groupId={}, requestOffset={}, suggestBrokerId={}",
-                            requestHeader.getTopic(), requestHeader.getConsumerGroup(), requestHeader.getQueueOffset(),
-                            responseHeader.getSuggestWhichBrokerId());
+                            topic, consumerGroup, requestHeader.getQueueOffset(), responseHeader.getSuggestWhichBrokerId());
                 }
 
                 break;
@@ -176,8 +172,9 @@ public class DefaultPullMessageResultHandler implements PullMessageResultHandler
 
     private boolean channelIsWritable(Channel channel, PullMessageRequestHeader requestHeader) {
         if (this.brokerController.getBrokerConfig().isNetWorkFlowController()) {
+            String consumerGroup = NamespaceUtil.wrapNamespace(requestHeader.getNamespace(), requestHeader.getConsumerGroup());
             if (!channel.isWritable()) {
-                log.warn("channel {} not writable ,cid {}", channel.remoteAddress(), requestHeader.getConsumerGroup());
+                log.warn("channel {} not writable ,cid {}", channel.remoteAddress(), consumerGroup);
                 return false;
             }
 

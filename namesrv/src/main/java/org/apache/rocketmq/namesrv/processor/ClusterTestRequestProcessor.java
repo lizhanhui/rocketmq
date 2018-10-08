@@ -20,6 +20,7 @@ import io.netty.channel.ChannelHandlerContext;
 import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.common.help.FAQUrl;
+import org.apache.rocketmq.common.protocol.NamespaceUtil;
 import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.common.namesrv.NamesrvUtil;
@@ -56,15 +57,15 @@ public class ClusterTestRequestProcessor extends DefaultRequestProcessor {
         final GetRouteInfoRequestHeader requestHeader =
             (GetRouteInfoRequestHeader) request.decodeCommandCustomHeader(GetRouteInfoRequestHeader.class);
 
-        TopicRouteData topicRouteData = this.namesrvController.getRouteInfoManager().pickupTopicRouteData(requestHeader.getTopic());
+        String topic = NamespaceUtil.withNamespace(request, requestHeader.getTopic());
+        TopicRouteData topicRouteData = this.namesrvController.getRouteInfoManager().pickupTopicRouteData(topic);
         if (topicRouteData != null) {
             String orderTopicConf =
-                this.namesrvController.getKvConfigManager().getKVConfig(NamesrvUtil.NAMESPACE_ORDER_TOPIC_CONFIG,
-                    requestHeader.getTopic());
+                this.namesrvController.getKvConfigManager().getKVConfig(NamesrvUtil.NAMESPACE_ORDER_TOPIC_CONFIG, topic);
             topicRouteData.setOrderTopicConf(orderTopicConf);
         } else {
             try {
-                topicRouteData = adminExt.examineTopicRouteInfo(requestHeader.getTopic());
+                topicRouteData = adminExt.examineTopicRouteInfo(topic);
             } catch (Exception e) {
                 log.info("get route info by topic from product environment failed. envName={},", productEnvName);
             }
@@ -79,7 +80,7 @@ public class ClusterTestRequestProcessor extends DefaultRequestProcessor {
         }
 
         response.setCode(ResponseCode.TOPIC_NOT_EXIST);
-        response.setRemark("No topic route info in name server for the topic: " + requestHeader.getTopic()
+        response.setRemark("No topic route info in name server for the topic: " + topic
             + FAQUrl.suggestTodo(FAQUrl.APPLY_TOPIC_URL));
         return response;
     }

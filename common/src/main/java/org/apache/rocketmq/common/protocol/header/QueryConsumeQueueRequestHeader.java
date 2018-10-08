@@ -18,6 +18,7 @@
 package org.apache.rocketmq.common.protocol.header;
 
 import org.apache.rocketmq.remoting.CommandCustomHeader;
+import org.apache.rocketmq.remoting.annotation.CFNullable;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 
 public class QueryConsumeQueueRequestHeader implements CommandCustomHeader {
@@ -27,6 +28,8 @@ public class QueryConsumeQueueRequestHeader implements CommandCustomHeader {
     private long index;
     private int count;
     private String consumerGroup;
+    @CFNullable
+    private String namespace;
 
     public String getTopic() {
         return topic;
@@ -66,6 +69,14 @@ public class QueryConsumeQueueRequestHeader implements CommandCustomHeader {
 
     public void setConsumerGroup(String consumerGroup) {
         this.consumerGroup = consumerGroup;
+    }
+
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
     }
 
     @Override

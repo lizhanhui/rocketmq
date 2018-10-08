@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.client.ClientConfig;
 import org.apache.rocketmq.client.consumer.PullCallback;
 import org.apache.rocketmq.client.consumer.PullResult;
@@ -274,6 +275,9 @@ public class MQClientAPIImpl {
         requestHeader.setTopicFilterType(topicConfig.getTopicFilterType().name());
         requestHeader.setTopicSysFlag(topicConfig.getTopicSysFlag());
         requestHeader.setOrder(topicConfig.isOrder());
+        if (StringUtils.isNotEmpty(this.clientConfig.getNamespace())) {
+            requestHeader.setNamespace(this.clientConfig.getNamespace());
+        }
 
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.UPDATE_AND_CREATE_TOPIC, requestHeader);
 
@@ -680,6 +684,9 @@ public class MQClientAPIImpl {
         throws RemotingException, MQBrokerException, InterruptedException {
         SearchOffsetRequestHeader requestHeader = new SearchOffsetRequestHeader();
         requestHeader.setTopic(topic);
+        if (StringUtils.isNotEmpty(this.clientConfig.getNamespace())) {
+            requestHeader.setNamespace(this.clientConfig.getNamespace());
+        }
         requestHeader.setQueueId(queueId);
         requestHeader.setTimestamp(timestamp);
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.SEARCH_OFFSET_BY_TIMESTAMP, requestHeader);
@@ -705,6 +712,9 @@ public class MQClientAPIImpl {
         GetMaxOffsetRequestHeader requestHeader = new GetMaxOffsetRequestHeader();
         requestHeader.setTopic(topic);
         requestHeader.setQueueId(queueId);
+        if (StringUtils.isNotEmpty(this.clientConfig.getNamespace())) {
+            requestHeader.setNamespace(this.clientConfig.getNamespace());
+        }
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.GET_MAX_OFFSET, requestHeader);
 
         RemotingCommand response = this.remotingClient.invokeSync(MixAll.brokerVIPChannel(this.clientConfig.isVipChannelEnabled(), addr),
@@ -731,6 +741,9 @@ public class MQClientAPIImpl {
         MQBrokerException, InterruptedException {
         GetConsumerListByGroupRequestHeader requestHeader = new GetConsumerListByGroupRequestHeader();
         requestHeader.setConsumerGroup(consumerGroup);
+        if (StringUtils.isNotEmpty(this.clientConfig.getNamespace())) {
+            requestHeader.setNamespace(this.clientConfig.getNamespace());
+        }
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.GET_CONSUMER_LIST_BY_GROUP, requestHeader);
 
         RemotingCommand response = this.remotingClient.invokeSync(MixAll.brokerVIPChannel(this.clientConfig.isVipChannelEnabled(), addr),
@@ -756,6 +769,9 @@ public class MQClientAPIImpl {
         GetMinOffsetRequestHeader requestHeader = new GetMinOffsetRequestHeader();
         requestHeader.setTopic(topic);
         requestHeader.setQueueId(queueId);
+        if (StringUtils.isNotEmpty(this.clientConfig.getNamespace())) {
+            requestHeader.setNamespace(this.clientConfig.getNamespace());
+        }
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.GET_MIN_OFFSET, requestHeader);
 
         RemotingCommand response = this.remotingClient.invokeSync(MixAll.brokerVIPChannel(this.clientConfig.isVipChannelEnabled(), addr),
@@ -781,6 +797,10 @@ public class MQClientAPIImpl {
         GetEarliestMsgStoretimeRequestHeader requestHeader = new GetEarliestMsgStoretimeRequestHeader();
         requestHeader.setTopic(topic);
         requestHeader.setQueueId(queueId);
+        if (StringUtils.isNotEmpty(this.clientConfig.getNamespace())) {
+            requestHeader.setNamespace(this.clientConfig.getNamespace());
+        }
+
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.GET_EARLIEST_MSG_STORETIME, requestHeader);
 
         RemotingCommand response = this.remotingClient.invokeSync(MixAll.brokerVIPChannel(this.clientConfig.isVipChannelEnabled(), addr),
@@ -856,12 +876,15 @@ public class MQClientAPIImpl {
         this.remotingClient.invokeOneway(MixAll.brokerVIPChannel(this.clientConfig.isVipChannelEnabled(), addr), request, timeoutMillis);
     }
 
-    public int sendHearbeat(
+    public int sendHeartbeat(
         final String addr,
         final HeartbeatData heartbeatData,
         final long timeoutMillis
     ) throws RemotingException, MQBrokerException, InterruptedException {
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.HEART_BEAT, null);
+        if (null != this.clientConfig.getNamespace()) {
+            request.addExtField("namespace", this.clientConfig.getNamespace());
+        }
         request.setLanguage(clientConfig.getLanguage());
         request.setBody(heartbeatData.encode());
         RemotingCommand response = this.remotingClient.invokeSync(addr, request, timeoutMillis);
@@ -888,6 +911,10 @@ public class MQClientAPIImpl {
         requestHeader.setClientID(clientID);
         requestHeader.setProducerGroup(producerGroup);
         requestHeader.setConsumerGroup(consumerGroup);
+        if (StringUtils.isNotEmpty(this.clientConfig.getNamespace())) {
+            requestHeader.setNamespace(this.clientConfig.getNamespace());
+        }
+
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.UNREGISTER_CLIENT, requestHeader);
 
         RemotingCommand response = this.remotingClient.invokeSync(addr, request, timeoutMillis);
@@ -931,6 +958,9 @@ public class MQClientAPIImpl {
     public boolean registerClient(final String addr, final HeartbeatData heartbeat, final long timeoutMillis)
         throws RemotingException, InterruptedException {
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.HEART_BEAT, null);
+        if (null != this.clientConfig.getNamespace()) {
+            request.addExtField("namespace", this.clientConfig.getNamespace());
+        }
 
         request.setBody(heartbeat.encode());
         RemotingCommand response = this.remotingClient.invokeSync(addr, request, timeoutMillis);
@@ -954,6 +984,9 @@ public class MQClientAPIImpl {
         requestHeader.setDelayLevel(delayLevel);
         requestHeader.setOriginMsgId(msg.getMsgId());
         requestHeader.setMaxReconsumeTimes(maxConsumeRetryTimes);
+        if (StringUtils.isNotEmpty(this.clientConfig.getNamespace())) {
+            requestHeader.setNamespace(this.clientConfig.getNamespace());
+        }
 
         RemotingCommand response = this.remotingClient.invokeSync(MixAll.brokerVIPChannel(this.clientConfig.isVipChannelEnabled(), addr),
             request, timeoutMillis);
@@ -1023,6 +1056,9 @@ public class MQClientAPIImpl {
         RemotingTimeoutException, RemotingSendRequestException, RemotingConnectException, MQBrokerException {
         GetTopicStatsInfoRequestHeader requestHeader = new GetTopicStatsInfoRequestHeader();
         requestHeader.setTopic(topic);
+        if (StringUtils.isNotEmpty(this.clientConfig.getNamespace())) {
+            requestHeader.setNamespace(this.clientConfig.getNamespace());
+        }
 
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.GET_TOPIC_STATS_INFO, requestHeader);
 
@@ -1053,6 +1089,9 @@ public class MQClientAPIImpl {
         GetConsumeStatsRequestHeader requestHeader = new GetConsumeStatsRequestHeader();
         requestHeader.setConsumerGroup(consumerGroup);
         requestHeader.setTopic(topic);
+        if (StringUtils.isNotEmpty(this.clientConfig.getNamespace())) {
+            requestHeader.setNamespace(this.clientConfig.getNamespace());
+        }
 
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.GET_CONSUME_STATS, requestHeader);
 
@@ -1076,6 +1115,9 @@ public class MQClientAPIImpl {
         MQBrokerException {
         GetProducerConnectionListRequestHeader requestHeader = new GetProducerConnectionListRequestHeader();
         requestHeader.setProducerGroup(producerGroup);
+        if (StringUtils.isNotEmpty(this.clientConfig.getNamespace())) {
+            requestHeader.setNamespace(this.clientConfig.getNamespace());
+        }
 
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.GET_PRODUCER_CONNECTION_LIST, requestHeader);
 
@@ -1098,6 +1140,9 @@ public class MQClientAPIImpl {
         MQBrokerException {
         GetConsumerConnectionListRequestHeader requestHeader = new GetConsumerConnectionListRequestHeader();
         requestHeader.setConsumerGroup(consumerGroup);
+        if (StringUtils.isNotEmpty(this.clientConfig.getNamespace())) {
+            requestHeader.setNamespace(this.clientConfig.getNamespace());
+        }
 
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.GET_CONSUMER_CONNECTION_LIST, requestHeader);
 
@@ -1207,6 +1252,9 @@ public class MQClientAPIImpl {
         boolean allowTopicNotExist) throws MQClientException, InterruptedException, RemotingTimeoutException, RemotingSendRequestException, RemotingConnectException {
         GetRouteInfoRequestHeader requestHeader = new GetRouteInfoRequestHeader();
         requestHeader.setTopic(topic);
+        if (StringUtils.isNotEmpty(this.clientConfig.getNamespace())) {
+            requestHeader.setNamespace(this.clientConfig.getNamespace());
+        }
 
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.GET_ROUTEINTO_BY_TOPIC, requestHeader);
 
@@ -1280,6 +1328,9 @@ public class MQClientAPIImpl {
         throws RemotingException, MQBrokerException, InterruptedException, MQClientException {
         DeleteTopicRequestHeader requestHeader = new DeleteTopicRequestHeader();
         requestHeader.setTopic(topic);
+        if (StringUtils.isNotEmpty(this.clientConfig.getNamespace())) {
+            requestHeader.setNamespace(this.clientConfig.getNamespace());
+        }
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.DELETE_TOPIC_IN_BROKER, requestHeader);
 
         RemotingCommand response = this.remotingClient.invokeSync(MixAll.brokerVIPChannel(this.clientConfig.isVipChannelEnabled(), addr),
@@ -1300,6 +1351,9 @@ public class MQClientAPIImpl {
         throws RemotingException, MQBrokerException, InterruptedException, MQClientException {
         DeleteTopicRequestHeader requestHeader = new DeleteTopicRequestHeader();
         requestHeader.setTopic(topic);
+        if (StringUtils.isNotEmpty(this.clientConfig.getNamespace())) {
+            requestHeader.setNamespace(this.clientConfig.getNamespace());
+        }
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.DELETE_TOPIC_IN_NAMESRV, requestHeader);
 
         RemotingCommand response = this.remotingClient.invokeSync(addr, request, timeoutMillis);
@@ -1319,6 +1373,9 @@ public class MQClientAPIImpl {
         throws RemotingException, MQBrokerException, InterruptedException, MQClientException {
         DeleteSubscriptionGroupRequestHeader requestHeader = new DeleteSubscriptionGroupRequestHeader();
         requestHeader.setGroupName(groupName);
+        if (StringUtils.isNotEmpty(this.clientConfig.getNamespace())) {
+            requestHeader.setNamespace(this.clientConfig.getNamespace());
+        }
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.DELETE_SUBSCRIPTIONGROUP, requestHeader);
 
         RemotingCommand response = this.remotingClient.invokeSync(MixAll.brokerVIPChannel(this.clientConfig.isVipChannelEnabled(), addr),
@@ -1506,6 +1563,9 @@ public class MQClientAPIImpl {
         MQBrokerException {
         QueryTopicConsumeByWhoRequestHeader requestHeader = new QueryTopicConsumeByWhoRequestHeader();
         requestHeader.setTopic(topic);
+        if (StringUtils.isNotEmpty(this.clientConfig.getNamespace())) {
+            requestHeader.setNamespace(this.clientConfig.getNamespace());
+        }
 
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.QUERY_TOPIC_CONSUME_BY_WHO, requestHeader);
 
@@ -1530,6 +1590,9 @@ public class MQClientAPIImpl {
         QueryConsumeTimeSpanRequestHeader requestHeader = new QueryConsumeTimeSpanRequestHeader();
         requestHeader.setTopic(topic);
         requestHeader.setGroup(group);
+        if (StringUtils.isNotEmpty(this.clientConfig.getNamespace())) {
+            requestHeader.setNamespace(this.clientConfig.getNamespace());
+        }
 
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.QUERY_CONSUME_TIME_SPAN, requestHeader);
 
@@ -1720,6 +1783,7 @@ public class MQClientAPIImpl {
         requestHeader.setClientId(clientId);
         requestHeader.setMsgId(msgId);
 
+
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.CONSUME_MESSAGE_DIRECTLY, requestHeader);
 
         RemotingCommand response = this.remotingClient.invokeSync(MixAll.brokerVIPChannel(this.clientConfig.isVipChannelEnabled(), addr),
@@ -1747,6 +1811,10 @@ public class MQClientAPIImpl {
         QueryCorrectionOffsetHeader requestHeader = new QueryCorrectionOffsetHeader();
         requestHeader.setCompareGroup(group);
         requestHeader.setTopic(topic);
+        if (StringUtils.isNotEmpty(this.clientConfig.getNamespace())) {
+            requestHeader.setNamespace(this.clientConfig.getNamespace());
+        }
+
         if (filterGroup != null) {
             StringBuilder sb = new StringBuilder();
             String splitor = "";
@@ -1871,6 +1939,9 @@ public class MQClientAPIImpl {
         requestHeader.setDestGroup(destGroup);
         requestHeader.setTopic(topic);
         requestHeader.setOffline(isOffline);
+        if (StringUtils.isNotEmpty(this.clientConfig.getNamespace())) {
+            requestHeader.setNamespace(this.clientConfig.getNamespace());
+        }
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.CLONE_GROUP_OFFSET, requestHeader);
 
         RemotingCommand response = this.remotingClient.invokeSync(MixAll.brokerVIPChannel(this.clientConfig.isVipChannelEnabled(), addr),
@@ -2054,6 +2125,9 @@ public class MQClientAPIImpl {
         requestHeader.setIndex(index);
         requestHeader.setCount(count);
         requestHeader.setConsumerGroup(consumerGroup);
+        if (StringUtils.isNotEmpty(this.clientConfig.getNamespace())) {
+            requestHeader.setNamespace(this.clientConfig.getNamespace());
+        }
 
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.QUERY_CONSUME_QUEUE, requestHeader);
 

@@ -19,6 +19,7 @@ package org.apache.rocketmq.common.protocol.header;
 
 import org.apache.rocketmq.remoting.CommandCustomHeader;
 import org.apache.rocketmq.remoting.annotation.CFNotNull;
+import org.apache.rocketmq.remoting.annotation.CFNullable;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 
 public class QueryConsumeTimeSpanRequestHeader implements CommandCustomHeader {
@@ -26,6 +27,8 @@ public class QueryConsumeTimeSpanRequestHeader implements CommandCustomHeader {
     private String topic;
     @CFNotNull
     private String group;
+    @CFNullable
+    private String namespace;
 
     @Override
     public void checkFields() throws RemotingCommandException {
@@ -45,5 +48,13 @@ public class QueryConsumeTimeSpanRequestHeader implements CommandCustomHeader {
 
     public void setGroup(String group) {
         this.group = group;
+    }
+
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
     }
 }

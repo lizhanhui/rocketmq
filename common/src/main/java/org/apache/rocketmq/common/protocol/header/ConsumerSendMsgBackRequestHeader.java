@@ -34,6 +34,8 @@ public class ConsumerSendMsgBackRequestHeader implements CommandCustomHeader {
     @CFNullable
     private boolean unitMode = false;
     private Integer maxReconsumeTimes;
+    @CFNullable
+    private String namespace;
 
     @Override
     public void checkFields() throws RemotingCommandException {
@@ -94,6 +96,14 @@ public class ConsumerSendMsgBackRequestHeader implements CommandCustomHeader {
 
     public void setMaxReconsumeTimes(final Integer maxReconsumeTimes) {
         this.maxReconsumeTimes = maxReconsumeTimes;
+    }
+
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
     }
 
     @Override

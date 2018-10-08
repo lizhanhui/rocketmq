@@ -22,6 +22,7 @@ package org.apache.rocketmq.common.protocol.header.namesrv;
 
 import org.apache.rocketmq.remoting.CommandCustomHeader;
 import org.apache.rocketmq.remoting.annotation.CFNotNull;
+import org.apache.rocketmq.remoting.annotation.CFNullable;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 
 public class RegisterOrderTopicRequestHeader implements CommandCustomHeader {
@@ -29,6 +30,8 @@ public class RegisterOrderTopicRequestHeader implements CommandCustomHeader {
     private String topic;
     @CFNotNull
     private String orderTopicString;
+    @CFNullable
+    private String namespace;
 
     @Override
     public void checkFields() throws RemotingCommandException {
@@ -49,5 +52,13 @@ public class RegisterOrderTopicRequestHeader implements CommandCustomHeader {
 
     public void setOrderTopicString(String orderTopicString) {
         this.orderTopicString = orderTopicString;
+    }
+
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
     }
 }

@@ -19,6 +19,7 @@ package org.apache.rocketmq.common.protocol.header;
 
 import org.apache.rocketmq.remoting.CommandCustomHeader;
 import org.apache.rocketmq.remoting.annotation.CFNotNull;
+import org.apache.rocketmq.remoting.annotation.CFNullable;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 
 public class ResetOffsetRequestHeader implements CommandCustomHeader {
@@ -30,6 +31,8 @@ public class ResetOffsetRequestHeader implements CommandCustomHeader {
     private long timestamp;
     @CFNotNull
     private boolean isForce;
+    @CFNullable
+    private String namespace;
 
     public String getTopic() {
         return topic;
@@ -61,6 +64,14 @@ public class ResetOffsetRequestHeader implements CommandCustomHeader {
 
     public void setForce(boolean isForce) {
         this.isForce = isForce;
+    }
+
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
     }
 
     @Override

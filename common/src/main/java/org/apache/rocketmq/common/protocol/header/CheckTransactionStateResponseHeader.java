@@ -23,6 +23,7 @@ package org.apache.rocketmq.common.protocol.header;
 import org.apache.rocketmq.common.sysflag.MessageSysFlag;
 import org.apache.rocketmq.remoting.CommandCustomHeader;
 import org.apache.rocketmq.remoting.annotation.CFNotNull;
+import org.apache.rocketmq.remoting.annotation.CFNullable;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 
 public class CheckTransactionStateResponseHeader implements CommandCustomHeader {
@@ -33,9 +34,9 @@ public class CheckTransactionStateResponseHeader implements CommandCustomHeader 
     @CFNotNull
     private Long commitLogOffset;
     @CFNotNull
-    private Integer commitOrRollback; // TRANSACTION_COMMIT_TYPE
-
-    // TRANSACTION_ROLLBACK_TYPE
+    private Integer commitOrRollback;
+    @CFNullable
+    private String namespace;
 
     @Override
     public void checkFields() throws RemotingCommandException {
@@ -80,5 +81,13 @@ public class CheckTransactionStateResponseHeader implements CommandCustomHeader 
 
     public void setCommitOrRollback(Integer commitOrRollback) {
         this.commitOrRollback = commitOrRollback;
+    }
+
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
     }
 }

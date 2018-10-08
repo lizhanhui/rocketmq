@@ -30,6 +30,8 @@ public class UnregisterClientRequestHeader implements CommandCustomHeader {
     private String producerGroup;
     @CFNullable
     private String consumerGroup;
+    @CFNullable
+    private String namespace;
 
     public String getClientID() {
         return clientID;
@@ -55,8 +57,17 @@ public class UnregisterClientRequestHeader implements CommandCustomHeader {
         this.consumerGroup = consumerGroup;
     }
 
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
+    }
+
     @Override
     public void checkFields() throws RemotingCommandException {
 
     }
+
 }

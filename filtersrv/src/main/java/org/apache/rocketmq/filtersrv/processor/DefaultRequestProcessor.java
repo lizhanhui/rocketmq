@@ -17,13 +17,14 @@
 
 package org.apache.rocketmq.filtersrv.processor;
 
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
 import org.apache.rocketmq.client.consumer.DefaultMQPullConsumer;
 import org.apache.rocketmq.client.consumer.PullCallback;
 import org.apache.rocketmq.client.consumer.PullResult;
@@ -31,11 +32,10 @@ import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.common.UtilAll;
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.common.filter.FilterContext;
-import org.apache.rocketmq.logging.InternalLogger;
-import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.common.message.MessageDecoder;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.message.MessageQueue;
+import org.apache.rocketmq.common.protocol.NamespaceUtil;
 import org.apache.rocketmq.common.protocol.RequestCode;
 import org.apache.rocketmq.common.protocol.ResponseCode;
 import org.apache.rocketmq.common.protocol.header.PullMessageRequestHeader;
@@ -44,6 +44,8 @@ import org.apache.rocketmq.common.protocol.header.filtersrv.RegisterMessageFilte
 import org.apache.rocketmq.common.sysflag.MessageSysFlag;
 import org.apache.rocketmq.filtersrv.FiltersrvController;
 import org.apache.rocketmq.filtersrv.filter.FilterClassInfo;
+import org.apache.rocketmq.logging.InternalLogger;
+import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.remoting.common.RemotingHelper;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 import org.apache.rocketmq.remoting.netty.NettyRequestProcessor;
@@ -89,9 +91,11 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         final RegisterMessageFilterClassRequestHeader requestHeader =
             (RegisterMessageFilterClassRequestHeader) request.decodeCommandCustomHeader(RegisterMessageFilterClassRequestHeader.class);
 
+        String consumerGroup = NamespaceUtil.withNamespace(request, requestHeader.getConsumerGroup());
+        String topic = NamespaceUtil.withNamespace(request, requestHeader.getTopic());
         try {
-            boolean ok = this.filtersrvController.getFilterClassManager().registerFilterClass(requestHeader.getConsumerGroup(),
-                requestHeader.getTopic(),
+            boolean ok = this.filtersrvController.getFilterClassManager().registerFilterClass(consumerGroup,
+                topic,
                 requestHeader.getClassName(),
                 requestHeader.getClassCRC(),
                 request.getBody());
@@ -116,15 +120,16 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         final PullMessageRequestHeader requestHeader =
             (PullMessageRequestHeader) request.decodeCommandCustomHeader(PullMessageRequestHeader.class);
 
+        final String topic = NamespaceUtil.withNamespace(request, requestHeader.getTopic());
+        final String consumerGroup = NamespaceUtil.withNamespace(request, requestHeader.getConsumerGroup());
         final FilterContext filterContext = new FilterContext();
-        filterContext.setConsumerGroup(requestHeader.getConsumerGroup());
+        filterContext.setConsumerGroup(consumerGroup);
 
         response.setOpaque(request.getOpaque());
 
         DefaultMQPullConsumer pullConsumer = this.filtersrvController.getDefaultMQPullConsumer();
         final FilterClassInfo findFilterClass =
-            this.filtersrvController.getFilterClassManager()
-                .findFilterClass(requestHeader.getConsumerGroup(), requestHeader.getTopic());
+            this.filtersrvController.getFilterClassManager().findFilterClass(consumerGroup, topic);
         if (null == findFilterClass) {
             response.setCode(ResponseCode.SYSTEM_ERROR);
             response.setRemark("Find Filter class failed, not registered");
@@ -140,7 +145,7 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         responseHeader.setSuggestWhichBrokerId(MixAll.MASTER_ID);
 
         MessageQueue mq = new MessageQueue();
-        mq.setTopic(requestHeader.getTopic());
+        mq.setTopic(topic);
         mq.setQueueId(requestHeader.getQueueId());
         mq.setBrokerName(this.filtersrvController.getBrokerName());
         long offset = requestHeader.getQueueOffset();
@@ -169,20 +174,19 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
                             }
 
                             if (!msgListOK.isEmpty()) {
-                                returnResponse(requestHeader.getConsumerGroup(), requestHeader.getTopic(), ctx, response, msgListOK);
+                                returnResponse(consumerGroup, topic, ctx, response, msgListOK);
                                 return;
                             } else {
                                 response.setCode(ResponseCode.PULL_RETRY_IMMEDIATELY);
                             }
                         } catch (Throwable e) {
                             final String error =
-                                String.format("do Message Filter Exception, ConsumerGroup: %s Topic: %s ",
-                                    requestHeader.getConsumerGroup(), requestHeader.getTopic());
+                                String.format("do Message Filter Exception, ConsumerGroup: %s Topic: %s ", consumerGroup, topic);
                             log.error(error, e);
 
                             response.setCode(ResponseCode.SYSTEM_ERROR);
                             response.setRemark(error + RemotingHelper.exceptionSimpleDesc(e));
-                            returnResponse(requestHeader.getConsumerGroup(), requestHeader.getTopic(), ctx, response, null);
+                            returnResponse(consumerGroup, topic, ctx, response, null);
                             return;
                         }
 
@@ -200,14 +204,14 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
                         break;
                 }
 
-                returnResponse(requestHeader.getConsumerGroup(), requestHeader.getTopic(), ctx, response, null);
+                returnResponse(consumerGroup, topic, ctx, response, null);
             }
 
             @Override
             public void onException(Throwable e) {
                 response.setCode(ResponseCode.SYSTEM_ERROR);
                 response.setRemark("Pull Callback Exception, " + RemotingHelper.exceptionSimpleDesc(e));
-                returnResponse(requestHeader.getConsumerGroup(), requestHeader.getTopic(), ctx, response, null);
+                returnResponse(consumerGroup, topic, ctx, response, null);
                 return;
             }
         };

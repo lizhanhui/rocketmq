@@ -22,6 +22,7 @@ package org.apache.rocketmq.common.protocol.header;
 
 import org.apache.rocketmq.remoting.CommandCustomHeader;
 import org.apache.rocketmq.remoting.annotation.CFNotNull;
+import org.apache.rocketmq.remoting.annotation.CFNullable;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 
 public class QueryConsumerOffsetRequestHeader implements CommandCustomHeader {
@@ -31,6 +32,8 @@ public class QueryConsumerOffsetRequestHeader implements CommandCustomHeader {
     private String topic;
     @CFNotNull
     private Integer queueId;
+    @CFNullable
+    private String namespace;
 
     @Override
     public void checkFields() throws RemotingCommandException {
@@ -58,5 +61,13 @@ public class QueryConsumerOffsetRequestHeader implements CommandCustomHeader {
 
     public void setQueueId(Integer queueId) {
         this.queueId = queueId;
+    }
+
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
     }
 }

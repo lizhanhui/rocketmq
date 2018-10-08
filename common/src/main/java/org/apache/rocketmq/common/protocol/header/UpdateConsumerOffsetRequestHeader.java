@@ -33,6 +33,8 @@ public class UpdateConsumerOffsetRequestHeader implements CommandCustomHeader {
     private Integer queueId;
     @CFNotNull
     private Long commitOffset;
+    @CFNotNull
+    private String namespace;
 
     @Override
     public void checkFields() throws RemotingCommandException {
@@ -68,5 +70,13 @@ public class UpdateConsumerOffsetRequestHeader implements CommandCustomHeader {
 
     public void setCommitOffset(Long commitOffset) {
         this.commitOffset = commitOffset;
+    }
+
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
     }
 }

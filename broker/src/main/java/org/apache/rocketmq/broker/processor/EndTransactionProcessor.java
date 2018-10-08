@@ -115,6 +115,7 @@ public class EndTransactionProcessor implements NettyRequestProcessor {
         final MessageExt msgExt = this.brokerController.getMessageStore().lookMessageByOffset(requestHeader.getCommitLogOffset());
         if (msgExt != null) {
             final String pgroupRead = msgExt.getProperty(MessageConst.PROPERTY_PRODUCER_GROUP);
+            //pgroup read from message's property should not contains namespace.
             if (!pgroupRead.equals(requestHeader.getProducerGroup())) {
                 response.setCode(ResponseCode.SYSTEM_ERROR);
                 response.setRemark("the producer group wrong");

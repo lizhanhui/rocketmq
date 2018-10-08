@@ -34,17 +34,14 @@ public class EndTransactionRequestHeader implements CommandCustomHeader {
     @CFNotNull
     private Long commitLogOffset;
     @CFNotNull
-    private Integer commitOrRollback; // TRANSACTION_COMMIT_TYPE
-    // TRANSACTION_ROLLBACK_TYPE
-    // TRANSACTION_NOT_TYPE
-
+    private Integer commitOrRollback;
     @CFNullable
     private Boolean fromTransactionCheck = false;
-
     @CFNotNull
     private String msgId;
-
     private String transactionId;
+    @CFNullable
+    private String namespace;
 
     @Override
     public void checkFields() throws RemotingCommandException {
@@ -117,6 +114,14 @@ public class EndTransactionRequestHeader implements CommandCustomHeader {
 
     public void setTransactionId(String transactionId) {
         this.transactionId = transactionId;
+    }
+
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
     }
 
     @Override
