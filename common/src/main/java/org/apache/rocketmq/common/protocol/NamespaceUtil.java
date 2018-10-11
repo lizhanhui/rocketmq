@@ -40,8 +40,19 @@ public class NamespaceUtil {
         return wrapNamespace(namespace, resource);
     }
 
+    public static String withNamespaceAndRetry(RemotingCommand request, String consumerGroup) {
+        if (StringUtils.isEmpty(consumerGroup)) {
+            return null;
+        }
+
+        return new StringBuffer()
+            .append(MixAll.RETRY_GROUP_TOPIC_PREFIX)
+            .append(withNamespace(request, consumerGroup))
+            .toString();
+    }
+
     public static String wrapNamespace(String namespace, String resource) {
-        if (StringUtils.isEmpty(namespace)) {
+        if (StringUtils.isEmpty(namespace) || StringUtils.isEmpty(resource)) {
             return resource;
         }
 

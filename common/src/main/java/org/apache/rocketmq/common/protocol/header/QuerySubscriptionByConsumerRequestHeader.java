@@ -22,12 +22,15 @@ package org.apache.rocketmq.common.protocol.header;
 
 import org.apache.rocketmq.remoting.CommandCustomHeader;
 import org.apache.rocketmq.remoting.annotation.CFNotNull;
+import org.apache.rocketmq.remoting.annotation.CFNullable;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 
 public class QuerySubscriptionByConsumerRequestHeader implements CommandCustomHeader {
     @CFNotNull
     private String group;
     private String topic;
+    @CFNullable
+    private String namespace;
 
     @Override
     public void checkFields() throws RemotingCommandException {
@@ -48,5 +51,13 @@ public class QuerySubscriptionByConsumerRequestHeader implements CommandCustomHe
 
     public void setTopic(String topic) {
         this.topic = topic;
+    }
+
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
     }
 }

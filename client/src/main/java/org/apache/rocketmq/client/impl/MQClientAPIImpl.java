@@ -1591,6 +1591,9 @@ public class MQClientAPIImpl {
         MQBrokerException {
         QueryTopicsByConsumerRequestHeader requestHeader = new QueryTopicsByConsumerRequestHeader();
         requestHeader.setGroup(group);
+        if (null != this.clientConfig.getNamespace()) {
+            requestHeader.setNamespace(this.clientConfig.getNamespace());
+        }
 
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.QUERY_TOPICS_BY_CONSUMER, requestHeader);
 
@@ -1614,6 +1617,9 @@ public class MQClientAPIImpl {
         QuerySubscriptionByConsumerRequestHeader requestHeader = new QuerySubscriptionByConsumerRequestHeader();
         requestHeader.setGroup(group);
         requestHeader.setGroup(topic);
+        if (null != this.clientConfig.getNamespace()) {
+            requestHeader.setNamespace(this.clientConfig.getNamespace());
+        }
 
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.QUERY_SUBSCRIPTION_BY_CONSUMER, requestHeader);
 
@@ -2202,6 +2208,9 @@ public class MQClientAPIImpl {
         requestBody.setClientId(clientId);
         requestBody.setGroup(consumerGroup);
         requestBody.setSubscriptionData(subscriptionData);
+        if (null != this.clientConfig.getNamespace()) {
+            requestBody.setNamespace(this.clientConfig.getNamespace());
+        }
 
         request.setBody(requestBody.encode());
 

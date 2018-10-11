@@ -868,7 +868,8 @@ public class AdminBrokerProcessor implements NettyRequestProcessor {
         QueryTopicsByConsumerRequestHeader requestHeader =
             (QueryTopicsByConsumerRequestHeader) request.decodeCommandCustomHeader(QueryTopicsByConsumerRequestHeader.class);
 
-        Set<String> topics = this.brokerController.getConsumerOffsetManager().whichTopicByConsumer(requestHeader.getGroup());
+        String consumerGroup = NamespaceUtil.withNamespace(request, requestHeader.getGroup());
+        Set<String> topics = this.brokerController.getConsumerOffsetManager().whichTopicByConsumer(consumerGroup);
 
         TopicList topicList = new TopicList();
         topicList.setTopicList(topics);
@@ -887,12 +888,14 @@ public class AdminBrokerProcessor implements NettyRequestProcessor {
         QuerySubscriptionByConsumerRequestHeader requestHeader =
             (QuerySubscriptionByConsumerRequestHeader) request.decodeCommandCustomHeader(QuerySubscriptionByConsumerRequestHeader.class);
 
+        String topic = NamespaceUtil.withNamespace(request, requestHeader.getTopic());
+        String consumerGroup = NamespaceUtil.withNamespace(request, requestHeader.getGroup());
         SubscriptionData subscriptionData =
-            this.brokerController.getConsumerManager().findSubscriptionData(requestHeader.getGroup(),requestHeader.getTopic());
+            this.brokerController.getConsumerManager().findSubscriptionData(consumerGroup, topic);
 
         QuerySubscriptionResponseBody responseBody = new QuerySubscriptionResponseBody();
-        responseBody.setGroup(requestHeader.getGroup());
-        responseBody.setTopic(requestHeader.getTopic());
+        responseBody.setGroup(consumerGroup);
+        responseBody.setTopic(topic);
         responseBody.setSubscriptionData(subscriptionData);
         byte[] body = responseBody.encode();
 
