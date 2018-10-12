@@ -42,7 +42,7 @@ public class NamespaceUtil {
     }
 
     public static String wrapNamespace(String namespace, String resource) {
-        if (StringUtils.isEmpty(namespace) || StringUtils.isEmpty(resource)) {
+        if (StringUtils.isEmpty(namespace) || StringUtils.isEmpty(resource) || isSystemResource(resource)) {
             return resource;
         }
 
@@ -93,6 +93,14 @@ public class NamespaceUtil {
 
         return namespace;
 
+    }
+
+    private static boolean isSystemResource(String resource) {
+        if (StringUtils.isEmpty(resource)) {
+            return false;
+        }
+
+        return MixAll.isSystemTopic(resource) || MixAll.isSysConsumerGroup(resource) || MixAll.DEFAULT_TOPIC.equals(resource);
     }
 
     private static boolean isRetryTopic(String resource) {

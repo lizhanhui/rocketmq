@@ -30,6 +30,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
 import org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyContext;
 import org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyStatus;
@@ -247,7 +248,7 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
                 msg.setTopic(retryTopic);
             }
 
-            if (null != this.defaultMQPushConsumer.getNamespace()) {
+            if (StringUtils.isNotEmpty(this.defaultMQPushConsumer.getNamespace())) {
                 msg.setTopic(NamespaceUtil.getResource(msg.getTopic()));
             }
         }
@@ -420,6 +421,7 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
                     for (MessageExt msg : msgs) {
                         MessageAccessor.setConsumeStartTimeStamp(msg, String.valueOf(System.currentTimeMillis()));
                     }
+
                 }
                 status = listener.consumeMessage(Collections.unmodifiableList(msgs), context);
             } catch (Throwable e) {
