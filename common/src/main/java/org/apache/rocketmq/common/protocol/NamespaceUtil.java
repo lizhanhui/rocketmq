@@ -27,17 +27,7 @@ public class NamespaceUtil {
     public static final int DLQ_PREFIX_LENGTH = MixAll.DLQ_GROUP_TOPIC_PREFIX.length();
 
     public static String withNamespace(RemotingCommand request, String resource) {
-        String namespace;
-        switch (request.getCode()) {
-            case RequestCode.SEND_MESSAGE_V2:
-                namespace = request.getExtFields().get("n");
-                break;
-            default:
-                namespace = request.getExtFields().get("namespace");
-                break;
-        }
-
-        return wrapNamespace(namespace, resource);
+        return wrapNamespace(getNamespace(request), resource);
     }
 
     public static String withNamespaceAndRetry(RemotingCommand request, String consumerGroup) {
@@ -87,6 +77,22 @@ public class NamespaceUtil {
 
         int indexOfSeparator = resourceWithNamespace.indexOf(NAMESPACE_SEPARATOR) + 1;
         return resourceWithNamespace.substring(indexOfSeparator);
+    }
+
+    public static String getNamespace(RemotingCommand request) {
+        String namespace ;
+
+        switch (request.getCode()) {
+            case RequestCode.SEND_MESSAGE_V2:
+                namespace = request.getExtFields().get("n");
+                break;
+            default:
+                namespace = request.getExtFields().get("namespace");
+                break;
+        }
+
+        return namespace;
+
     }
 
     private static boolean isRetryTopic(String resource) {
