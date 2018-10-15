@@ -670,10 +670,10 @@ public class PopMessageProcessor implements NettyRequestProcessor {
                     if (popQ == null || popQ.isEmpty()) {
                         continue;
                     }
-                    PopRequest tmPopRequest = popQ.poll(3, TimeUnit.SECONDS);
+                    PopRequest tmPopRequest = popQ.poll();
                     while (tmPopRequest != null) {
                         wakeUp(tmPopRequest);
-                        tmPopRequest = popQ.poll(3, TimeUnit.SECONDS);
+                        tmPopRequest = popQ.poll();
                     }
                 }
             } catch (Throwable e) {
