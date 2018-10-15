@@ -79,6 +79,7 @@ public class ClientManageProcessor implements NettyRequestProcessor {
     public RemotingCommand heartBeat(ChannelHandlerContext ctx, RemotingCommand request) {
         RemotingCommand response = RemotingCommand.createResponseCommand(null);
         HeartbeatData heartbeatData = HeartbeatData.decode(request.getBody(), HeartbeatData.class);
+        String namespace = heartbeatData.getNamespace();
         ClientChannelInfo clientChannelInfo = new ClientChannelInfo(
             ctx.channel(),
             heartbeatData.getClientID(),
@@ -88,8 +89,7 @@ public class ClientManageProcessor implements NettyRequestProcessor {
 
         for (ConsumerData data : heartbeatData.getConsumerDataSet()) {
             //Reject the PullConsumer
-            String consumerGroup = NamespaceUtil.withNamespace(request, data.getGroupName());
-            String namespace = request.getExtFields().get("namespace");
+            String consumerGroup = NamespaceUtil.wrapNamespace(namespace, data.getGroupName());
             if (brokerController.getBrokerConfig().isRejectPullConsumerEnable()) {
                 if (ConsumeType.CONSUME_ACTIVELY == data.getConsumeType()) {
                     continue;
@@ -132,7 +132,7 @@ public class ClientManageProcessor implements NettyRequestProcessor {
         }
 
         for (ProducerData data : heartbeatData.getProducerDataSet()) {
-            String producerGroup = NamespaceUtil.withNamespace(request, data.getGroupName());
+            String producerGroup = NamespaceUtil.wrapNamespace(namespace, data.getGroupName());
             this.brokerController.getProducerManager().registerProducer(producerGroup, clientChannelInfo);
         }
         response.setCode(ResponseCode.SUCCESS);

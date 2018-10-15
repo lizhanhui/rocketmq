@@ -22,10 +22,12 @@ package org.apache.rocketmq.common.protocol.heartbeat;
 
 import java.util.HashSet;
 import java.util.Set;
+
 import org.apache.rocketmq.remoting.protocol.RemotingSerializable;
 
 public class HeartbeatData extends RemotingSerializable {
     private String clientID;
+    private String namespace;
     private Set<ProducerData> producerDataSet = new HashSet<ProducerData>();
     private Set<ConsumerData> consumerDataSet = new HashSet<ConsumerData>();
 
@@ -53,9 +55,17 @@ public class HeartbeatData extends RemotingSerializable {
         this.consumerDataSet = consumerDataSet;
     }
 
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
+    }
+
     @Override
     public String toString() {
-        return "HeartbeatData [clientID=" + clientID + ", producerDataSet=" + producerDataSet
-            + ", consumerDataSet=" + consumerDataSet + "]";
+        return "HeartbeatData [clientID=" + clientID + ", namespace=" + namespace + ", producerDataSet="
+            + producerDataSet + ", consumerDataSet=" + consumerDataSet + "]";
     }
 }
