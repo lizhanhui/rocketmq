@@ -676,8 +676,8 @@ public class MQClientAPIImpl {
                     RemotingCommand response = responseFuture.getResponseCommand();
                     if (response != null) {
                         try {
-                    		    NotificationResponseHeader responseHeader = (NotificationResponseHeader) response.decodeCommandCustomHeader(NotificationResponseHeader.class);
-                             callback.onSuccess(responseHeader.isHasMsg());
+                            NotificationResponseHeader responseHeader = (NotificationResponseHeader) response.decodeCommandCustomHeader(NotificationResponseHeader.class);
+                            callback.onSuccess(responseHeader.isHasMsg());
                         } catch (Exception e) {
                         	callback.onException(e);
                         }
@@ -841,8 +841,6 @@ public class MQClientAPIImpl {
 						if (ResponseCode.SUCCESS == response.getCode()) {
 							ackResult.setStatus(AckStatus.OK);
 							ackResult.setPopTime(responseHeader.getPopTime());
-							/*ackResult.setExtraInfo(requestHeader.getOffset() + MessageConst.KEY_SEPARATOR + responseHeader.getPopTime() + MessageConst.KEY_SEPARATOR + responseHeader.getInvisibleTime()
-							+ MessageConst.KEY_SEPARATOR + responseHeader.getReviveQid() + MessageConst.KEY_SEPARATOR  + requestHeader.getTopic());*/
 							ackResult.setExtraInfo(ExtraInfoUtil.buildExtraInfo(requestHeader.getOffset(), responseHeader.getPopTime(), responseHeader.getInvisibleTime(),
 									responseHeader.getReviveQid(), requestHeader.getTopic(), brokerName, requestHeader.getQueueId()) + MessageConst.KEY_SEPARATOR
 									+ requestHeader.getOffset());
@@ -967,25 +965,51 @@ public class MQClientAPIImpl {
 		popResult.setRestNum(responseHeader.getRestNum());
 		// it is a pop command if pop time greater than 0, we should set the check point info to extraInfo field
 		if (popStatus == PopStatus.FOUND) {
+		    Map<String, Long> startOffsetInfo = null;
+		    Map<String, List<Long>> msgOffsetInfo = null;
 			if (requestHeader instanceof PopMessageRequestHeader) {
 				popResult.setInvisibleTime(responseHeader.getInvisibleTime());
 				popResult.setPopTime(responseHeader.getPopTime());
+				startOffsetInfo = ExtraInfoUtil.parseStartOffsetInfo(responseHeader.getStartOffsetInfo());
+                msgOffsetInfo = ExtraInfoUtil.parseMsgOffsetInfo(responseHeader.getMsgOffsetInfo());
 			}
-			Map<String, String> map = new HashMap<String, String>(5);
+			Map<String/*topicMark@queueId*/, List<Long>/*msg queueOffset*/> sortMap = new HashMap<String, List<Long>>(16);
+            for (MessageExt messageExt : msgFoundList) {
+                String key = ExtraInfoUtil.getStartOffsetInfoMapKey(messageExt.getTopic(), messageExt.getQueueId());
+                if (!sortMap.containsKey(key)) {
+                    sortMap.put(key, new ArrayList<Long>(4));
+                }
+                sortMap.get(key).add(messageExt.getQueueOffset());
+            }
+            Map<String, String> map = new HashMap<String, String>(5);
 			for (MessageExt messageExt : msgFoundList) {
 				if (requestHeader instanceof PopMessageRequestHeader) {
-					// we should set the check point info to extraInfo field , if the command is popMsg
-					// find pop ck offset
-					String key = messageExt.getTopic() + messageExt.getQueueId();
-					if (!map.containsKey(messageExt.getTopic() + messageExt.getQueueId())) {
-						map.put(key, ExtraInfoUtil.buildExtraInfo(messageExt.getQueueOffset(), responseHeader.getPopTime(), responseHeader.getInvisibleTime(), responseHeader.getReviveQid(),
-								messageExt.getTopic(), brokerName, messageExt.getQueueId()));
-						
-					}
-					messageExt.getProperties().put(MessageConst.PROPERTY_POP_CK, map.get(key) + MessageConst.KEY_SEPARATOR + messageExt.getQueueOffset());
+                    if (startOffsetInfo == null) {
+                        // we should set the check point info to extraInfo field , if the command is popMsg
+                        // find pop ck offset
+                        String key = messageExt.getTopic() + messageExt.getQueueId();
+                        if (!map.containsKey(messageExt.getTopic() + messageExt.getQueueId())) {
+                            map.put(key, ExtraInfoUtil.buildExtraInfo(messageExt.getQueueOffset(), responseHeader.getPopTime(), responseHeader.getInvisibleTime(), responseHeader.getReviveQid(),
+                                    messageExt.getTopic(), brokerName, messageExt.getQueueId()));
+
+                        }
+                        messageExt.getProperties().put(MessageConst.PROPERTY_POP_CK, map.get(key) + MessageConst.KEY_SEPARATOR + messageExt.getQueueOffset());
+                    } else {
+                        String key = ExtraInfoUtil.getStartOffsetInfoMapKey(messageExt.getTopic(), messageExt.getQueueId());
+                        int index = sortMap.get(key).indexOf(messageExt.getQueueOffset());
+                        Long msgQueueOffset = msgOffsetInfo.get(key).get(index);
+                        if (msgQueueOffset != messageExt.getQueueOffset()) {
+                            log.warn("Queue offset[%d] of msg is strange, not equal to the stored in msg, %s", msgQueueOffset, messageExt);
+                        }
+
+                        messageExt.getProperties().put(MessageConst.PROPERTY_POP_CK,
+                            ExtraInfoUtil.buildExtraInfo(startOffsetInfo.get(key).longValue(), responseHeader.getPopTime(), responseHeader.getInvisibleTime(),
+                                responseHeader.getReviveQid(), messageExt.getTopic(), brokerName, messageExt.getQueueId(), msgQueueOffset.longValue())
+                        );
+                    }
 					if (messageExt.getProperties().get(MessageConst.PROPERTY_FIRST_POP_TIME) == null) {
 						messageExt.getProperties().put(MessageConst.PROPERTY_FIRST_POP_TIME, String.valueOf(responseHeader.getPopTime()));
-					}					
+					}
 				}
 				messageExt.setTopic(topic);
 			}

@@ -25,11 +25,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Random;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.rocketmq.broker.BrokerController;
 import org.apache.rocketmq.client.consumer.PullResult;
@@ -37,6 +32,7 @@ import org.apache.rocketmq.client.consumer.PullStatus;
 import org.apache.rocketmq.common.KeyBuilder;
 import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.common.PopAckConstants;
+import org.apache.rocketmq.common.ServiceThread;
 import org.apache.rocketmq.common.TopicConfig;
 import org.apache.rocketmq.common.TopicFilterType;
 import org.apache.rocketmq.common.constant.LoggerName;
@@ -71,27 +67,27 @@ public class AckMessageProcessor implements NettyRequestProcessor {
     private static final Logger POP_LOGGER = LoggerFactory.getLogger(LoggerName.ROCKETMQ_POP_LOGGER_NAME);
     private final BrokerController brokerController;
     private String reviveTopic;
-    private ExecutorService executorService;
-    private Random random = new Random(System.currentTimeMillis());
+    private PopReviveService[] popReviveServices;
     private boolean isMaster = false;
 
     public AckMessageProcessor(final BrokerController brokerController) {
         this.brokerController = brokerController;
         this.reviveTopic = PopAckConstants.REVIVE_TOPIC + this.brokerController.getBrokerConfig().getBrokerClusterName();
-        executorService = Executors.newFixedThreadPool(this.brokerController.getBrokerConfig().getReviveQueueNum() + 1, new ThreadFactory() {
-            private AtomicInteger count = new AtomicInteger();
+        this.popReviveServices = new PopReviveService[this.brokerController.getBrokerConfig().getReviveQueueNum()];
+        for (int i = 0; i < this.brokerController.getBrokerConfig().getReviveQueueNum(); i++) {
+            this.popReviveServices[i] = new PopReviveService(i);
+        }
+    }
 
-            @Override
-            public Thread newThread(Runnable r) {
-                Thread thread = new Thread(r, "reviveTask-" + count.get());
-                count.incrementAndGet();
-                thread.setDaemon(true);
-                return thread;
-            }
-        });
-        for (int qid = 0; qid < this.brokerController.getBrokerConfig().getReviveQueueNum(); qid++) {
-            ReviveTask task = new ReviveTask(qid);
-            executorService.execute(task);
+    public void startPopReviveService() {
+        for (PopReviveService popReviveService : popReviveServices) {
+            popReviveService.start();
+        }
+    }
+
+    public void shutdownPopReviveService() {
+        for (PopReviveService popReviveService : popReviveServices) {
+            popReviveService.stop();
         }
     }
 
@@ -132,17 +128,19 @@ public class AckMessageProcessor implements NettyRequestProcessor {
             response.setCode(ResponseCode.NO_MESSAGE);
             return response;
         }
-        //String[] extraInfo = requestHeader.getExtraInfo().split(MessageConst.KEY_SEPARATOR);
         String[] extraInfo = ExtraInfoUtil.split(requestHeader.getExtraInfo());
 
         ackMsg.setAo(requestHeader.getOffset());
-        //ackMsg.setSo(Long.valueOf(extraInfo[0]));
         ackMsg.setSo(ExtraInfoUtil.getCkQueueOffset(extraInfo));
         ackMsg.setC(requestHeader.getConsumerGroup());
         ackMsg.setT(requestHeader.getTopic());
         ackMsg.setQ(requestHeader.getQueueId());
-        //ackMsg.setPt(Long.valueOf(extraInfo[1]));
         ackMsg.setPt(ExtraInfoUtil.getPopTime(extraInfo));
+
+        if (this.brokerController.getPopMessageProcessor().getPopAckBufferMergeService().addAk(ackMsg)) {
+            return response;
+        }
+
         msgInner.setTopic(reviveTopic);
         msgInner.setBody(JSON.toJSONString(ackMsg).getBytes(DataConverter.charset));
         //msgInner.setQueueId(Integer.valueOf(extraInfo[3]));
@@ -165,181 +163,16 @@ public class AckMessageProcessor implements NettyRequestProcessor {
         return response;
     }
 
-    class ReviveTask implements Runnable {
+    public class PopReviveService extends ServiceThread {
         private int queueId;
 
-        public ReviveTask(int i) {
+        public PopReviveService(int i) {
             this.queueId = i;
         }
 
         @Override
-        public void run() {
-            try {
-                int initDelay = random.nextInt((int) brokerController.getBrokerConfig().getReviveInterval());
-                if (initDelay > 0) {
-                    Thread.sleep(initDelay);
-                }
-            } catch (Exception e) {
-                POP_LOGGER.error("init delay error", e);
-            }
-            int slow = 1;
-            while (true) {
-                try {
-                    try {
-                        Thread.sleep(brokerController.getBrokerConfig().getReviveInterval());
-                        if (!checkAndSetMaster()) {
-                            POP_LOGGER.info("slave skip start revive topic={}, reviveQueueId={}", reviveTopic, queueId);
-                            continue;
-                        }
-                        POP_LOGGER.info("start revive topic={}, reviveQueueId={}", reviveTopic, queueId);
-                        HashMap<String, PopCheckPoint> map = new HashMap<>();
-                        long startScanTime = System.currentTimeMillis();
-                        long startTime = 0;
-                        long endTime = 0;
-                        long oldOffset = brokerController.getConsumerOffsetManager().queryOffset(PopAckConstants.REVIVE_GROUP, reviveTopic, queueId);
-                        POP_LOGGER.info("reviveQueueId={}, old offset is {} ", queueId, oldOffset);
-                        long offset = oldOffset + 1;
-                        //TODO: offset 自我纠正
-                        while (true) {
-                            if (!checkAndSetMaster()) {
-                                POP_LOGGER.info("slave skip scan , revive topic={}, reviveQueueId={}", reviveTopic, queueId);
-                                break;
-                            }
-                            long timerDelay = brokerController.getMessageStore().getTimerMessageStore().getReadBehind();
-                            long commitLogDelay = brokerController.getMessageStore().getTimerMessageStore().getEnqueueBehind();
-                            List<MessageExt> messageExts = getReviveMessage(offset, queueId);
-                            if (messageExts == null || messageExts.isEmpty()) {
-                                long old = endTime;
-                                if (endTime != 0 && ((System.currentTimeMillis() - endTime) > (3 * PopAckConstants.SECOND) && timerDelay == 0 && commitLogDelay == 0)) {
-                                    endTime = System.currentTimeMillis();
-                                }
-                                if (timerDelay > 5 || commitLogDelay > 5) {
-                                    POP_LOGGER.warn("timer is delay,timerDelay={}, commit log is delay,commitLogDelay={}", timerDelay, commitLogDelay);
-                                }
-                                POP_LOGGER.info("reviveQueueId={}, offset is {}, can not get new msg, old endTime {}, new endTime {}, timerDelay={}, commitLogDelay={} ", queueId,
-                                    offset, old, endTime, timerDelay, commitLogDelay);
-                                break;
-                            }
-                            if (System.currentTimeMillis() - startScanTime > brokerController.getBrokerConfig().getReviveScanTime()) {
-                                POP_LOGGER.info("reviveQueueId={}, scan timeout  ", queueId);
-                                break;
-                            }
-                            for (MessageExt messageExt : messageExts) {
-                                long deliverTime = Long.valueOf(messageExt.getUserProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS));
-                                if (PopAckConstants.CK_TAG.equals(messageExt.getTags())) {
-                                    String raw = new String(messageExt.getBody(), DataConverter.charset);
-                                    POP_LOGGER.info("reviveQueueId={},find ck, offset:{}, raw : {}", messageExt.getQueueId(), messageExt.getQueueOffset(), raw);
-                                    PopCheckPoint point = JSON.parseObject(raw, PopCheckPoint.class);
-                                    if (point.getT() == null || point.getC() == null) {
-                                        continue;
-                                    }
-                                    map.put(point.getT() + point.getC() + point.getQ() + point.getSo() + point.getPt(), point);
-                                    if (startTime == 0) {
-                                        startTime = deliverTime;
-                                    }
-                                    point.setRo(messageExt.getQueueOffset());
-                                } else if (PopAckConstants.ACK_TAG.equals(messageExt.getTags())) {
-                                    String raw = new String(messageExt.getBody(), DataConverter.charset);
-                                    POP_LOGGER.info("reviveQueueId={},find ack, offset:{}, raw : {}", messageExt.getQueueId(), messageExt.getQueueOffset(), raw);
-                                    AckMsg ackMsg = JSON.parseObject(raw, AckMsg.class);
-                                    PopCheckPoint point = map.get(ackMsg.getT() + ackMsg.getC() + ackMsg.getQ() + ackMsg.getSo() + ackMsg.getPt());
-                                    if (point != null) {
-                                        point.setBm(DataConverter.setBit(point.getBm(), (int) (ackMsg.getAo() - ackMsg.getSo()), true));
-                                    }
-                                }
-                                if (deliverTime > endTime) {
-                                    endTime = deliverTime;
-                                }
-                            }
-                            offset = offset + messageExts.size();
-                        }
-                        if (!checkAndSetMaster()) {
-                            POP_LOGGER.info("slave skip scan , revive topic={}, reviveQueueId={}", reviveTopic, queueId);
-                            continue;
-                        }
-                        ArrayList<PopCheckPoint> sortList = new ArrayList<>(map.values());
-                        Collections.sort(sortList, new Comparator<PopCheckPoint>() {
-                            @Override
-                            public int compare(PopCheckPoint o1, PopCheckPoint o2) {
-                                return (int) (o1.getRo() - o2.getRo());
-                            }
-                        });
-                        POP_LOGGER.info("reviveQueueId={},ck listSize={}", queueId, sortList.size());
-                        if (sortList.size() != 0) {
-                            POP_LOGGER.info("reviveQueueId={}, 1st ck, startOffset={}, reviveOffset={} ; last ck, startOffset={}, reviveOffset={}", queueId, sortList.get(0).getSo(),
-                                sortList.get(0).getRo(), sortList.get(sortList.size() - 1).getSo(), sortList.get(sortList.size() - 1).getRo());
-                        }
-                        long newOffset = oldOffset;
-                        for (PopCheckPoint popCheckPoint : sortList) {
-                            if (!checkAndSetMaster()) {
-                                POP_LOGGER.info("slave skip ck process , revive topic={}, reviveQueueId={}", reviveTopic, queueId);
-                                break;
-                            }
-                            if (endTime - popCheckPoint.getRt() > (PopAckConstants.ackTimeInterval + PopAckConstants.SECOND)) {
-                                // check normal topic, skip ck , if normal topic is not exist
-                                String normalTopic = KeyBuilder.parseNormalTopic(popCheckPoint.getT(), popCheckPoint.getC());
-                                if (brokerController.getTopicConfigManager().selectTopicConfig(normalTopic) == null) {
-                                    POP_LOGGER.warn("reviveQueueId={},can not get normal topic {} , then continue ", queueId, popCheckPoint.getT());
-                                    newOffset = popCheckPoint.getRo();
-                                    continue;
-                                }
-                                SubscriptionGroupConfig subscriptionGroupConfig = brokerController.getSubscriptionGroupManager().findSubscriptionGroupConfig(popCheckPoint.getC());
-                                if (null == subscriptionGroupConfig) {
-                                    POP_LOGGER.warn("reviveQueueId={},can not get cid {} , then continue ", queueId, popCheckPoint.getC());
-                                    newOffset = popCheckPoint.getRo();
-                                    continue;
-                                }
-                                for (int j = 0; j < popCheckPoint.getN(); j++) {
-                                    if (!DataConverter.getBit(popCheckPoint.getBm(), j)) {
-                                        // retry msg
-                                        MessageExt messageExt = getBizMessage(popCheckPoint.getT(), popCheckPoint.getSo() + j, popCheckPoint.getQ());
-                                        if (messageExt == null) {
-                                            POP_LOGGER.warn("reviveQueueId={},can not get biz msg topic is {}, offset is {} , then continue ", queueId, popCheckPoint.getT(),
-                                                popCheckPoint.getSo() + j);
-                                            continue;
-                                        }
-                                        //skip ck from last epoch
-                                        if (popCheckPoint.getPt() < messageExt.getStoreTimestamp()) {
-                                            POP_LOGGER.warn("reviveQueueId={},skip ck from last epoch {}", queueId, popCheckPoint);
-                                            continue;
-                                        }
-                                        reviveRetry(popCheckPoint, messageExt);
-                                    }
-                                }
-                            } else {
-                                break;
-                            }
-                            newOffset = popCheckPoint.getRo();
-                        }
-                        long delay = 0;
-                        if (sortList.size() > 0) {
-                            delay = (System.currentTimeMillis() - sortList.get(0).getRt()) / 1000;
-                            slow = 1;
-                        }
-                        POP_LOGGER.info("reviveQueueId={},revive finish,old offset is {}, new offset is {}, ckDelay={}  ", queueId, oldOffset, newOffset, delay);
-                        if (newOffset > oldOffset) {
-                            if (!checkAndSetMaster()) {
-                                POP_LOGGER.info("slave skip commit, revive topic={}, reviveQueueId={}", reviveTopic, queueId);
-                                continue;
-                            }
-                            brokerController.getConsumerOffsetManager().commitOffset(PopAckConstants.LOCAL_HOST, PopAckConstants.REVIVE_GROUP, reviveTopic, queueId, newOffset);
-                        }
-                        if (sortList.size() == 0) {
-                            POP_LOGGER.info("reviveQueueId={},has no new msg ,take a rest {}", queueId, slow);
-                            Thread.sleep(slow * brokerController.getBrokerConfig().getReviveInterval());
-                            if (slow < brokerController.getBrokerConfig().getReviveMaxSlow()) {
-                                slow++;
-                            }
-                        }
-
-                    } catch (Exception e) {
-                        POP_LOGGER.error("reviveQueueId=" + queueId + ",revive error", e);
-                    }
-
-                } catch (Exception e) {
-                    POP_LOGGER.error("revive error", e);
-                }
-            }
+        public String getServiceName() {
+            return "PopReviveService_" + this.queueId;
         }
 
         private boolean checkMaster() {
@@ -380,8 +213,8 @@ public class AckMessageProcessor implements NettyRequestProcessor {
             msgInner.setPropertiesString(MessageDecoder.messageProperties2String(msgInner.getProperties()));
             addRetryTopicIfNoExit(msgInner.getTopic());
             PutMessageResult putMessageResult = brokerController.getMessageStore().putMessage(msgInner);
-            POP_LOGGER.info("reviveQueueId={},retry msg , topic {}, cid {}, msg queueId {}, offset {}, reviveDelay={}, result is {} "
-                , queueId, popCheckPoint.getT(), popCheckPoint.getC(), messageExt.getQueueId(), messageExt.getQueueOffset(),
+            POP_LOGGER.info("reviveQueueId={},retry msg , ck={}, msg queueId {}, offset {}, reviveDelay={}, result is {} ",
+                queueId, popCheckPoint, messageExt.getQueueId(), messageExt.getQueueOffset(),
                 (System.currentTimeMillis() - popCheckPoint.getRt()) / 1000, putMessageResult);
             if (putMessageResult.getAppendMessageResult() == null || putMessageResult.getAppendMessageResult().getStatus() != AppendMessageStatus.PUT_OK) {
                 throw new Exception("reviveQueueId=" + queueId + ",revive error ,msg is :" + msgInner);
@@ -508,5 +341,173 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 
             return foundList;
         }
+
+        @Override
+        public void run() {
+            int slow = 1;
+            while(!this.isStopped()) {
+                try {
+                    this.waitForRunning(brokerController.getBrokerConfig().getReviveInterval());
+                    if (!checkAndSetMaster()) {
+                        POP_LOGGER.info("slave skip start revive topic={}, reviveQueueId={}", reviveTopic, queueId);
+                        continue;
+                    }
+                    POP_LOGGER.info("start revive topic={}, reviveQueueId={}", reviveTopic, queueId);
+                    HashMap<String, PopCheckPoint> map = new HashMap<>();
+                    long startScanTime = System.currentTimeMillis();
+                    long startTime = 0;
+                    long endTime = 0;
+                    long oldOffset = brokerController.getConsumerOffsetManager().queryOffset(PopAckConstants.REVIVE_GROUP, reviveTopic, queueId);
+                    POP_LOGGER.info("reviveQueueId={}, old offset is {} ", queueId, oldOffset);
+                    long offset = oldOffset + 1;
+                    //TODO: offset 自我纠正
+                    while (true) {
+                        if (!checkAndSetMaster()) {
+                            POP_LOGGER.info("slave skip scan , revive topic={}, reviveQueueId={}", reviveTopic, queueId);
+                            break;
+                        }
+                        long timerDelay = brokerController.getMessageStore().getTimerMessageStore().getReadBehind();
+                        long commitLogDelay = brokerController.getMessageStore().getTimerMessageStore().getEnqueueBehind();
+                        List<MessageExt> messageExts = getReviveMessage(offset, queueId);
+                        if (messageExts == null || messageExts.isEmpty()) {
+                            long old = endTime;
+                            if (endTime != 0 && ((System.currentTimeMillis() - endTime) > (3 * PopAckConstants.SECOND) && timerDelay == 0 && commitLogDelay == 0)) {
+                                endTime = System.currentTimeMillis();
+                            }
+                            if (timerDelay > 5 || commitLogDelay > 5) {
+                                POP_LOGGER.warn("timer is delay,timerDelay={}, commit log is delay,commitLogDelay={}", timerDelay, commitLogDelay);
+                            }
+                            POP_LOGGER.info("reviveQueueId={}, offset is {}, can not get new msg, old endTime {}, new endTime {}, timerDelay={}, commitLogDelay={} ", queueId,
+                                offset, old, endTime, timerDelay, commitLogDelay);
+                            break;
+                        }
+                        if (System.currentTimeMillis() - startScanTime > brokerController.getBrokerConfig().getReviveScanTime()) {
+                            POP_LOGGER.info("reviveQueueId={}, scan timeout  ", queueId);
+                            break;
+                        }
+                        for (MessageExt messageExt : messageExts) {
+                            long deliverTime = Long.valueOf(messageExt.getUserProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS));
+                            if (PopAckConstants.CK_TAG.equals(messageExt.getTags())) {
+                                String raw = new String(messageExt.getBody(), DataConverter.charset);
+                                POP_LOGGER.info("reviveQueueId={},find ck, offset:{}, raw : {}", messageExt.getQueueId(), messageExt.getQueueOffset(), raw);
+                                PopCheckPoint point = JSON.parseObject(raw, PopCheckPoint.class);
+                                if (point.getT() == null || point.getC() == null) {
+                                    continue;
+                                }
+                                map.put(point.getT() + point.getC() + point.getQ() + point.getSo() + point.getPt(), point);
+                                if (startTime == 0) {
+                                    startTime = deliverTime;
+                                }
+                                point.setRo(messageExt.getQueueOffset());
+                            } else if (PopAckConstants.ACK_TAG.equals(messageExt.getTags())) {
+                                String raw = new String(messageExt.getBody(), DataConverter.charset);
+                                POP_LOGGER.info("reviveQueueId={},find ack, offset:{}, raw : {}", messageExt.getQueueId(), messageExt.getQueueOffset(), raw);
+                                AckMsg ackMsg = JSON.parseObject(raw, AckMsg.class);
+                                PopCheckPoint point = map.get(ackMsg.getT() + ackMsg.getC() + ackMsg.getQ() + ackMsg.getSo() + ackMsg.getPt());
+                                if (point != null) {
+                                    int indexOfAck = point.indexOfAck(ackMsg.getAo());
+                                    if (indexOfAck > -1) {
+                                        point.setBm(DataConverter.setBit(point.getBm(), indexOfAck, true));
+                                    } else {
+                                        POP_LOGGER.error("invalid ack index, {}, {}", ackMsg, point);
+                                    }
+                                }
+                            }
+                            if (deliverTime > endTime) {
+                                endTime = deliverTime;
+                            }
+                        }
+                        offset = offset + messageExts.size();
+                    }
+                    if (!checkAndSetMaster()) {
+                        POP_LOGGER.info("slave skip scan , revive topic={}, reviveQueueId={}", reviveTopic, queueId);
+                        continue;
+                    }
+                    ArrayList<PopCheckPoint> sortList = new ArrayList<>(map.values());
+                    Collections.sort(sortList, new Comparator<PopCheckPoint>() {
+                        @Override
+                        public int compare(PopCheckPoint o1, PopCheckPoint o2) {
+                            return (int) (o1.getRo() - o2.getRo());
+                        }
+                    });
+                    POP_LOGGER.info("reviveQueueId={},ck listSize={}", queueId, sortList.size());
+                    if (sortList.size() != 0) {
+                        POP_LOGGER.info("reviveQueueId={}, 1st ck, startOffset={}, reviveOffset={} ; last ck, startOffset={}, reviveOffset={}", queueId, sortList.get(0).getSo(),
+                            sortList.get(0).getRo(), sortList.get(sortList.size() - 1).getSo(), sortList.get(sortList.size() - 1).getRo());
+                    }
+                    long newOffset = oldOffset;
+                    for (PopCheckPoint popCheckPoint : sortList) {
+                        if (!checkAndSetMaster()) {
+                            POP_LOGGER.info("slave skip ck process , revive topic={}, reviveQueueId={}", reviveTopic, queueId);
+                            break;
+                        }
+                        if (endTime - popCheckPoint.getRt() > (PopAckConstants.ackTimeInterval + PopAckConstants.SECOND)) {
+                            // check normal topic, skip ck , if normal topic is not exist
+                            String normalTopic = KeyBuilder.parseNormalTopic(popCheckPoint.getT(), popCheckPoint.getC());
+                            if (brokerController.getTopicConfigManager().selectTopicConfig(normalTopic) == null) {
+                                POP_LOGGER.warn("reviveQueueId={},can not get normal topic {} , then continue ", queueId, popCheckPoint.getT());
+                                newOffset = popCheckPoint.getRo();
+                                continue;
+                            }
+                            SubscriptionGroupConfig subscriptionGroupConfig = brokerController.getSubscriptionGroupManager().findSubscriptionGroupConfig(popCheckPoint.getC());
+                            if (null == subscriptionGroupConfig) {
+                                POP_LOGGER.warn("reviveQueueId={},can not get cid {} , then continue ", queueId, popCheckPoint.getC());
+                                newOffset = popCheckPoint.getRo();
+                                continue;
+                            }
+                            for (int j = 0; j < popCheckPoint.getN(); j++) {
+                                if (!DataConverter.getBit(popCheckPoint.getBm(), j)) {
+                                    // retry msg
+                                    MessageExt messageExt;
+                                    if (popCheckPoint.getD() == null || popCheckPoint.getD().isEmpty()) {
+                                        messageExt = getBizMessage(popCheckPoint.getT(), popCheckPoint.getSo() + j, popCheckPoint.getQ());
+                                    } else {
+                                        messageExt = getBizMessage(popCheckPoint.getT(), popCheckPoint.getSo() + popCheckPoint.getD().get(j), popCheckPoint.getQ());
+                                    }
+                                    if (messageExt == null) {
+                                        POP_LOGGER.warn("reviveQueueId={},can not get biz msg topic is {}, offset is {} , then continue ", queueId, popCheckPoint.getT(),
+                                            popCheckPoint.getSo() + j);
+                                        continue;
+                                    }
+                                    //skip ck from last epoch
+                                    if (popCheckPoint.getPt() < messageExt.getStoreTimestamp()) {
+                                        POP_LOGGER.warn("reviveQueueId={},skip ck from last epoch {}", queueId, popCheckPoint);
+                                        continue;
+                                    }
+                                    reviveRetry(popCheckPoint, messageExt);
+                                }
+                            }
+                        } else {
+                            break;
+                        }
+                        newOffset = popCheckPoint.getRo();
+                    }
+                    long delay = 0;
+                    if (sortList.size() > 0) {
+                        delay = (System.currentTimeMillis() - sortList.get(0).getRt()) / 1000;
+                        slow = 1;
+                    }
+                    POP_LOGGER.info("reviveQueueId={},revive finish,old offset is {}, new offset is {}, ckDelay={}  ", queueId, oldOffset, newOffset, delay);
+                    if (newOffset > oldOffset) {
+                        if (!checkAndSetMaster()) {
+                            POP_LOGGER.info("slave skip commit, revive topic={}, reviveQueueId={}", reviveTopic, queueId);
+                            continue;
+                        }
+                        brokerController.getConsumerOffsetManager().commitOffset(PopAckConstants.LOCAL_HOST, PopAckConstants.REVIVE_GROUP, reviveTopic, queueId, newOffset);
+                    }
+                    if (sortList.size() == 0) {
+                        POP_LOGGER.info("reviveQueueId={},has no new msg ,take a rest {}", queueId, slow);
+                        Thread.sleep(slow * brokerController.getBrokerConfig().getReviveInterval());
+                        if (slow < brokerController.getBrokerConfig().getReviveMaxSlow()) {
+                            slow++;
+                        }
+                    }
+
+                } catch (Exception e) {
+                    POP_LOGGER.error("reviveQueueId=" + queueId + ",revive error", e);
+                }
+            }
+        }
     }
+
 }

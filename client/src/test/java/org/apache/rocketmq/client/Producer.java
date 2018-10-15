@@ -16,15 +16,30 @@ public class Producer {
 		producer.setNamesrvAddr("127.0.0.1:9876");
 		// producer.setNamesrvAddr("10.137.84.33:9876");
 		producer.start();
-		String topic = "longji-stress";
+		String topic = "xigutest";
 		final String brokerName = "broker-a";
 		final MessageQueue mq = new MessageQueue(topic, brokerName, 0);
-		for (int i = 0; i < 5; i++) {
-			Message msg = new Message(topic, String.valueOf(i).getBytes());
+		int counter = 0;
+		int total = 5;
+		while (total > 0) {
+			Message msg = new Message(topic, "abc".getBytes());
+			if (counter % 2 == 0) {
+				msg.setTags("tag");
+			}
+//			if (counter % 100 == 0) {
+				msg.putUserProperty("a", "1");
+//			}
 			SendResult result = producer.send(msg);
 		    //SendResult result=producer.send(msg, mq);
 			System.out.println(result);
+			counter++;
+			total--;
+			if (counter > 100) {
+				counter = 0;
+				Thread.sleep(1000);
+			}
 		}
 
+		producer.shutdown();
 	}
 }

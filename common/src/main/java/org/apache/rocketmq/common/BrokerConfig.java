@@ -137,15 +137,18 @@ public class BrokerConfig {
     // whether do filter when retry.
     private boolean filterSupportRetry = false;
     private boolean enablePropertyFilter = false;
-    private int  popPollingSize = 1024;
-    private int  popPollingMapSize = 100000;
+    private int popPollingSize = 1024;
+    private int popPollingMapSize = 100000;
     // 20w cost 200M heap memory.
-    private long maxPopPollingSize=100000;
-	private int  reviveQueueNum = 8;
-    private long  reviveInterval = 1000;
-    private long  reviveMaxSlow = 10;
-    private long  reviveScanTime = 10000;
+    private long maxPopPollingSize = 100000;
+    private int reviveQueueNum = 8;
+    private long reviveInterval = 1000;
+    private long reviveMaxSlow = 10;
+    private long reviveScanTime = 10000;
     private boolean enablePopLog = false;
+    private boolean enablePopBufferMerge = false;
+    private int popCkStayBufferTime = 10 * 1000;
+    private int popCkStayBufferTimeOut = 3 * 1000;
 
     public long getMaxPopPollingSize() {
         return maxPopPollingSize;
@@ -695,4 +698,28 @@ public class BrokerConfig {
 	public void setReviveInterval(long reviveInterval) {
 		this.reviveInterval = reviveInterval;
 	}
+
+    public int getPopCkStayBufferTime() {
+        return popCkStayBufferTime;
+    }
+
+    public void setPopCkStayBufferTime(int popCkStayBufferTime) {
+        this.popCkStayBufferTime = popCkStayBufferTime;
+    }
+
+    public int getPopCkStayBufferTimeOut() {
+        return popCkStayBufferTimeOut;
+    }
+
+    public void setPopCkStayBufferTimeOut(int popCkStayBufferTimeOut) {
+        this.popCkStayBufferTimeOut = popCkStayBufferTimeOut;
+    }
+
+    public boolean isEnablePopBufferMerge() {
+        return enablePopBufferMerge;
+    }
+
+    public void setEnablePopBufferMerge(boolean enablePopBufferMerge) {
+        this.enablePopBufferMerge = enablePopBufferMerge;
+    }
 }

@@ -92,29 +92,58 @@ public class ChangeInvisibleTimeProcessor implements NettyRequestProcessor {
             response.setCode(ResponseCode.NO_MESSAGE);
             return response;
         }
-        // ack origin msg first
-        MessageExtBrokerInner msgInner = new MessageExtBrokerInner();
-        AckMsg ackMsg = new AckMsg();
-        //String[] extraInfo = requestHeader.getExtraInfo().split(MessageConst.KEY_SEPARATOR);
+
         String[] extraInfo = ExtraInfoUtil.split(requestHeader.getExtraInfo());
 
+        // add new ck
+        long now = System.currentTimeMillis();
+        PutMessageResult ckResult = appendCheckPoint(requestHeader, ExtraInfoUtil.getReviveQid(extraInfo), requestHeader.getQueueId(), requestHeader.getOffset(), now);
+
+        if (ckResult.getPutMessageStatus() != PutMessageStatus.PUT_OK
+            && ckResult.getPutMessageStatus() != PutMessageStatus.FLUSH_DISK_TIMEOUT
+            && ckResult.getPutMessageStatus() != PutMessageStatus.FLUSH_SLAVE_TIMEOUT
+            && ckResult.getPutMessageStatus() != PutMessageStatus.SLAVE_NOT_AVAILABLE) {
+            POP_LOGGER.error("change Invisible, put new ck error: {}", ckResult);
+            response.setCode(ResponseCode.SYSTEM_ERROR);
+            return response;
+        }
+
+        // ack old msg.
+        try {
+            ackOrigin(requestHeader, extraInfo);
+        } catch (Throwable e) {
+            POP_LOGGER.error("change Invisible, put ack msg error: {}, {}", requestHeader.getExtraInfo(), e.getMessage());
+            // cancel new ck?
+        }
+
+        responseHeader.setInvisibleTime(requestHeader.getInvisibleTime());
+        responseHeader.setPopTime(now);
+        responseHeader.setReviveQid(ExtraInfoUtil.getReviveQid(extraInfo));
+        return response;
+    }
+
+    private void ackOrigin(final ChangeInvisibleTimeRequestHeader requestHeader, String[] extraInfo) {
+        MessageExtBrokerInner msgInner = new MessageExtBrokerInner();
+        AckMsg ackMsg = new AckMsg();
+
         ackMsg.setAo(requestHeader.getOffset());
-        //ackMsg.setSo(Long.valueOf(extraInfo[0]));
         ackMsg.setSo(ExtraInfoUtil.getCkQueueOffset(extraInfo));
         ackMsg.setC(requestHeader.getConsumerGroup());
         ackMsg.setT(requestHeader.getTopic());
         ackMsg.setQ(requestHeader.getQueueId());
-        //ackMsg.setPt(Long.valueOf(extraInfo[1]));
         ackMsg.setPt(ExtraInfoUtil.getPopTime(extraInfo));
+
+        if (brokerController.getPopMessageProcessor().getPopAckBufferMergeService().addAk(ackMsg)) {
+            return;
+        }
+
         msgInner.setTopic(reviveTopic);
         msgInner.setBody(JSON.toJSONString(ackMsg).getBytes(DataConverter.charset));
-        //msgInner.setQueueId(Integer.valueOf(extraInfo[3]));
         msgInner.setQueueId(ExtraInfoUtil.getReviveQid(extraInfo));
         msgInner.setTags(PopAckConstants.ACK_TAG);
         msgInner.setBornTimestamp(System.currentTimeMillis());
         msgInner.setBornHost(this.brokerController.getStoreHost());
         msgInner.setStoreHost(this.brokerController.getStoreHost());
-        //msgInner.putUserProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS, String.valueOf(Long.valueOf(extraInfo[1]) + Long.valueOf(extraInfo[2])));
         msgInner.putUserProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS, String.valueOf(ExtraInfoUtil.getPopTime(extraInfo) + ExtraInfoUtil.getInvisibleTime(extraInfo)));
         msgInner.getProperties().put(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX, ackMsg.getT() + PopAckConstants.SPLIT + ackMsg.getQ() + PopAckConstants.SPLIT + ackMsg.getAo() + PopAckConstants.SPLIT + ackMsg.getC());
         msgInner.setPropertiesString(MessageDecoder.messageProperties2String(msgInner.getProperties()));
@@ -123,21 +152,11 @@ public class ChangeInvisibleTimeProcessor implements NettyRequestProcessor {
             && putMessageResult.getPutMessageStatus() != PutMessageStatus.FLUSH_DISK_TIMEOUT
             && putMessageResult.getPutMessageStatus() != PutMessageStatus.FLUSH_SLAVE_TIMEOUT
             && putMessageResult.getPutMessageStatus() != PutMessageStatus.SLAVE_NOT_AVAILABLE) {
-            POP_LOGGER.error("put ack msg error:" + putMessageResult);
-            response.setCode(ResponseCode.SYSTEM_ERROR);
-            return response;
+            POP_LOGGER.error("change Invisible, put ack msg fail: {}, {}", ackMsg, putMessageResult);
         }
-        // add new ck
-        long now = System.currentTimeMillis();
-        //appendCheckPoint(channel, requestHeader, Integer.valueOf(extraInfo[3]), requestHeader.getQueueId(), requestHeader.getOffset(),now);
-        appendCheckPoint(channel, requestHeader, ExtraInfoUtil.getReviveQid(extraInfo), requestHeader.getQueueId(), requestHeader.getOffset(), now);
-        responseHeader.setInvisibleTime(requestHeader.getInvisibleTime());
-        responseHeader.setPopTime(now);
-        responseHeader.setReviveQid(ExtraInfoUtil.getReviveQid(extraInfo));
-        return response;
     }
 
-    private void appendCheckPoint(final Channel channel, final ChangeInvisibleTimeRequestHeader requestHeader, int reviveQid, int queueId, long offset, long popTime) {
+    private PutMessageResult appendCheckPoint(final ChangeInvisibleTimeRequestHeader requestHeader, int reviveQid, int queueId, long offset, long popTime) {
         // add check point msg to revive log
         MessageExtBrokerInner msgInner = new MessageExtBrokerInner();
         msgInner.setTopic(reviveTopic);
@@ -150,6 +169,8 @@ public class ChangeInvisibleTimeProcessor implements NettyRequestProcessor {
         ck.setC(requestHeader.getConsumerGroup());
         ck.setT(requestHeader.getTopic());
         ck.setQ((byte) queueId);
+        ck.addDiff(0);
+
         msgInner.setBody(JSON.toJSONString(ck).getBytes(DataConverter.charset));
         msgInner.setQueueId(reviveQid);
         msgInner.setTags(PopAckConstants.CK_TAG);
@@ -160,7 +181,8 @@ public class ChangeInvisibleTimeProcessor implements NettyRequestProcessor {
         msgInner.getProperties().put(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX, ck.getT() + PopAckConstants.SPLIT + ck.getQ() + PopAckConstants.SPLIT + ck.getSo() + PopAckConstants.SPLIT + ck.getC());
         msgInner.setPropertiesString(MessageDecoder.messageProperties2String(msgInner.getProperties()));
         PutMessageResult putMessageResult = this.brokerController.getMessageStore().putMessage(msgInner);
-        POP_LOGGER.info("change Invisible , appendCheckPoint, topic {}, queueId {},reviveId {}, cid {}, startOffset {}, result {}", requestHeader.getTopic(), queueId, reviveQid, requestHeader.getConsumerGroup(), offset,
-            putMessageResult);
+        POP_LOGGER.info("change Invisible , appendCheckPoint, topic {}, queueId {},reviveId {}, cid {}, startOffset {}, rt {}, result {}", requestHeader.getTopic(), queueId, reviveQid, requestHeader.getConsumerGroup(), offset,
+            ck.getRt(), putMessageResult);
+        return putMessageResult;
     }
 }

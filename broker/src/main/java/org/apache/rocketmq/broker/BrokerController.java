@@ -691,12 +691,21 @@ public class BrokerController {
             this.pullRequestHoldService.shutdown();
         }
 
+        {
+            this.popMessageProcessor.getPopLongPollingService().shutdown();
+        }
+
         if (this.remotingServer != null) {
             this.remotingServer.shutdown();
         }
 
         if (this.fastRemotingServer != null) {
             this.fastRemotingServer.shutdown();
+        }
+
+        {
+            this.popMessageProcessor.getPopAckBufferMergeService().shutdown();
+            this.ackMessageProcessor.shutdownPopReviveService();
         }
 
         //it is better to make sure the timerMessageStore shutdown firstly
@@ -765,6 +774,12 @@ public class BrokerController {
         }
         if (this.timerMessageStore != null) {
             this.timerMessageStore.start();
+        }
+
+        {
+            this.popMessageProcessor.getPopLongPollingService().start();
+            this.popMessageProcessor.getPopAckBufferMergeService().start();
+            this.ackMessageProcessor.startPopReviveService();
         }
 
         if (this.remotingServer != null) {

@@ -35,34 +35,45 @@ public class PopMessageRequestHeader implements CommandCustomHeader {
     @CFNotNull
     private int maxMsgNums;
     @CFNotNull
-    private long invisibleTime;   
+    private long invisibleTime;
     @CFNotNull
-    private long pollTime;   
+    private long pollTime;
     @CFNotNull
-    private long bornTime;   
+    private long bornTime;
     @CFNotNull
-    private int initMode;   
+    private int initMode;
+
+    private String expType;
+    private String exp;
+
     @Override
     public void checkFields() throws RemotingCommandException {
     }
+
     public void setInitMode(int initMode) {
-		this.initMode = initMode;
-	}
+        this.initMode = initMode;
+    }
+
     public int getInitMode() {
-		return initMode;
-	}
+        return initMode;
+    }
+
     public long getInvisibleTime() {
-		return invisibleTime;
-	}
+        return invisibleTime;
+    }
+
     public void setInvisibleTime(long invisibleTime) {
-		this.invisibleTime = invisibleTime;
-	}
+        this.invisibleTime = invisibleTime;
+    }
+
     public long getPollTime() {
-		return pollTime;
-	}
+        return pollTime;
+    }
+
     public void setPollTime(long pollTime) {
-		this.pollTime = pollTime;
-	}
+        this.pollTime = pollTime;
+    }
+
     public String getConsumerGroup() {
         return consumerGroup;
     }
@@ -70,12 +81,14 @@ public class PopMessageRequestHeader implements CommandCustomHeader {
     public void setConsumerGroup(String consumerGroup) {
         this.consumerGroup = consumerGroup;
     }
+
     public long getBornTime() {
-		return bornTime;
-	}
+        return bornTime;
+    }
+
     public void setBornTime(long bornTime) {
-		this.bornTime = bornTime;
-	}
+        this.bornTime = bornTime;
+    }
 
     public String getTopic() {
         return topic;
@@ -85,12 +98,12 @@ public class PopMessageRequestHeader implements CommandCustomHeader {
         this.topic = topic;
     }
 
-	public int getQueueId() {
-		if (queueId < 0) {
-			return -1;
-		}
-		return queueId;
-	}
+    public int getQueueId() {
+        if (queueId < 0) {
+            return -1;
+        }
+        return queueId;
+    }
 
     public void setQueueId(int queueId) {
         this.queueId = queueId;
@@ -105,8 +118,23 @@ public class PopMessageRequestHeader implements CommandCustomHeader {
         this.maxMsgNums = maxMsgNums;
     }
 
-	public boolean isTimeoutTooMuch() {
-		return System.currentTimeMillis() - bornTime - pollTime > 500;
-	}
+    public boolean isTimeoutTooMuch() {
+        return System.currentTimeMillis() - bornTime - pollTime > 500;
+    }
 
+    public String getExpType() {
+        return expType;
+    }
+
+    public void setExpType(String expType) {
+        this.expType = expType;
+    }
+
+    public String getExp() {
+        return exp;
+    }
+
+    public void setExp(String exp) {
+        this.exp = exp;
+    }
 }

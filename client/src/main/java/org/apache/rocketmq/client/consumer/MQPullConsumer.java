@@ -151,40 +151,192 @@ public interface MQPullConsumer extends MQConsumer {
     void sendMessageBack(MessageExt msg, int delayLevel, String brokerName, String consumerGroup)
         throws RemotingException, MQBrokerException, InterruptedException, MQClientException;
 
-
+    /**
+     * Just get message for view
+     *
+     * @param mq
+     * @param maxNums
+     * @param consumerGroup
+     * @param timeout
+     * @return
+     * @throws MQClientException
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
 	PopResult peekMessage(MessageQueue mq, int maxNums, String consumerGroup, long timeout)
 			throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
-	
 
 
+    /**
+     * pop async
+     *
+     * @param mq
+     * @param invisibleTime
+     * @param maxNums
+     * @param consumerGroup
+     * @param timeout
+     * @param popCallback
+     * @param poll
+     * @param initMode
+     * @throws MQClientException
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
 	void popAsync(MessageQueue mq, long invisibleTime, int maxNums, String consumerGroup, long timeout, PopCallback popCallback, boolean poll, int initMode)
 			throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 
+
+    /**
+     * pop async with filter expression
+     *
+     * @param mq
+     * @param invisibleTime
+     * @param maxNums
+     * @param consumerGroup
+     * @param timeout
+     * @param popCallback
+     * @param poll
+     * @param initMode
+     * @param expressionType
+     * @param expression
+     * @throws MQClientException
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
+    void popAsync(MessageQueue mq, long invisibleTime, int maxNums, String consumerGroup, long timeout, PopCallback popCallback, boolean poll, int initMode,
+                  String expressionType, String expression) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+
+    /**
+     * peek async
+     *
+     * @param mq
+     * @param maxNums
+     * @param consumerGroup
+     * @param timeout
+     * @param popCallback
+     * @throws MQClientException
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
 	void peekAsync(MessageQueue mq, int maxNums, String consumerGroup, long timeout, PopCallback popCallback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 
+    /**
+     * pop sync
+     *
+     * @param mq
+     * @param invisibleTime
+     * @param maxNums
+     * @param consumerGroup
+     * @param timeout
+     * @param initMode
+     * @return
+     * @throws MQClientException
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
 	PopResult pop(MessageQueue mq, long invisibleTime, int maxNums, String consumerGroup, long timeout, int initMode)
 			throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 
-/*	void ackMessage(MessageQueue mq, long offset, String consumerGroup, String extraInfo) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+    /**
+     * pop sync with expression filter
+     *
+     * @param mq
+     * @param invisibleTime
+     * @param maxNums
+     * @param consumerGroup
+     * @param timeout
+     * @param initMode
+     * @param expressionType
+     * @param expression
+     * @return
+     * @throws MQClientException
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
+    PopResult pop(MessageQueue mq, long invisibleTime, int maxNums, String consumerGroup, long timeout, int initMode, String expressionType, String expression)
+        throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 
-	void ackMessageAsync(MessageQueue mq, long offset, String consumerGroup, String extraInfo, long timeOut, AckCallback callback)
-			throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
-
-	void changeInvisibleTimeAsync(MessageQueue mq, long offset, String consumerGroup, String extraInfo, long invisibleTime, long timeoutMillis, AckCallback callback)
-			throws MQClientException, RemotingException, MQBrokerException, InterruptedException;*/
+    /**
+     *
+     * @param mq
+     * @param consumerGroup
+     * @param fromTime
+     * @param toTime
+     * @param timeout
+     * @param callback
+     * @throws MQClientException
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
     void statisticsMessages(MessageQueue mq, String consumerGroup, long fromTime, long toTime, long timeout, StatisticsMessagesCallback callback)
             throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 
-
+    /**
+     * ack async, confirm the msg is consumed suc.
+     *
+     * @param topic
+     * @param consumerGroup
+     * @param extraInfo
+     * @param timeOut
+     * @param callback
+     * @throws MQClientException
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
 	void ackMessageAsync(String topic, String consumerGroup, String extraInfo, long timeOut, AckCallback callback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 
+    /**
+     * change retry time async.
+     *
+     * @param topic
+     * @param consumerGroup
+     * @param extraInfo
+     * @param invisibleTime
+     * @param timeoutMillis
+     * @param callback
+     * @throws MQClientException
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
 	void changeInvisibleTimeAsync(String topic, String consumerGroup, String extraInfo, long invisibleTime, long timeoutMillis, AckCallback callback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 
+    /**
+     * ack sync
+     *
+     * @param topic
+     * @param consumerGroup
+     * @param extraInfo
+     * @throws MQClientException
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
 	void ackMessage(String topic, String consumerGroup, String extraInfo) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 
 	void notificationPollingAsync(MessageQueue mq, String consumerGroup, long timeout, NotificationCallback callback)
 			throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 
+    /**
+     * get polling num of broker.
+     *
+     * @param mq
+     * @param consumerGroup
+     * @param timeout
+     * @param callback
+     * @throws MQClientException
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
 	void getPollingInfoAsync(MessageQueue mq, String consumerGroup, long timeout, PollingInfoCallback callback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 
 
