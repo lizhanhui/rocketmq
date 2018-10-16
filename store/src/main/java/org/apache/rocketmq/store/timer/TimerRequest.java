@@ -18,7 +18,7 @@ package org.apache.rocketmq.store.timer;
 
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Semaphore;
+
 import org.apache.rocketmq.common.message.MessageExt;
 
 public class TimerRequest {
@@ -96,7 +96,7 @@ public class TimerRequest {
     }
 
     public void idempotentRelease() {
-       idempotentRelease(true);
+        idempotentRelease(true);
     }
 
     public void idempotentRelease(boolean succ) {

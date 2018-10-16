@@ -14,10 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-/**
- * $Id: PullMessageResponseHeader.java 1835 2013-05-16 02:00:50Z vintagewang@apache.org $
- */
 package org.apache.rocketmq.common.protocol.header;
 
 import org.apache.rocketmq.remoting.CommandCustomHeader;
@@ -27,34 +23,39 @@ import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 public class ChangeInvisibleTimeResponseHeader implements CommandCustomHeader {
 
 
-	@CFNotNull
+    @CFNotNull
     private long popTime;
     @CFNotNull
     private long invisibleTime;
-    
-    @CFNotNull
-    private int reviveQid; 
 
-	@Override
+    @CFNotNull
+    private int reviveQid;
+
+    @Override
     public void checkFields() throws RemotingCommandException {
     }
-    public long getPopTime() {
-		return popTime;
-	}
-	public void setPopTime(long popTime) {
-		this.popTime = popTime;
-	}
 
-	public long getInvisibleTime() {
-		return invisibleTime;
-	}
-	public void setInvisibleTime(long invisibleTime) {
-		this.invisibleTime = invisibleTime;
-	}
+    public long getPopTime() {
+        return popTime;
+    }
+
+    public void setPopTime(long popTime) {
+        this.popTime = popTime;
+    }
+
+    public long getInvisibleTime() {
+        return invisibleTime;
+    }
+
+    public void setInvisibleTime(long invisibleTime) {
+        this.invisibleTime = invisibleTime;
+    }
+
     public int getReviveQid() {
-		return reviveQid;
-	}
-	public void setReviveQid(int reviveQid) {
-		this.reviveQid = reviveQid;
-	}
+        return reviveQid;
+    }
+
+    public void setReviveQid(int reviveQid) {
+        this.reviveQid = reviveQid;
+    }
 }

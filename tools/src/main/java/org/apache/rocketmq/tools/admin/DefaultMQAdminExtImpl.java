@@ -1052,14 +1052,14 @@ public class DefaultMQAdminExtImpl implements MQAdminExt, MQAdminExtInner {
 
     @Override
     public String getBrokerMasterIp(final String topicName, final String brokerName)
-            throws RemotingException, MQClientException, InterruptedException {
+        throws RemotingException, MQClientException, InterruptedException {
         TopicRouteData topicRouteData = this.examineTopicRouteInfo(topicName);
         for (BrokerData bd : topicRouteData.getBrokerDatas()) {
-            if(!brokerName.equals(bd.getBrokerName())) {
+            if (!brokerName.equals(bd.getBrokerName())) {
                 continue;
             }
             HashMap<Long, String> brokerAddrs = bd.getBrokerAddrs();
-            if(brokerAddrs == null || !brokerAddrs.containsKey(MixAll.MASTER_ID)) {
+            if (brokerAddrs == null || !brokerAddrs.containsKey(MixAll.MASTER_ID)) {
                 continue;
             }
             return brokerAddrs.get(MixAll.MASTER_ID);

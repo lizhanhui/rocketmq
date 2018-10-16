@@ -137,7 +137,7 @@ public class TopicConfigManager extends ConfigManager {
             this.topicConfigTable.put(topicConfig.getTopicName(), topicConfig);
         }
         {
-        	// Wheel Timer Topic
+            // Wheel Timer Topic
             String topic = TimerMessageStore.TIMER_TOPIC;
             TopicConfig topicConfig = new TopicConfig(topic);
             this.systemTopicList.add(topic);

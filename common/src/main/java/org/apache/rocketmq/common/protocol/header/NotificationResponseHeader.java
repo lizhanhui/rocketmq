@@ -14,10 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-/**
- * $Id: PullMessageResponseHeader.java 1835 2013-05-16 02:00:50Z vintagewang@apache.org $
- */
 package org.apache.rocketmq.common.protocol.header;
 
 import org.apache.rocketmq.remoting.CommandCustomHeader;
@@ -27,15 +23,18 @@ import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 public class NotificationResponseHeader implements CommandCustomHeader {
 
 
-	@CFNotNull
+    @CFNotNull
     private boolean hasMsg = false;
-	public boolean isHasMsg() {
-		return hasMsg;
-	}
-	public void setHasMsg(boolean hasMsg) {
-		this.hasMsg = hasMsg;
-	}
-	@Override
+
+    public boolean isHasMsg() {
+        return hasMsg;
+    }
+
+    public void setHasMsg(boolean hasMsg) {
+        this.hasMsg = hasMsg;
+    }
+
+    @Override
     public void checkFields() throws RemotingCommandException {
     }
 }

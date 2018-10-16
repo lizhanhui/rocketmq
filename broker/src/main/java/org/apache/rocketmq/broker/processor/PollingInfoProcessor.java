@@ -18,7 +18,9 @@ package org.apache.rocketmq.broker.processor;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+
 import java.util.concurrent.LinkedBlockingDeque;
+
 import org.apache.rocketmq.broker.BrokerController;
 import org.apache.rocketmq.broker.longpolling.PopRequest;
 import org.apache.rocketmq.common.KeyBuilder;
@@ -30,20 +32,21 @@ import org.apache.rocketmq.common.protocol.ResponseCode;
 import org.apache.rocketmq.common.protocol.header.PollingInfoRequestHeader;
 import org.apache.rocketmq.common.protocol.header.PollingInfoResponseHeader;
 import org.apache.rocketmq.common.subscription.SubscriptionGroupConfig;
+import org.apache.rocketmq.logging.InternalLogger;
+import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.remoting.common.RemotingHelper;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 import org.apache.rocketmq.remoting.netty.NettyRequestProcessor;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class PollingInfoProcessor implements NettyRequestProcessor {
-    private static final Logger POP_LOGGER = LoggerFactory.getLogger(LoggerName.ROCKETMQ_POP_LOGGER_NAME);
+    private static final InternalLogger POP_LOGGER = InternalLoggerFactory.getLogger(LoggerName.ROCKETMQ_POP_LOGGER_NAME);
     private final BrokerController brokerController;
+
     public PollingInfoProcessor(final BrokerController brokerController) {
         this.brokerController = brokerController;
     }
-    
+
     @Override
     public RemotingCommand processRequest(final ChannelHandlerContext ctx, RemotingCommand request) throws RemotingCommandException {
         return this.processRequest(ctx.channel(), request);
@@ -63,10 +66,6 @@ public class PollingInfoProcessor implements NettyRequestProcessor {
             (PollingInfoRequestHeader) request.decodeCommandCustomHeader(PollingInfoRequestHeader.class);
 
         response.setOpaque(request.getOpaque());
-        
-        if (POP_LOGGER.isDebugEnabled()) {
-            POP_LOGGER.debug("receive PopMessage request command, {}", request);
-        }
 
         if (!PermName.isReadable(this.brokerController.getBrokerConfig().getBrokerPermission())) {
             response.setCode(ResponseCode.NO_PERMISSION);
@@ -87,35 +86,35 @@ public class PollingInfoProcessor implements NettyRequestProcessor {
             response.setRemark("the topic[" + requestHeader.getTopic() + "] peeking message is forbidden");
             return response;
         }
-        
+
         if (requestHeader.getQueueId() >= topicConfig.getReadQueueNums()) {
             String errorInfo = String.format("queueId[%d] is illegal, topic:[%s] topicConfig.readQueueNums:[%d] consumer:[%s]",
-                    requestHeader.getQueueId(), requestHeader.getTopic(), topicConfig.getReadQueueNums(), channel.remoteAddress());
+                requestHeader.getQueueId(), requestHeader.getTopic(), topicConfig.getReadQueueNums(), channel.remoteAddress());
             POP_LOGGER.warn(errorInfo);
             response.setCode(ResponseCode.SYSTEM_ERROR);
             response.setRemark(errorInfo);
             return response;
         }
-		SubscriptionGroupConfig subscriptionGroupConfig = this.brokerController.getSubscriptionGroupManager().findSubscriptionGroupConfig(requestHeader.getConsumerGroup());
-		if (null == subscriptionGroupConfig) {
-			response.setCode(ResponseCode.SUBSCRIPTION_GROUP_NOT_EXIST);
-			response.setRemark(String.format("subscription group [%s] does not exist, %s", requestHeader.getConsumerGroup(), FAQUrl.suggestTodo(FAQUrl.SUBSCRIPTION_GROUP_NOT_EXIST)));
-			return response;
-		}
+        SubscriptionGroupConfig subscriptionGroupConfig = this.brokerController.getSubscriptionGroupManager().findSubscriptionGroupConfig(requestHeader.getConsumerGroup());
+        if (null == subscriptionGroupConfig) {
+            response.setCode(ResponseCode.SUBSCRIPTION_GROUP_NOT_EXIST);
+            response.setRemark(String.format("subscription group [%s] does not exist, %s", requestHeader.getConsumerGroup(), FAQUrl.suggestTodo(FAQUrl.SUBSCRIPTION_GROUP_NOT_EXIST)));
+            return response;
+        }
 
-		if (!subscriptionGroupConfig.isConsumeEnable()) {
-			response.setCode(ResponseCode.NO_PERMISSION);
-			response.setRemark("subscription group no permission, " + requestHeader.getConsumerGroup());
-			return response;
-		}
-		String key = KeyBuilder.buildPollingKey(requestHeader.getTopic(), requestHeader.getConsumerGroup(), requestHeader.getQueueId());
-		LinkedBlockingDeque<PopRequest> queue = this.brokerController.getPopMessageProcessor().getPollingMap().get(key);
-		if (queue != null) {
-			responseHeader.setPollingNum(queue.size());
-		}else {
-			responseHeader.setPollingNum(0);
-		}
-		response.setCode(ResponseCode.SUCCESS);
+        if (!subscriptionGroupConfig.isConsumeEnable()) {
+            response.setCode(ResponseCode.NO_PERMISSION);
+            response.setRemark("subscription group no permission, " + requestHeader.getConsumerGroup());
+            return response;
+        }
+        String key = KeyBuilder.buildPollingKey(requestHeader.getTopic(), requestHeader.getConsumerGroup(), requestHeader.getQueueId());
+        LinkedBlockingDeque<PopRequest> queue = this.brokerController.getPopMessageProcessor().getPollingMap().get(key);
+        if (queue != null) {
+            responseHeader.setPollingNum(queue.size());
+        } else {
+            responseHeader.setPollingNum(0);
+        }
+        response.setCode(ResponseCode.SUCCESS);
         return response;
     }
 

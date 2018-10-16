@@ -25,7 +25,7 @@ import org.apache.rocketmq.remoting.annotation.CFNotNull;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 
 public class GetRouteInfoRequestHeader implements CommandCustomHeader {
-    public static final char split = 1;
+    public static char split = 1;
 
     @CFNotNull
     private String topic;

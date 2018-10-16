@@ -122,10 +122,10 @@ public class StatsItemSet {
             statsItem.samplingInMinutes();
 
             LinkedList<CallSnapshot> csList = statsItem.getCsListHour();
-            if(csList != null && csList.size() >= 7) {
+            if (csList != null && csList.size() >= 7) {
                 CallSnapshot first = csList.getFirst();
                 CallSnapshot last = csList.getLast();
-                if((first.getTimes() == last.getTimes()) && (first.getValue() == last.getValue())) {
+                if ((first.getTimes() == last.getTimes()) && (first.getValue() == last.getValue())) {
                     it.remove();
                 }
             }

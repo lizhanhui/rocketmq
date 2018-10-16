@@ -21,6 +21,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.FileRegion;
+
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Random;
@@ -37,6 +38,8 @@ import org.apache.rocketmq.common.protocol.ResponseCode;
 import org.apache.rocketmq.common.protocol.header.PeekMessageRequestHeader;
 import org.apache.rocketmq.common.protocol.header.PopMessageResponseHeader;
 import org.apache.rocketmq.common.subscription.SubscriptionGroupConfig;
+import org.apache.rocketmq.logging.InternalLogger;
+import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.remoting.common.RemotingHelper;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 import org.apache.rocketmq.remoting.netty.NettyRequestProcessor;
@@ -44,13 +47,11 @@ import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 import org.apache.rocketmq.store.GetMessageResult;
 import org.apache.rocketmq.store.GetMessageStatus;
 import org.apache.rocketmq.store.SelectMappedBufferResult;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class PeekMessageProcessor implements NettyRequestProcessor {
-    private static final Logger LOG = LoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
+    private static final InternalLogger LOG = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
     private final BrokerController brokerController;
-    private Random random=new Random(System.currentTimeMillis());
+    private Random random = new Random(System.currentTimeMillis());
 
     public PeekMessageProcessor(final BrokerController brokerController) {
         this.brokerController = brokerController;
@@ -75,10 +76,6 @@ public class PeekMessageProcessor implements NettyRequestProcessor {
 
         response.setOpaque(request.getOpaque());
 
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("receive PeekMessage request command, {}", request);
-        }
-
         if (!PermName.isReadable(this.brokerController.getBrokerConfig().getBrokerPermission())) {
             response.setCode(ResponseCode.NO_PERMISSION);
             response.setRemark(String.format("the broker[%s] peeking message is forbidden", this.brokerController.getBrokerConfig().getBrokerIP1()));
@@ -101,68 +98,68 @@ public class PeekMessageProcessor implements NettyRequestProcessor {
 
         if (requestHeader.getQueueId() >= topicConfig.getReadQueueNums()) {
             String errorInfo = String.format("queueId[%d] is illegal, topic:[%s] topicConfig.readQueueNums:[%d] consumer:[%s]",
-                    requestHeader.getQueueId(), requestHeader.getTopic(), topicConfig.getReadQueueNums(), channel.remoteAddress());
+                requestHeader.getQueueId(), requestHeader.getTopic(), topicConfig.getReadQueueNums(), channel.remoteAddress());
             LOG.warn(errorInfo);
             response.setCode(ResponseCode.SYSTEM_ERROR);
             response.setRemark(errorInfo);
             return response;
         }
-		SubscriptionGroupConfig subscriptionGroupConfig = this.brokerController.getSubscriptionGroupManager().findSubscriptionGroupConfig(requestHeader.getConsumerGroup());
-		if (null == subscriptionGroupConfig) {
-			response.setCode(ResponseCode.SUBSCRIPTION_GROUP_NOT_EXIST);
-			response.setRemark(String.format("subscription group [%s] does not exist, %s", requestHeader.getConsumerGroup(), FAQUrl.suggestTodo(FAQUrl.SUBSCRIPTION_GROUP_NOT_EXIST)));
-			return response;
-		}
+        SubscriptionGroupConfig subscriptionGroupConfig = this.brokerController.getSubscriptionGroupManager().findSubscriptionGroupConfig(requestHeader.getConsumerGroup());
+        if (null == subscriptionGroupConfig) {
+            response.setCode(ResponseCode.SUBSCRIPTION_GROUP_NOT_EXIST);
+            response.setRemark(String.format("subscription group [%s] does not exist, %s", requestHeader.getConsumerGroup(), FAQUrl.suggestTodo(FAQUrl.SUBSCRIPTION_GROUP_NOT_EXIST)));
+            return response;
+        }
 
-		if (!subscriptionGroupConfig.isConsumeEnable()) {
-			response.setCode(ResponseCode.NO_PERMISSION);
-			response.setRemark("subscription group no permission, " + requestHeader.getConsumerGroup());
-			return response;
-		}        
-		int randomQ=random.nextInt(100);
-		int reviveQid=randomQ % this.brokerController.getBrokerConfig().getReviveQueueNum();
-		GetMessageResult getMessageResult=new GetMessageResult();
-		boolean needRetry=(randomQ % 5 == 0);
-		long popTime=System.currentTimeMillis();
-		long restNum = 0;
-		if (needRetry) {
-			TopicConfig retryTopicConfig = this.brokerController.getTopicConfigManager().selectTopicConfig(KeyBuilder.buildPopRetryTopic(requestHeader.getTopic(), requestHeader.getConsumerGroup()));
-			if (retryTopicConfig != null) {
-				for (int i = 0; i < retryTopicConfig.getReadQueueNums(); i++) {
-					int queueId = (randomQ + i) % retryTopicConfig.getReadQueueNums();
-					restNum = peekMsgFromQueue(true, getMessageResult, requestHeader, queueId, restNum, reviveQid, channel, popTime);
-				}
-			}
-		}
-		if (requestHeader.getQueueId() < 0) {
-			// read all queue
-			for (int i = 0; i < topicConfig.getReadQueueNums(); i++) {
-				int queueId = (randomQ + i) % topicConfig.getReadQueueNums();
-				restNum = peekMsgFromQueue(false, getMessageResult, requestHeader, queueId,  restNum, reviveQid, channel,popTime);
-			}
-		}else {
-			int queueId = requestHeader.getQueueId();
-			restNum = peekMsgFromQueue(false, getMessageResult, requestHeader, queueId, restNum,  reviveQid, channel,popTime);
-		}
-		// if not full , fetch retry again
-		if (!needRetry && getMessageResult.getMessageMapedList().size() < requestHeader.getMaxMsgNums()) {
-			TopicConfig retryTopicConfig = this.brokerController.getTopicConfigManager().selectTopicConfig(KeyBuilder.buildPopRetryTopic(requestHeader.getTopic(), requestHeader.getConsumerGroup()));
-			if (retryTopicConfig != null) {
-				for (int i = 0; i < retryTopicConfig.getReadQueueNums(); i++) {
-					int queueId = (randomQ + i) % retryTopicConfig.getReadQueueNums();
-					restNum = peekMsgFromQueue(true, getMessageResult, requestHeader, queueId , restNum,  reviveQid, channel, popTime);
-				}
-			}
-		}
-		if (!getMessageResult.getMessageBufferList().isEmpty()) {
+        if (!subscriptionGroupConfig.isConsumeEnable()) {
+            response.setCode(ResponseCode.NO_PERMISSION);
+            response.setRemark("subscription group no permission, " + requestHeader.getConsumerGroup());
+            return response;
+        }
+        int randomQ = random.nextInt(100);
+        int reviveQid = randomQ % this.brokerController.getBrokerConfig().getReviveQueueNum();
+        GetMessageResult getMessageResult = new GetMessageResult();
+        boolean needRetry = randomQ % 5 == 0;
+        long popTime = System.currentTimeMillis();
+        long restNum = 0;
+        if (needRetry) {
+            TopicConfig retryTopicConfig = this.brokerController.getTopicConfigManager().selectTopicConfig(KeyBuilder.buildPopRetryTopic(requestHeader.getTopic(), requestHeader.getConsumerGroup()));
+            if (retryTopicConfig != null) {
+                for (int i = 0; i < retryTopicConfig.getReadQueueNums(); i++) {
+                    int queueId = (randomQ + i) % retryTopicConfig.getReadQueueNums();
+                    restNum = peekMsgFromQueue(true, getMessageResult, requestHeader, queueId, restNum, reviveQid, channel, popTime);
+                }
+            }
+        }
+        if (requestHeader.getQueueId() < 0) {
+            // read all queue
+            for (int i = 0; i < topicConfig.getReadQueueNums(); i++) {
+                int queueId = (randomQ + i) % topicConfig.getReadQueueNums();
+                restNum = peekMsgFromQueue(false, getMessageResult, requestHeader, queueId, restNum, reviveQid, channel, popTime);
+            }
+        } else {
+            int queueId = requestHeader.getQueueId();
+            restNum = peekMsgFromQueue(false, getMessageResult, requestHeader, queueId, restNum, reviveQid, channel, popTime);
+        }
+        // if not full , fetch retry again
+        if (!needRetry && getMessageResult.getMessageMapedList().size() < requestHeader.getMaxMsgNums()) {
+            TopicConfig retryTopicConfig = this.brokerController.getTopicConfigManager().selectTopicConfig(KeyBuilder.buildPopRetryTopic(requestHeader.getTopic(), requestHeader.getConsumerGroup()));
+            if (retryTopicConfig != null) {
+                for (int i = 0; i < retryTopicConfig.getReadQueueNums(); i++) {
+                    int queueId = (randomQ + i) % retryTopicConfig.getReadQueueNums();
+                    restNum = peekMsgFromQueue(true, getMessageResult, requestHeader, queueId, restNum, reviveQid, channel, popTime);
+                }
+            }
+        }
+        if (!getMessageResult.getMessageBufferList().isEmpty()) {
             response.setCode(ResponseCode.SUCCESS);
             getMessageResult.setStatus(GetMessageStatus.FOUND);
-		}else{
+        } else {
             response.setCode(ResponseCode.PULL_NOT_FOUND);
             getMessageResult.setStatus(GetMessageStatus.NO_MESSAGE_IN_QUEUE);
 
-		}
-		responseHeader.setRestNum(restNum);
+        }
+        responseHeader.setRestNum(restNum);
         response.setRemark(getMessageResult.getStatus().name());
         switch (response.getCode()) {
             case ResponseCode.SUCCESS:
@@ -182,14 +179,14 @@ public class PeekMessageProcessor implements NettyRequestProcessor {
                         (int) (this.brokerController.getMessageStore().now() - beginTimeMills));
                     response.setBody(r);
                 } else {
-                	final GetMessageResult tmpGetMessageResult=getMessageResult;
+                    final GetMessageResult tmpGetMessageResult = getMessageResult;
                     try {
                         FileRegion fileRegion =
                             new ManyMessageTransfer(response.encodeHeader(getMessageResult.getBufferTotalSize()), getMessageResult);
                         channel.writeAndFlush(fileRegion).addListener(new ChannelFutureListener() {
                             @Override
                             public void operationComplete(ChannelFuture future) throws Exception {
-                            	tmpGetMessageResult.release();
+                                tmpGetMessageResult.release();
                                 if (!future.isSuccess()) {
                                     LOG.error("Fail to transfer messages from page cache to {}", channel.remoteAddress(), future.cause());
                                 }
@@ -207,39 +204,40 @@ public class PeekMessageProcessor implements NettyRequestProcessor {
                 assert false;
         }
         return response;
-}
+    }
 
-	private long peekMsgFromQueue(boolean isRetry, GetMessageResult getMessageResult, PeekMessageRequestHeader requestHeader, int queueId, long restNum,int reviveQid, Channel channel, long popTime) {
-		String topic = isRetry ? KeyBuilder.buildPopRetryTopic(requestHeader.getTopic(), requestHeader.getConsumerGroup()) : requestHeader.getTopic();
-		GetMessageResult getMessageTmpResult;
-		long offset = getPopOffset(topic, requestHeader.getConsumerGroup(), queueId);
-		restNum = this.brokerController.getMessageStore().getMaxOffsetInQueue(topic, queueId) - offset + restNum;
-		if (getMessageResult.getMessageMapedList().size() >= requestHeader.getMaxMsgNums()) {
-			return restNum;
-		}
-		getMessageTmpResult = this.brokerController.getMessageStore().getMessage(requestHeader.getConsumerGroup(), topic, queueId, offset,
-				requestHeader.getMaxMsgNums() - getMessageResult.getMessageMapedList().size(), null);
-		// maybe store offset is not correct.
-		if (GetMessageStatus.OFFSET_TOO_SMALL.equals(getMessageTmpResult.getStatus()) || GetMessageStatus.OFFSET_OVERFLOW_BADLY.equals(getMessageTmpResult.getStatus())) {
-			offset = getMessageTmpResult.getNextBeginOffset();
-			getMessageTmpResult = this.brokerController.getMessageStore().getMessage(requestHeader.getConsumerGroup(), topic, queueId, offset,
-					requestHeader.getMaxMsgNums() - getMessageResult.getMessageMapedList().size(), null);
-		}
-		if (getMessageTmpResult != null) {
-			for (SelectMappedBufferResult mapedBuffer : getMessageTmpResult.getMessageMapedList()) {
-				getMessageResult.addMessage(mapedBuffer);
-			}
-		}
-		return restNum;
-	}
-	private long getPopOffset(String topic, String cid, int queueId) {
-		long offset = this.brokerController.getConsumerOffsetManager().queryOffset(cid, topic, queueId);
-		if (offset < 0) {
-			offset = this.brokerController.getMessageStore().getMinOffsetInQueue(topic, queueId);
-		}
-		return offset;
-	}
-	
+    private long peekMsgFromQueue(boolean isRetry, GetMessageResult getMessageResult, PeekMessageRequestHeader requestHeader, int queueId, long restNum, int reviveQid, Channel channel, long popTime) {
+        String topic = isRetry ? KeyBuilder.buildPopRetryTopic(requestHeader.getTopic(), requestHeader.getConsumerGroup()) : requestHeader.getTopic();
+        GetMessageResult getMessageTmpResult;
+        long offset = getPopOffset(topic, requestHeader.getConsumerGroup(), queueId);
+        restNum = this.brokerController.getMessageStore().getMaxOffsetInQueue(topic, queueId) - offset + restNum;
+        if (getMessageResult.getMessageMapedList().size() >= requestHeader.getMaxMsgNums()) {
+            return restNum;
+        }
+        getMessageTmpResult = this.brokerController.getMessageStore().getMessage(requestHeader.getConsumerGroup(), topic, queueId, offset,
+            requestHeader.getMaxMsgNums() - getMessageResult.getMessageMapedList().size(), null);
+        // maybe store offset is not correct.
+        if (GetMessageStatus.OFFSET_TOO_SMALL.equals(getMessageTmpResult.getStatus()) || GetMessageStatus.OFFSET_OVERFLOW_BADLY.equals(getMessageTmpResult.getStatus())) {
+            offset = getMessageTmpResult.getNextBeginOffset();
+            getMessageTmpResult = this.brokerController.getMessageStore().getMessage(requestHeader.getConsumerGroup(), topic, queueId, offset,
+                requestHeader.getMaxMsgNums() - getMessageResult.getMessageMapedList().size(), null);
+        }
+        if (getMessageTmpResult != null) {
+            for (SelectMappedBufferResult mapedBuffer : getMessageTmpResult.getMessageMapedList()) {
+                getMessageResult.addMessage(mapedBuffer);
+            }
+        }
+        return restNum;
+    }
+
+    private long getPopOffset(String topic, String cid, int queueId) {
+        long offset = this.brokerController.getConsumerOffsetManager().queryOffset(cid, topic, queueId);
+        if (offset < 0) {
+            offset = this.brokerController.getMessageStore().getMinOffsetInQueue(topic, queueId);
+        }
+        return offset;
+    }
+
     private byte[] readGetMessageResult(final GetMessageResult getMessageResult, final String group, final String topic, final int queueId) {
         final ByteBuffer byteBuffer = ByteBuffer.allocate(getMessageResult.getBufferTotalSize());
 

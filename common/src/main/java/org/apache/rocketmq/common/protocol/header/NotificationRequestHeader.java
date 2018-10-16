@@ -14,10 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-/**
- * $Id: PullMessageRequestHeader.java 1835 2013-05-16 02:00:50Z vintagewang@apache.org $
- */
 package org.apache.rocketmq.common.protocol.header;
 
 import org.apache.rocketmq.remoting.CommandCustomHeader;
@@ -33,19 +29,23 @@ public class NotificationRequestHeader implements CommandCustomHeader {
     @CFNotNull
     private int queueId;
     @CFNotNull
-    private long pollTime;   
+    private long pollTime;
     @CFNotNull
-    private long bornTime;   
+    private long bornTime;
+
     @CFNotNull
     @Override
     public void checkFields() throws RemotingCommandException {
     }
+
     public long getPollTime() {
-		return pollTime;
-	}
+        return pollTime;
+    }
+
     public void setPollTime(long pollTime) {
-		this.pollTime = pollTime;
-	}
+        this.pollTime = pollTime;
+    }
+
     public String getConsumerGroup() {
         return consumerGroup;
     }
@@ -53,12 +53,14 @@ public class NotificationRequestHeader implements CommandCustomHeader {
     public void setConsumerGroup(String consumerGroup) {
         this.consumerGroup = consumerGroup;
     }
+
     public long getBornTime() {
-		return bornTime;
-	}
+        return bornTime;
+    }
+
     public void setBornTime(long bornTime) {
-		this.bornTime = bornTime;
-	}
+        this.bornTime = bornTime;
+    }
 
     public String getTopic() {
         return topic;
@@ -69,9 +71,9 @@ public class NotificationRequestHeader implements CommandCustomHeader {
     }
 
     public int getQueueId() {
-    	if (queueId < 0) {
-			return -1;
-		}
+        if (queueId < 0) {
+            return -1;
+        }
         return queueId;
     }
 

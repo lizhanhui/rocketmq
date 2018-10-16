@@ -40,24 +40,23 @@ public class ConsumerStatsManager {
     private final StatsItemSet topicAndGroupPullTPS;
     private final StatsItemSet topicAndGroupPullRT;
 
-    //smq
-    private static final String SMQ_POP_RT = "SMQ_POP_RT";
-    private static final String SMQ_POP_QPS = "SMQ_POP_QPS";
-    private static final String SMQ_PEEK_RT = "SMQ_PEEK_RT";
-    private static final String SMQ_PEEK_QPS = "SMQ_PEEK_QPS";
-    private static final String SMQ_ACK_RT = "SMQ_ACK_RT";
-    private static final String SMQ_ACK_QPS = "SMQ_ACK_QPS";
-    private static final String SMQ_CHANGE_RT = "SMQ_CHANGE_RT";
-    private static final String SMQ_CHANGE_QPS = "SMQ_CHANGE_QPS";
+    private static final String POP_RT = "POP_RT";
+    private static final String POP_QPS = "POP_QPS";
+    private static final String PEEK_RT = "PEEK_RT";
+    private static final String PEEK_QPS = "PEEK_QPS";
+    private static final String ACK_RT = "ACK_RT";
+    private static final String ACK_QPS = "ACK_QPS";
+    private static final String CHANGE_RT = "CHANGE_RT";
+    private static final String CHANGE_QPS = "CHANGE_QPS";
 
-    private final StatsItemSet smqPopRT;
-    private final StatsItemSet smqPopQPS;
-    private final StatsItemSet smqPeekRT;
-    private final StatsItemSet smqPeekQPS;
-    private final StatsItemSet smqAckRT;
-    private final StatsItemSet smqAckQPS;
-    private final StatsItemSet smqChangeRT;
-    private final StatsItemSet smqChangeQPS;
+    private final StatsItemSet popRT;
+    private final StatsItemSet popQPS;
+    private final StatsItemSet peekRT;
+    private final StatsItemSet peekQPS;
+    private final StatsItemSet ackRT;
+    private final StatsItemSet ackQPS;
+    private final StatsItemSet changeRT;
+    private final StatsItemSet changeQPS;
 
     public ConsumerStatsManager(final ScheduledExecutorService scheduledExecutorService) {
         this.topicAndGroupConsumeOKTPS =
@@ -73,15 +72,14 @@ public class ConsumerStatsManager {
 
         this.topicAndGroupPullRT = new StatsItemSet(TOPIC_AND_GROUP_PULL_RT, scheduledExecutorService, log);
 
-        //smq
-        this.smqPopRT = new StatsItemSet(SMQ_POP_RT, scheduledExecutorService, log);
-        this.smqPopQPS = new StatsItemSet(SMQ_POP_QPS, scheduledExecutorService, log);
-        this.smqPeekRT = new StatsItemSet(SMQ_PEEK_RT, scheduledExecutorService, log);
-        this.smqPeekQPS = new StatsItemSet(SMQ_PEEK_QPS, scheduledExecutorService, log);
-        this.smqAckRT = new StatsItemSet(SMQ_ACK_RT, scheduledExecutorService, log);
-        this.smqAckQPS = new StatsItemSet(SMQ_ACK_QPS, scheduledExecutorService, log);
-        this.smqChangeRT = new StatsItemSet(SMQ_CHANGE_RT, scheduledExecutorService, log);
-        this.smqChangeQPS = new StatsItemSet(SMQ_CHANGE_QPS, scheduledExecutorService, log);
+        this.popRT = new StatsItemSet(POP_RT, scheduledExecutorService, log);
+        this.popQPS = new StatsItemSet(POP_QPS, scheduledExecutorService, log);
+        this.peekRT = new StatsItemSet(PEEK_RT, scheduledExecutorService, log);
+        this.peekQPS = new StatsItemSet(PEEK_QPS, scheduledExecutorService, log);
+        this.ackRT = new StatsItemSet(ACK_RT, scheduledExecutorService, log);
+        this.ackQPS = new StatsItemSet(ACK_QPS, scheduledExecutorService, log);
+        this.changeRT = new StatsItemSet(CHANGE_RT, scheduledExecutorService, log);
+        this.changeQPS = new StatsItemSet(CHANGE_QPS, scheduledExecutorService, log);
     }
 
     public void start() {
@@ -182,35 +180,35 @@ public class ConsumerStatsManager {
         return this.topicAndGroupConsumeFailedTPS.getStatsDataInMinute(topic + "@" + group);
     }
 
-    public void incSmqPopRT(final String brokerName, final String group, final String topic, final long rt) {
-        this.smqPopRT.addValue(brokerName + ":" + topic + "@" + group, (int) rt, 1);
+    public void incPopRT(final String brokerName, final String group, final String topic, final long rt) {
+        this.popRT.addValue(brokerName + ":" + topic + "@" + group, (int) rt, 1);
     }
 
-    public void incSmqPopQPS(final String brokerName, final String group, final String topic) {
-        this.smqPopQPS.addValue(brokerName + ":" + topic + "@" + group, 1, 1);
+    public void incPopQPS(final String brokerName, final String group, final String topic) {
+        this.popQPS.addValue(brokerName + ":" + topic + "@" + group, 1, 1);
     }
 
-    public void incSmqPeekRT(final String brokerName, final String group, final String topic, final long rt) {
-        this.smqPeekRT.addValue(brokerName + ":" + topic + "@" + group, (int) rt, 1);
+    public void incPeekRT(final String brokerName, final String group, final String topic, final long rt) {
+        this.peekRT.addValue(brokerName + ":" + topic + "@" + group, (int) rt, 1);
     }
 
-    public void incSmqPeekQPS(final String brokerName, final String group, final String topic) {
-        this.smqPeekQPS.addValue(brokerName + ":" + topic + "@" + group, 1, 1);
+    public void incPeekQPS(final String brokerName, final String group, final String topic) {
+        this.peekQPS.addValue(brokerName + ":" + topic + "@" + group, 1, 1);
     }
 
-    public void incSmqAckRT(final String brokerName, final String group, final String topic, final long rt) {
-        this.smqAckRT.addValue(brokerName + ":" + topic + "@" + group, (int) rt, 1);
+    public void incAckRT(final String brokerName, final String group, final String topic, final long rt) {
+        this.ackRT.addValue(brokerName + ":" + topic + "@" + group, (int) rt, 1);
     }
 
-    public void incSmqAckQPS(final String brokerName, final String group, final String topic) {
-        this.smqAckQPS.addValue(brokerName + ":" + topic + "@" + group, 1, 1);
+    public void incAckQPS(final String brokerName, final String group, final String topic) {
+        this.ackQPS.addValue(brokerName + ":" + topic + "@" + group, 1, 1);
     }
 
-    public void incSmqChangeRT(final String brokerName, final String group, final String topic, final long rt) {
-        this.smqChangeRT.addValue(brokerName + ":" + topic + "@" + group, (int) rt, 1);
+    public void incChangeRT(final String brokerName, final String group, final String topic, final long rt) {
+        this.changeRT.addValue(brokerName + ":" + topic + "@" + group, (int) rt, 1);
     }
 
-    public void incSmqChangeQPS(final String brokerName, final String group, final String topic) {
-        this.smqChangeQPS.addValue(brokerName + ":" + topic + "@" + group, 1, 1);
+    public void incChangeQPS(final String brokerName, final String group, final String topic) {
+        this.changeQPS.addValue(brokerName + ":" + topic + "@" + group, 1, 1);
     }
 }

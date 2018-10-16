@@ -1,13 +1,9 @@
 package org.apache.rocketmq.client;
 
 import java.util.Date;
-import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
-import org.apache.rocketmq.client.consumer.AckCallback;
-import org.apache.rocketmq.client.consumer.AckResult;
 import org.apache.rocketmq.client.consumer.DefaultMQPullConsumer;
 import org.apache.rocketmq.client.consumer.PollingInfoCallback;
 import org.apache.rocketmq.client.consumer.PopCallback;

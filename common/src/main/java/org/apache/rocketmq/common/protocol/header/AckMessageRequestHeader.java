@@ -14,10 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-/**
- * $Id: PullMessageRequestHeader.java 1835 2013-05-16 02:00:50Z vintagewang@apache.org $
- */
 package org.apache.rocketmq.common.protocol.header;
 
 import org.apache.rocketmq.remoting.CommandCustomHeader;
@@ -36,27 +32,32 @@ public class AckMessageRequestHeader implements CommandCustomHeader {
 
     @CFNotNull
     private Long offset;
-    
-    
-    
+
+
     @Override
     public void checkFields() throws RemotingCommandException {
     }
+
     public void setOffset(Long offset) {
-		this.offset = offset;
-	}
+        this.offset = offset;
+    }
+
     public Long getOffset() {
-		return offset;
-	}
+        return offset;
+    }
+
     public String getConsumerGroup() {
         return consumerGroup;
     }
+
     public void setExtraInfo(String extraInfo) {
-		this.extraInfo = extraInfo;
-	}
+        this.extraInfo = extraInfo;
+    }
+
     public String getExtraInfo() {
-		return extraInfo;
-	}
+        return extraInfo;
+    }
+
     public void setConsumerGroup(String consumerGroup) {
         this.consumerGroup = consumerGroup;
     }
@@ -77,8 +78,8 @@ public class AckMessageRequestHeader implements CommandCustomHeader {
         this.queueId = queueId;
     }
 
-	@Override
-	public String toString() {
-		return topic + "," + this.consumerGroup + "," + this.queueId + "," + this.offset + "," + this.extraInfo;
-	}
+    @Override
+    public String toString() {
+        return topic + "," + this.consumerGroup + "," + this.queueId + "," + this.offset + "," + this.extraInfo;
+    }
 }

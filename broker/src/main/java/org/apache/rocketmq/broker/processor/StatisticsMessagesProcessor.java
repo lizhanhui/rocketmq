@@ -16,7 +16,8 @@
  */
 package org.apache.rocketmq.broker.processor;
 
-import io.netty.channel.*;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.Channel;
 import org.apache.rocketmq.broker.BrokerController;
 import org.apache.rocketmq.client.consumer.StatisticsMessagesResult;
 import org.apache.rocketmq.common.KeyBuilder;
@@ -24,14 +25,14 @@ import org.apache.rocketmq.common.TopicConfig;
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.common.protocol.ResponseCode;
 import org.apache.rocketmq.common.protocol.header.StatisticsMessagesRequestHeader;
+import org.apache.rocketmq.logging.InternalLogger;
+import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 import org.apache.rocketmq.remoting.netty.NettyRequestProcessor;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class StatisticsMessagesProcessor implements NettyRequestProcessor {
-    private static final Logger POP_LOGGER = LoggerFactory.getLogger(LoggerName.ROCKETMQ_POP_LOGGER_NAME);
+    private static final InternalLogger POP_LOGGER = InternalLoggerFactory.getLogger(LoggerName.ROCKETMQ_POP_LOGGER_NAME);
     private final BrokerController brokerController;
 
     public StatisticsMessagesProcessor(final BrokerController brokerController) {
@@ -49,9 +50,6 @@ public class StatisticsMessagesProcessor implements NettyRequestProcessor {
     }
 
     private RemotingCommand processRequest(final Channel channel, RemotingCommand request, boolean brokerAllowSuspend) throws RemotingCommandException {
-        if (POP_LOGGER.isDebugEnabled()) {
-            POP_LOGGER.debug("receive StatisticsMessages request command, {}", request);
-        }
         RemotingCommand response = RemotingCommand.createResponseCommand(null);
         response.setOpaque(request.getOpaque());
 

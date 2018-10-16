@@ -18,6 +18,7 @@ package org.apache.rocketmq.common;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+
 import org.apache.rocketmq.common.annotation.ImportantField;
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.common.constant.PermName;
@@ -64,7 +65,7 @@ public class BrokerConfig {
     private int adminBrokerThreadPoolNums = 16;
     private int clientManageThreadPoolNums = 32;
     private int consumerManageThreadPoolNums = 32;
-    private int heartbeatThreadPoolNums = Math.min(32,Runtime.getRuntime().availableProcessors());
+    private int heartbeatThreadPoolNums = Math.min(32, Runtime.getRuntime().availableProcessors());
 
     private int flushConsumerOffsetInterval = 1000 * 5;
 
@@ -147,10 +148,8 @@ public class BrokerConfig {
     private boolean forceRegister = true;
 
     /**
-     *
      * This configurable item defines interval of topics registration of broker to name server. Allowing values are
      * between 10, 000 and 60, 000 milliseconds.
-     *
      */
     private int registerNameServerPeriod = 1000 * 30;
 
@@ -698,12 +697,14 @@ public class BrokerConfig {
     public void setEnablePropertyFilter(boolean enablePropertyFilter) {
         this.enablePropertyFilter = enablePropertyFilter;
     }
+
     public void setPopPollingSize(int popPollingSize) {
-		this.popPollingSize = popPollingSize;
-	}
+        this.popPollingSize = popPollingSize;
+    }
+
     public int getPopPollingSize() {
-		return popPollingSize;
-	}
+        return popPollingSize;
+    }
 
     public boolean isUseLockFreeProducerManager() {
         return useLockFreeProducerManager;
@@ -720,19 +721,22 @@ public class BrokerConfig {
     public void setRejectPullConsumerEnable(final boolean rejectPullConsumerEnable) {
         this.rejectPullConsumerEnable = rejectPullConsumerEnable;
     }
-    public int getReviveQueueNum() {
-		return reviveQueueNum;
-	}
 
-	public void setReviveQueueNum(int reviveQueueNum) {
-		this.reviveQueueNum = reviveQueueNum;
-	}
-	public long getReviveInterval() {
-		return reviveInterval;
-	}
-	public void setReviveInterval(long reviveInterval) {
-		this.reviveInterval = reviveInterval;
-	}
+    public int getReviveQueueNum() {
+        return reviveQueueNum;
+    }
+
+    public void setReviveQueueNum(int reviveQueueNum) {
+        this.reviveQueueNum = reviveQueueNum;
+    }
+
+    public long getReviveInterval() {
+        return reviveInterval;
+    }
+
+    public void setReviveInterval(long reviveInterval) {
+        this.reviveInterval = reviveInterval;
+    }
 
     public int getPopCkStayBufferTime() {
         return popCkStayBufferTime;

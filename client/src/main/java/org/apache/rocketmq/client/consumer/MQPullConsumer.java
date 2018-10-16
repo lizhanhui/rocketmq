@@ -17,6 +17,7 @@
 package org.apache.rocketmq.client.consumer;
 
 import java.util.Set;
+
 import org.apache.rocketmq.client.exception.MQBrokerException;
 import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.common.message.MessageExt;
@@ -45,22 +46,22 @@ public interface MQPullConsumer extends MQConsumer {
     /**
      * Pulling the messages,not blocking
      *
-     * @param mq from which message queue
+     * @param mq            from which message queue
      * @param subExpression subscription expression.it only support or operation such as "tag1 || tag2 || tag3" <br> if
-     * null or * expression,meaning subscribe
-     * all
-     * @param offset from where to pull
-     * @param maxNums max pulling numbers
+     *                      null or * expression,meaning subscribe
+     *                      all
+     * @param offset        from where to pull
+     * @param maxNums       max pulling numbers
      * @return The resulting {@code PullRequest}
      */
     PullResult pull(final MessageQueue mq, final String subExpression, final long offset,
-        final int maxNums) throws MQClientException, RemotingException, MQBrokerException,
+                    final int maxNums) throws MQClientException, RemotingException, MQBrokerException,
         InterruptedException;
 
     /**
      * Pulling the messages with MessageSelector in a sync. way
      *
-     * @param mq from which message queue
+     * @param mq              from which message queue
      * @param messageSelector message selector
      * @return
      * @throws MQClientException
@@ -74,9 +75,9 @@ public interface MQPullConsumer extends MQConsumer {
     /**
      * Pulling the messages with MessageSelector and PullCallback in an async. way
      *
-     * @param mq from which message queue
+     * @param mq              from which message queue
      * @param messageSelector message selector
-     * @param callback callback, can not be null
+     * @param callback        callback, can not be null
      * @throws MQClientException
      * @throws RemotingException
      * @throws MQBrokerException
@@ -91,21 +92,21 @@ public interface MQPullConsumer extends MQConsumer {
      * @return The resulting {@code PullRequest}
      */
     PullResult pull(final MessageQueue mq, final String subExpression, final long offset,
-        final int maxNums, final long timeout) throws MQClientException, RemotingException,
+                    final int maxNums, final long timeout) throws MQClientException, RemotingException,
         MQBrokerException, InterruptedException;
 
     /**
      * Pulling the messages in a async. way
      */
     void pull(final MessageQueue mq, final String subExpression, final long offset, final int maxNums,
-        final PullCallback pullCallback) throws MQClientException, RemotingException,
+              final PullCallback pullCallback) throws MQClientException, RemotingException,
         InterruptedException;
 
     /**
      * Pulling the messages in a async. way
      */
     void pull(final MessageQueue mq, final String subExpression, final long offset, final int maxNums,
-        final PullCallback pullCallback, long timeout) throws MQClientException, RemotingException,
+              final PullCallback pullCallback, long timeout) throws MQClientException, RemotingException,
         InterruptedException;
 
     /**
@@ -114,14 +115,14 @@ public interface MQPullConsumer extends MQConsumer {
      * @return The resulting {@code PullRequest}
      */
     PullResult pullBlockIfNotFound(final MessageQueue mq, final String subExpression,
-        final long offset, final int maxNums) throws MQClientException, RemotingException,
+                                   final long offset, final int maxNums) throws MQClientException, RemotingException,
         MQBrokerException, InterruptedException;
 
     /**
      * Pulling the messages through callback function,if no message arrival,blocking.
      */
     void pullBlockIfNotFound(final MessageQueue mq, final String subExpression, final long offset,
-        final int maxNums, final PullCallback pullCallback) throws MQClientException, RemotingException,
+                             final int maxNums, final PullCallback pullCallback) throws MQClientException, RemotingException,
         InterruptedException;
 
     /**
@@ -164,8 +165,8 @@ public interface MQPullConsumer extends MQConsumer {
      * @throws MQBrokerException
      * @throws InterruptedException
      */
-	PopResult peekMessage(MessageQueue mq, int maxNums, String consumerGroup, long timeout)
-			throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+    PopResult peekMessage(MessageQueue mq, int maxNums, String consumerGroup, long timeout)
+        throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 
 
     /**
@@ -184,8 +185,8 @@ public interface MQPullConsumer extends MQConsumer {
      * @throws MQBrokerException
      * @throws InterruptedException
      */
-	void popAsync(MessageQueue mq, long invisibleTime, int maxNums, String consumerGroup, long timeout, PopCallback popCallback, boolean poll, int initMode)
-			throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+    void popAsync(MessageQueue mq, long invisibleTime, int maxNums, String consumerGroup, long timeout, PopCallback popCallback, boolean poll, int initMode)
+        throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 
 
     /**
@@ -222,7 +223,7 @@ public interface MQPullConsumer extends MQConsumer {
      * @throws MQBrokerException
      * @throws InterruptedException
      */
-	void peekAsync(MessageQueue mq, int maxNums, String consumerGroup, long timeout, PopCallback popCallback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+    void peekAsync(MessageQueue mq, int maxNums, String consumerGroup, long timeout, PopCallback popCallback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 
     /**
      * pop sync
@@ -239,8 +240,8 @@ public interface MQPullConsumer extends MQConsumer {
      * @throws MQBrokerException
      * @throws InterruptedException
      */
-	PopResult pop(MessageQueue mq, long invisibleTime, int maxNums, String consumerGroup, long timeout, int initMode)
-			throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+    PopResult pop(MessageQueue mq, long invisibleTime, int maxNums, String consumerGroup, long timeout, int initMode)
+        throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 
     /**
      * pop sync with expression filter
@@ -263,7 +264,6 @@ public interface MQPullConsumer extends MQConsumer {
         throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 
     /**
-     *
      * @param mq
      * @param consumerGroup
      * @param fromTime
@@ -276,7 +276,7 @@ public interface MQPullConsumer extends MQConsumer {
      * @throws InterruptedException
      */
     void statisticsMessages(MessageQueue mq, String consumerGroup, long fromTime, long toTime, long timeout, StatisticsMessagesCallback callback)
-            throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+        throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 
     /**
      * ack async, confirm the msg is consumed suc.
@@ -291,7 +291,7 @@ public interface MQPullConsumer extends MQConsumer {
      * @throws MQBrokerException
      * @throws InterruptedException
      */
-	void ackMessageAsync(String topic, String consumerGroup, String extraInfo, long timeOut, AckCallback callback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+    void ackMessageAsync(String topic, String consumerGroup, String extraInfo, long timeOut, AckCallback callback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 
     /**
      * change retry time async.
@@ -307,7 +307,7 @@ public interface MQPullConsumer extends MQConsumer {
      * @throws MQBrokerException
      * @throws InterruptedException
      */
-	void changeInvisibleTimeAsync(String topic, String consumerGroup, String extraInfo, long invisibleTime, long timeoutMillis, AckCallback callback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+    void changeInvisibleTimeAsync(String topic, String consumerGroup, String extraInfo, long invisibleTime, long timeoutMillis, AckCallback callback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 
     /**
      * ack sync
@@ -320,10 +320,10 @@ public interface MQPullConsumer extends MQConsumer {
      * @throws MQBrokerException
      * @throws InterruptedException
      */
-	void ackMessage(String topic, String consumerGroup, String extraInfo) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+    void ackMessage(String topic, String consumerGroup, String extraInfo) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 
-	void notificationPollingAsync(MessageQueue mq, String consumerGroup, long timeout, NotificationCallback callback)
-			throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+    void notificationPollingAsync(MessageQueue mq, String consumerGroup, long timeout, NotificationCallback callback)
+        throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 
     /**
      * get polling num of broker.
@@ -337,7 +337,7 @@ public interface MQPullConsumer extends MQConsumer {
      * @throws MQBrokerException
      * @throws InterruptedException
      */
-	void getPollingInfoAsync(MessageQueue mq, String consumerGroup, long timeout, PollingInfoCallback callback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
+    void getPollingInfoAsync(MessageQueue mq, String consumerGroup, long timeout, PollingInfoCallback callback) throws MQClientException, RemotingException, MQBrokerException, InterruptedException;
 
 
 }

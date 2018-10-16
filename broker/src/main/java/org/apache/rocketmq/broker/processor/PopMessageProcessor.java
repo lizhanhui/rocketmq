@@ -31,7 +31,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -60,6 +59,8 @@ import org.apache.rocketmq.common.protocol.header.PopMessageResponseHeader;
 import org.apache.rocketmq.common.protocol.heartbeat.SubscriptionData;
 import org.apache.rocketmq.common.subscription.SubscriptionGroupConfig;
 import org.apache.rocketmq.common.utils.DataConverter;
+import org.apache.rocketmq.logging.InternalLogger;
+import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.remoting.common.RemotingHelper;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 import org.apache.rocketmq.remoting.netty.NettyRequestProcessor;
@@ -75,19 +76,17 @@ import org.apache.rocketmq.store.SelectMappedBufferResult;
 import org.apache.rocketmq.store.pop.AckMsg;
 import org.apache.rocketmq.store.pop.PopCheckPoint;
 import org.apache.rocketmq.util.cache.LockManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.alibaba.fastjson.JSON;
 import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap;
 
 public class PopMessageProcessor implements NettyRequestProcessor {
-    private static final Logger POP_LOGGER = LoggerFactory.getLogger(LoggerName.ROCKETMQ_POP_LOGGER_NAME);
+    private static final InternalLogger POP_LOGGER = InternalLoggerFactory.getLogger(LoggerName.ROCKETMQ_POP_LOGGER_NAME);
     private final BrokerController brokerController;
     private Random random = new Random(System.currentTimeMillis());
     private String reviveTopic;
-    private static String BORN_TIME = "bornTime";
-    private static String POLLING = "POLLING";
+    private static final String BORN_TIME = "bornTime";
+    private static final String POLLING = "POLLING";
 
     private static final int POLLING_SUC = 0;
     private static final int POLLING_FULL = 1;
@@ -319,7 +318,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
         int reviveQid = randomQ % this.brokerController.getBrokerConfig().getReviveQueueNum();
         GetMessageResult getMessageResult = new GetMessageResult();
         long restNum = 0;
-        boolean needRetry = (randomQ % 5 == 0);
+        boolean needRetry = randomQ % 5 == 0;
         long popTime = System.currentTimeMillis();
         if (needRetry) {
             TopicConfig retryTopicConfig = this.brokerController.getTopicConfigManager().selectTopicConfig(KeyBuilder.buildPopRetryTopic(requestHeader.getTopic(), requestHeader.getConsumerGroup()));
@@ -499,7 +498,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
         }
         long expired = requestHeader.getBornTime() + requestHeader.getPollTime();
         final PopRequest request = new PopRequest(remotingCommand, channel, expired);
-        boolean isFull = (totalPollingNum.get() >= this.brokerController.getBrokerConfig().getMaxPopPollingSize());
+        boolean isFull = totalPollingNum.get() >= this.brokerController.getBrokerConfig().getMaxPopPollingSize();
         if (isFull) {
             POP_LOGGER.info("polling {}, result POLLING_FULL", remotingCommand);
             return POLLING_FULL;
@@ -745,7 +744,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
         @Override
         public void run() {
             // scan
-            while(!this.isStopped()) {
+            while (!this.isStopped()) {
                 try {
                     scan();
 
@@ -758,7 +757,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
                     if (this.buffer.size() == 0 && !this.serving) {
                         this.serving = true;
                     }
-                } catch (Throwable e){
+                } catch (Throwable e) {
                 }
             }
 
@@ -884,7 +883,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
         }
 
         private void markBitCAS(AtomicInteger setBits, int index) {
-            while(true) {
+            while (true) {
                 int bits = setBits.get();
                 if (DataConverter.getBit(bits, index)) {
                     break;

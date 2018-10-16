@@ -14,10 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-/**
- * $Id: PullMessageRequestHeader.java 1835 2013-05-16 02:00:50Z vintagewang@apache.org $
- */
 package org.apache.rocketmq.common.protocol.header;
 
 import org.apache.rocketmq.remoting.CommandCustomHeader;
@@ -33,15 +29,19 @@ public class PeekMessageRequestHeader implements CommandCustomHeader {
     private int maxMsgNums;
     @CFNotNull
     private String consumerGroup;
+
     @Override
     public void checkFields() throws RemotingCommandException {
     }
+
     public String getConsumerGroup() {
-		return consumerGroup;
-	}
+        return consumerGroup;
+    }
+
     public void setConsumerGroup(String consumerGroup) {
-		this.consumerGroup = consumerGroup;
-	}
+        this.consumerGroup = consumerGroup;
+    }
+
     public String getTopic() {
         return topic;
     }

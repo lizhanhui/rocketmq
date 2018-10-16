@@ -46,6 +46,8 @@ import org.apache.rocketmq.common.protocol.header.AckMessageRequestHeader;
 import org.apache.rocketmq.common.protocol.header.ExtraInfoUtil;
 import org.apache.rocketmq.common.subscription.SubscriptionGroupConfig;
 import org.apache.rocketmq.common.utils.DataConverter;
+import org.apache.rocketmq.logging.InternalLogger;
+import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.remoting.common.RemotingHelper;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 import org.apache.rocketmq.remoting.netty.NettyRequestProcessor;
@@ -58,13 +60,11 @@ import org.apache.rocketmq.store.PutMessageStatus;
 import org.apache.rocketmq.store.config.BrokerRole;
 import org.apache.rocketmq.store.pop.AckMsg;
 import org.apache.rocketmq.store.pop.PopCheckPoint;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.alibaba.fastjson.JSON;
 
 public class AckMessageProcessor implements NettyRequestProcessor {
-    private static final Logger POP_LOGGER = LoggerFactory.getLogger(LoggerName.ROCKETMQ_POP_LOGGER_NAME);
+    private static final InternalLogger POP_LOGGER = InternalLoggerFactory.getLogger(LoggerName.ROCKETMQ_POP_LOGGER_NAME);
     private final BrokerController brokerController;
     private String reviveTopic;
     private PopReviveService[] popReviveServices;
@@ -345,7 +345,7 @@ public class AckMessageProcessor implements NettyRequestProcessor {
         @Override
         public void run() {
             int slow = 1;
-            while(!this.isStopped()) {
+            while (!this.isStopped()) {
                 try {
                     this.waitForRunning(brokerController.getBrokerConfig().getReviveInterval());
                     if (!checkAndSetMaster()) {
@@ -360,7 +360,7 @@ public class AckMessageProcessor implements NettyRequestProcessor {
                     long oldOffset = brokerController.getConsumerOffsetManager().queryOffset(PopAckConstants.REVIVE_GROUP, reviveTopic, queueId);
                     POP_LOGGER.info("reviveQueueId={}, old offset is {} ", queueId, oldOffset);
                     long offset = oldOffset + 1;
-                    //TODO: offset 自我纠正
+                    // offset self amend
                     while (true) {
                         if (!checkAndSetMaster()) {
                             POP_LOGGER.info("slave skip scan , revive topic={}, reviveQueueId={}", reviveTopic, queueId);

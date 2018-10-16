@@ -568,6 +568,7 @@ public class BrokerController {
          * statisticsMessagesProcessor
          */
         this.remotingServer.registerProcessor(RequestCode.STATISTICS_MESSAGES, this.statisticsMessagesProcessor, this.pullMessageExecutor);
+        this.remotingServer.registerProcessor(RequestCode.STATISTICS_MESSAGES_V2, this.statisticsMessagesProcessor, this.pullMessageExecutor);
 
         /**
          * notificationProcessor
@@ -747,9 +748,11 @@ public class BrokerController {
     public SubscriptionGroupManager getSubscriptionGroupManager() {
         return subscriptionGroupManager;
     }
+
     public PopMessageProcessor getPopMessageProcessor() {
-		return popMessageProcessor;
-	}
+        return popMessageProcessor;
+    }
+
     public void shutdown() {
         if (this.brokerStatsManager != null) {
             this.brokerStatsManager.shutdown();

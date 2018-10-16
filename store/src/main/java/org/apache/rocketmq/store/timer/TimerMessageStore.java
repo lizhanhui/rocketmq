@@ -16,7 +16,6 @@
  */
 package org.apache.rocketmq.store.timer;
 
-import com.conversantmedia.util.concurrent.DisruptorBlockingQueue;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -40,6 +39,8 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import com.conversantmedia.util.concurrent.DisruptorBlockingQueue;
 import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.common.ServiceThread;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
@@ -51,6 +52,8 @@ import org.apache.rocketmq.common.message.MessageClientIDSetter;
 import org.apache.rocketmq.common.message.MessageConst;
 import org.apache.rocketmq.common.message.MessageDecoder;
 import org.apache.rocketmq.common.message.MessageExt;
+import org.apache.rocketmq.logging.InternalLogger;
+import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.store.ConsumeQueue;
 import org.apache.rocketmq.store.MappedFile;
 import org.apache.rocketmq.store.MessageExtBrokerInner;
@@ -59,8 +62,6 @@ import org.apache.rocketmq.store.PutMessageResult;
 import org.apache.rocketmq.store.SelectMappedBufferResult;
 import org.apache.rocketmq.store.config.BrokerRole;
 import org.apache.rocketmq.store.config.MessageStoreConfig;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class TimerMessageStore {
     public static final String TIMER_TOPIC = MixAll.SYSTEM_TOPIC_PREFIX + "wheel_timer";
@@ -69,7 +70,7 @@ public class TimerMessageStore {
     public static final String TIMER_DEQUEUE_MS = MessageConst.PROPERTY_TIMER_DEQUEUE_MS;
     public static final String TIMER_ROLL_TIMES = MessageConst.PROPERTY_TIMER_ROLL_TIMES;
     public static final String TIMER_DELETE_UNIQKEY = MessageConst.PROPERTY_TIMER_DEL_UNIQKEY;
-    public static final Random random = new Random();
+    public static final Random RANDOM = new Random();
     public static final int PUT_OK = 0, PUT_NEED_RETRY = 1, PUT_NO_RETRY = 2;
     public static final int DAY_SECS = 24 * 3600;
     //the timer wheel length, if the broker shutdown last more than the configured days, will cause message loss
@@ -80,7 +81,7 @@ public class TimerMessageStore {
     public static final int MAGIC_DELETE = 1 << 2;
     public boolean debug = false;
 
-    private static final Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
+    private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
     private final PerfCounter.Ticks perfs = new PerfCounter.Ticks(log);
     private final BlockingQueue<TimerRequest> enqueuePutQueue;
     private final BlockingQueue<List<TimerRequest>> dequeueGetQueue;
@@ -159,7 +160,9 @@ public class TimerMessageStore {
         dequeueGetService = new TimerDequeueGetService();
         timerFlushService = new TimerFlushService();
         int getThreadNum =  storeConfig.getTimerGetMessageThreadNum();
-        if (getThreadNum <= 0) getThreadNum =1;
+        if (getThreadNum <= 0) {
+            getThreadNum = 1;
+        }
         dequeueGetMessageServices = new TimerDequeueGetMessageService[getThreadNum];
         for (int i = 0; i < dequeueGetMessageServices.length; i++) {
             dequeueGetMessageServices[i] = new TimerDequeueGetMessageService();
@@ -354,7 +357,7 @@ public class TimerMessageStore {
                         String when = storeConfig.getTimerCheckMetricsWhen();
                         if (!UtilAll.isItTimeToDo(when)) {
                             return;
-                        };
+                        }
                         long curr = System.currentTimeMillis();
                         if (curr - lastTimeOfCheckMetrics > 70 * 60 * 1000) {
                             lastTimeOfCheckMetrics = curr;
@@ -468,6 +471,7 @@ public class TimerMessageStore {
         }
 
     }
+
     public void holdMomentForUnknownError(long ms) {
         try {
             Thread.sleep(ms);
@@ -475,9 +479,11 @@ public class TimerMessageStore {
 
         }
     }
+
     public void holdMomentForUnknownError() {
-       holdMomentForUnknownError(50);
+        holdMomentForUnknownError(50);
     }
+
     public boolean enqueue(int queueId) {
         if (storeConfig.isTimerStopEnqueue()) {
             return false;
@@ -1342,16 +1348,18 @@ public class TimerMessageStore {
 
     class TimerDequeueWarmService extends ServiceThread {
 
-        @Override public String getServiceName() {
+        @Override
+        public String getServiceName() {
             return this.getClass().getSimpleName();
         }
 
-        @Override public void run() {
+        @Override
+        public void run() {
             TimerMessageStore.log.info(this.getServiceName() + " service start");
             while (!this.isStopped()) {
                 try {
                     //if (!storeConfig.isTimerWarmEnable() || -1 == TimerMessageStore.this.warmDequeue()) {
-                        waitForRunning(50);
+                    waitForRunning(50);
                     //}
                 } catch (Throwable e) {
                     TimerMessageStore.log.error("Error occurred in " + getServiceName(), e);
@@ -1413,31 +1421,31 @@ public class TimerMessageStore {
     }
 
     public long getALlCongestNum() {
-        return timerWheel.getAllNum(currReadTimeMs/1000);
+        return timerWheel.getAllNum(currReadTimeMs / 1000);
     }
 
     public long getCongestNum(long deliverTimeMs) {
-        return timerWheel.getNum(deliverTimeMs/1000);
+        return timerWheel.getNum(deliverTimeMs / 1000);
     }
 
     public boolean isReject(long deliverTimeMs) {
-        long congestNum = timerWheel.getNum(deliverTimeMs/1000);
+        long congestNum = timerWheel.getNum(deliverTimeMs / 1000);
         if (congestNum <= storeConfig.getTimerCongestNumEachSec()) {
             return false;
         }
         if (congestNum >= storeConfig.getTimerCongestNumEachSec() * 2) {
             return true;
         }
-        if (random.nextInt(1000) > 1000 * (congestNum - storeConfig.getTimerCongestNumEachSec())/(storeConfig.getTimerCongestNumEachSec() + 0.1)) {
+        if (RANDOM.nextInt(1000) > 1000 * (congestNum - storeConfig.getTimerCongestNumEachSec()) / (storeConfig.getTimerCongestNumEachSec() + 0.1)) {
             return true;
         }
         return false;
     }
 
 
-    public long  getEnqueueBehind() {
+    public long getEnqueueBehind() {
         if (System.currentTimeMillis() - lastEnqueueButExpiredTime < 2000) {
-            return (System.currentTimeMillis() - lastEnqueueButExpiredStoreTime) /1000;
+            return (System.currentTimeMillis() - lastEnqueueButExpiredStoreTime) / 1000;
         }
         return 0;
     }
@@ -1456,6 +1464,7 @@ public class TimerMessageStore {
     public float getEnqueueTps() {
         return perfs.getCounter("enqueue_put").getLastTps();
     }
+
     public float getDequeueTps() {
         return perfs.getCounter("dequeue_put").getLastTps();
     }
@@ -1500,7 +1509,6 @@ public class TimerMessageStore {
     public TimerLog getTimerLog() {
         return timerLog;
     }
-
 
 
     public TimerMetrics getTimerMetrics() {

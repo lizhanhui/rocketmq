@@ -106,6 +106,7 @@ import org.apache.rocketmq.common.protocol.header.CreateTopicRequestHeader;
 import org.apache.rocketmq.common.protocol.header.DeleteSubscriptionGroupRequestHeader;
 import org.apache.rocketmq.common.protocol.header.DeleteTopicRequestHeader;
 import org.apache.rocketmq.common.protocol.header.EndTransactionRequestHeader;
+import org.apache.rocketmq.common.protocol.header.ExtraInfoUtil;
 import org.apache.rocketmq.common.protocol.header.GetConsumeStatsInBrokerHeader;
 import org.apache.rocketmq.common.protocol.header.GetConsumeStatsRequestHeader;
 import org.apache.rocketmq.common.protocol.header.GetConsumerConnectionListRequestHeader;
@@ -122,7 +123,12 @@ import org.apache.rocketmq.common.protocol.header.GetMinOffsetResponseHeader;
 import org.apache.rocketmq.common.protocol.header.GetProducerConnectionListRequestHeader;
 import org.apache.rocketmq.common.protocol.header.GetTopicStatsInfoRequestHeader;
 import org.apache.rocketmq.common.protocol.header.GetTopicsByClusterRequestHeader;
+import org.apache.rocketmq.common.protocol.header.InitConsumerOffsetRequestHeader;
+import org.apache.rocketmq.common.protocol.header.NotificationRequestHeader;
+import org.apache.rocketmq.common.protocol.header.NotificationResponseHeader;
 import org.apache.rocketmq.common.protocol.header.PeekMessageRequestHeader;
+import org.apache.rocketmq.common.protocol.header.PollingInfoRequestHeader;
+import org.apache.rocketmq.common.protocol.header.PollingInfoResponseHeader;
 import org.apache.rocketmq.common.protocol.header.PopMessageRequestHeader;
 import org.apache.rocketmq.common.protocol.header.PopMessageResponseHeader;
 import org.apache.rocketmq.common.protocol.header.PullMessageRequestHeader;
@@ -140,11 +146,11 @@ import org.apache.rocketmq.common.protocol.header.SearchOffsetResponseHeader;
 import org.apache.rocketmq.common.protocol.header.SendMessageRequestHeader;
 import org.apache.rocketmq.common.protocol.header.SendMessageRequestHeaderV2;
 import org.apache.rocketmq.common.protocol.header.SendMessageResponseHeader;
+import org.apache.rocketmq.common.protocol.header.StatisticsMessagesRequestHeader;
 import org.apache.rocketmq.common.protocol.header.UnregisterClientRequestHeader;
 import org.apache.rocketmq.common.protocol.header.UpdateConsumerOffsetRequestHeader;
 import org.apache.rocketmq.common.protocol.header.ViewBrokerStatsDataRequestHeader;
 import org.apache.rocketmq.common.protocol.header.ViewMessageRequestHeader;
-import org.apache.rocketmq.common.protocol.header.*;
 import org.apache.rocketmq.common.protocol.header.filtersrv.RegisterMessageFilterClassRequestHeader;
 import org.apache.rocketmq.common.protocol.header.namesrv.DeleteKVConfigRequestHeader;
 import org.apache.rocketmq.common.protocol.header.namesrv.GetKVConfigRequestHeader;
@@ -635,178 +641,185 @@ public class MQClientAPIImpl {
         return null;
     }
 
-	public PopResult popMessage(//
-			final String brokerName,
-			final String addr, //
-			final PopMessageRequestHeader requestHeader, //
-			final long timeoutMillis //
-	) throws RemotingException, MQBrokerException, InterruptedException {
-		RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.POP_MESSAGE, requestHeader);
-		RemotingCommand response = this.remotingClient.invokeSync(addr, request, timeoutMillis);
-		assert response != null;
-		return this.processPopResponse(brokerName, response,requestHeader.getTopic(), requestHeader);
-	}
-	public void popMessageAsync(
+    public PopResult popMessage(//
+                                final String brokerName,
+                                final String addr, //
+                                final PopMessageRequestHeader requestHeader, //
+                                final long timeoutMillis //
+    ) throws RemotingException, MQBrokerException, InterruptedException {
+        RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.POP_MESSAGE, requestHeader);
+        RemotingCommand response = this.remotingClient.invokeSync(addr, request, timeoutMillis);
+        assert response != null;
+        return this.processPopResponse(brokerName, response, requestHeader.getTopic(), requestHeader);
+    }
+
+    public void popMessageAsync(
         final String brokerName,
         final String addr, //
         final PopMessageRequestHeader requestHeader, //
-        final long timeoutMillis ,//
+        final long timeoutMillis,//
         final PopCallback popCallback//
-        ) throws RemotingException, InterruptedException {
-            incSmqPopQPS(addr, requestHeader);
-            final RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.POP_MESSAGE, requestHeader);
-            this.remotingClient.invokeAsync(addr, request, timeoutMillis, new InvokeCallback() {
-                @Override
-                public void operationComplete(ResponseFuture responseFuture) {
-                    incSmqPopRT(addr, requestHeader, responseFuture);
-                    RemotingCommand response = responseFuture.getResponseCommand();
-                    if (response != null) {
-                        try {
-                            PopResult popResult = MQClientAPIImpl.this.processPopResponse(brokerName, response,requestHeader.getTopic(), requestHeader);
-                            assert popResult != null;
-                            popCallback.onSuccess(popResult);
-                        } catch (Exception e) {
-                        	popCallback.onException(e);
-                        }
+    ) throws RemotingException, InterruptedException {
+        incSmqPopQPS(addr, requestHeader);
+        final RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.POP_MESSAGE, requestHeader);
+        this.remotingClient.invokeAsync(addr, request, timeoutMillis, new InvokeCallback() {
+            @Override
+            public void operationComplete(ResponseFuture responseFuture) {
+                incSmqPopRT(addr, requestHeader, responseFuture);
+                RemotingCommand response = responseFuture.getResponseCommand();
+                if (response != null) {
+                    try {
+                        PopResult popResult = MQClientAPIImpl.this.processPopResponse(brokerName, response, requestHeader.getTopic(), requestHeader);
+                        assert popResult != null;
+                        popCallback.onSuccess(popResult);
+                    } catch (Exception e) {
+                        popCallback.onException(e);
+                    }
+                } else {
+                    if (!responseFuture.isSendRequestOK()) {
+                        popCallback.onException(new MQClientException("send request failed to " + addr + ". Request: " + request, responseFuture.getCause()));
+                    } else if (responseFuture.isTimeout()) {
+                        popCallback.onException(new MQClientException("wait response from " + addr + " timeout :" + responseFuture.getTimeoutMillis() + "ms" + ". Request: " + request,
+                            responseFuture.getCause()));
                     } else {
-                        if (!responseFuture.isSendRequestOK()) {
-                        	popCallback.onException(new MQClientException("send request failed to " + addr + ". Request: " + request, responseFuture.getCause()));
-                        } else if (responseFuture.isTimeout()) {
-                        	popCallback.onException(new MQClientException("wait response from " + addr + " timeout :" + responseFuture.getTimeoutMillis() + "ms" + ". Request: " + request,
-                                responseFuture.getCause()));
-                        } else {
-                        	popCallback.onException(new MQClientException("unknown reason. addr: " + addr + ", timeoutMillis: " + timeoutMillis + ". Request: " + request, responseFuture.getCause()));
-                        }
+                        popCallback.onException(new MQClientException("unknown reason. addr: " + addr + ", timeoutMillis: " + timeoutMillis + ". Request: " + request, responseFuture.getCause()));
                     }
                 }
-            });
-        }
-	public void notificationAsync(
+            }
+        });
+    }
+
+    public void notificationAsync(
         final String brokerName,
         final String addr, //
         final NotificationRequestHeader requestHeader, //
-        final long timeoutMillis ,//
+        final long timeoutMillis,//
         final NotificationCallback callback//
-        ) throws RemotingException, InterruptedException {
-            final RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.NOTIFICATION, requestHeader);
-            this.remotingClient.invokeAsync(addr, request, timeoutMillis, new InvokeCallback() {
-                @Override
-                public void operationComplete(ResponseFuture responseFuture) {
-                    RemotingCommand response = responseFuture.getResponseCommand();
-                    if (response != null) {
-                        try {
-                            NotificationResponseHeader responseHeader = (NotificationResponseHeader) response.decodeCommandCustomHeader(NotificationResponseHeader.class);
-                            callback.onSuccess(responseHeader.isHasMsg());
-                        } catch (Exception e) {
-                        	callback.onException(e);
-                        }
+    ) throws RemotingException, InterruptedException {
+        final RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.NOTIFICATION, requestHeader);
+        this.remotingClient.invokeAsync(addr, request, timeoutMillis, new InvokeCallback() {
+            @Override
+            public void operationComplete(ResponseFuture responseFuture) {
+                RemotingCommand response = responseFuture.getResponseCommand();
+                if (response != null) {
+                    try {
+                        NotificationResponseHeader responseHeader = (NotificationResponseHeader) response.decodeCommandCustomHeader(NotificationResponseHeader.class);
+                        callback.onSuccess(responseHeader.isHasMsg());
+                    } catch (Exception e) {
+                        callback.onException(e);
+                    }
+                } else {
+                    if (!responseFuture.isSendRequestOK()) {
+                        callback.onException(new MQClientException("send request failed to " + addr + ". Request: " + request, responseFuture.getCause()));
+                    } else if (responseFuture.isTimeout()) {
+                        callback.onException(new MQClientException("wait response from " + addr + " timeout :" + responseFuture.getTimeoutMillis() + "ms" + ". Request: " + request,
+                            responseFuture.getCause()));
                     } else {
-                        if (!responseFuture.isSendRequestOK()) {
-                        	callback.onException(new MQClientException("send request failed to " + addr + ". Request: " + request, responseFuture.getCause()));
-                        } else if (responseFuture.isTimeout()) {
-                        	callback.onException(new MQClientException("wait response from " + addr + " timeout :" + responseFuture.getTimeoutMillis() + "ms" + ". Request: " + request,
-                                responseFuture.getCause()));
-                        } else {
-                        	callback.onException(new MQClientException("unknown reason. addr: " + addr + ", timeoutMillis: " + timeoutMillis + ". Request: " + request, responseFuture.getCause()));
-                        }
+                        callback.onException(new MQClientException("unknown reason. addr: " + addr + ", timeoutMillis: " + timeoutMillis + ". Request: " + request, responseFuture.getCause()));
                     }
                 }
-            });
-        }
-	public void pollingInfoAsync(
+            }
+        });
+    }
+
+    public void pollingInfoAsync(
         final String brokerName,
         final String addr, //
         final PollingInfoRequestHeader requestHeader, //
-        final long timeoutMillis ,//
+        final long timeoutMillis,//
         final PollingInfoCallback callback//
-        ) throws RemotingException, InterruptedException {
-            final RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.POLLING_INFO, requestHeader);
-            this.remotingClient.invokeAsync(addr, request, timeoutMillis, new InvokeCallback() {
-                @Override
-                public void operationComplete(ResponseFuture responseFuture) {
-                    RemotingCommand response = responseFuture.getResponseCommand();
-                    if (response != null) {
-                        try {
-                        	     PollingInfoResponseHeader responseHeader = (PollingInfoResponseHeader) response.decodeCommandCustomHeader(PollingInfoResponseHeader.class);
-                             callback.onSuccess(responseHeader.getPollingNum());
-                        } catch (Exception e) {
-                        	callback.onException(e);
-                        }
+    ) throws RemotingException, InterruptedException {
+        final RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.POLLING_INFO, requestHeader);
+        this.remotingClient.invokeAsync(addr, request, timeoutMillis, new InvokeCallback() {
+            @Override
+            public void operationComplete(ResponseFuture responseFuture) {
+                RemotingCommand response = responseFuture.getResponseCommand();
+                if (response != null) {
+                    try {
+                        PollingInfoResponseHeader responseHeader = (PollingInfoResponseHeader) response.decodeCommandCustomHeader(PollingInfoResponseHeader.class);
+                        callback.onSuccess(responseHeader.getPollingNum());
+                    } catch (Exception e) {
+                        callback.onException(e);
+                    }
+                } else {
+                    if (!responseFuture.isSendRequestOK()) {
+                        callback.onException(new MQClientException("send request failed to " + addr + ". Request: " + request, responseFuture.getCause()));
+                    } else if (responseFuture.isTimeout()) {
+                        callback.onException(new MQClientException("wait response from " + addr + " timeout :" + responseFuture.getTimeoutMillis() + "ms" + ". Request: " + request,
+                            responseFuture.getCause()));
                     } else {
-                        if (!responseFuture.isSendRequestOK()) {
-                        	callback.onException(new MQClientException("send request failed to " + addr + ". Request: " + request, responseFuture.getCause()));
-                        } else if (responseFuture.isTimeout()) {
-                        	callback.onException(new MQClientException("wait response from " + addr + " timeout :" + responseFuture.getTimeoutMillis() + "ms" + ". Request: " + request,
-                                responseFuture.getCause()));
-                        } else {
-                        	callback.onException(new MQClientException("unknown reason. addr: " + addr + ", timeoutMillis: " + timeoutMillis + ". Request: " + request, responseFuture.getCause()));
-                        }
+                        callback.onException(new MQClientException("unknown reason. addr: " + addr + ", timeoutMillis: " + timeoutMillis + ". Request: " + request, responseFuture.getCause()));
                     }
                 }
-            });
-        }
-	public void peekMessageAsync(//
-			final String brokerName,
-			final String addr, //
-			final PeekMessageRequestHeader requestHeader, //
-			final long timeoutMillis ,//
-            final PopCallback popCallback//
-        ) throws RemotingException, InterruptedException {
-            incSmqPeekQPS(addr, requestHeader);
-            final RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.PEEK_MESSAGE, requestHeader);
-            this.remotingClient.invokeAsync(addr, request, timeoutMillis, new InvokeCallback() {
-                @Override
-                public void operationComplete(ResponseFuture responseFuture) {
-                    incSmqPeekRT(addr, requestHeader, responseFuture);
-                    RemotingCommand response = responseFuture.getResponseCommand();
-                    if (response != null) {
-                        try {
-                            PopResult popResult = MQClientAPIImpl.this.processPopResponse(brokerName, response,requestHeader.getTopic(), requestHeader);
-                            assert popResult != null;
-                            popCallback.onSuccess(popResult);
-                        } catch (Exception e) {
-                        	popCallback.onException(e);
-                        }
+            }
+        });
+    }
+
+    public void peekMessageAsync(//
+                                 final String brokerName,
+                                 final String addr, //
+                                 final PeekMessageRequestHeader requestHeader, //
+                                 final long timeoutMillis,//
+                                 final PopCallback popCallback//
+    ) throws RemotingException, InterruptedException {
+        incSmqPeekQPS(addr, requestHeader);
+        final RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.PEEK_MESSAGE, requestHeader);
+        this.remotingClient.invokeAsync(addr, request, timeoutMillis, new InvokeCallback() {
+            @Override
+            public void operationComplete(ResponseFuture responseFuture) {
+                incSmqPeekRT(addr, requestHeader, responseFuture);
+                RemotingCommand response = responseFuture.getResponseCommand();
+                if (response != null) {
+                    try {
+                        PopResult popResult = MQClientAPIImpl.this.processPopResponse(brokerName, response, requestHeader.getTopic(), requestHeader);
+                        assert popResult != null;
+                        popCallback.onSuccess(popResult);
+                    } catch (Exception e) {
+                        popCallback.onException(e);
+                    }
+                } else {
+                    if (!responseFuture.isSendRequestOK()) {
+                        popCallback.onException(new MQClientException("send request failed to " + addr + ". Request: " + request, responseFuture.getCause()));
+                    } else if (responseFuture.isTimeout()) {
+                        popCallback.onException(new MQClientException("wait response from " + addr + " timeout :" + responseFuture.getTimeoutMillis() + "ms" + ". Request: " + request,
+                            responseFuture.getCause()));
                     } else {
-                        if (!responseFuture.isSendRequestOK()) {
-                        	popCallback.onException(new MQClientException("send request failed to " + addr + ". Request: " + request, responseFuture.getCause()));
-                        } else if (responseFuture.isTimeout()) {
-                        	popCallback.onException(new MQClientException("wait response from " + addr + " timeout :" + responseFuture.getTimeoutMillis() + "ms" + ". Request: " + request,
-                                responseFuture.getCause()));
-                        } else {
-                        	popCallback.onException(new MQClientException("unknown reason. addr: " + addr + ", timeoutMillis: " + timeoutMillis + ". Request: " + request, responseFuture.getCause()));
-                        }
+                        popCallback.onException(new MQClientException("unknown reason. addr: " + addr + ", timeoutMillis: " + timeoutMillis + ". Request: " + request, responseFuture.getCause()));
                     }
                 }
-            });
-        }
-	public PopResult peekMessage(//
-			final String brokerName,
-			final String addr, //
-			final PeekMessageRequestHeader requestHeader, //
-			final long timeoutMillis //
-	) throws RemotingException, MQBrokerException, InterruptedException {
-		RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.PEEK_MESSAGE, requestHeader);
-		RemotingCommand response = this.remotingClient.invokeSync(addr, request, timeoutMillis);
-		assert response != null;
-		return this.processPopResponse(brokerName, response,requestHeader.getTopic(), requestHeader);
-	}
-	public void ackMessage(//
-			final String addr, //
-			final AckMessageRequestHeader requestHeader //
-	) throws RemotingException, MQBrokerException, InterruptedException {
-		RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.ACK_MESSAGE, requestHeader);
-		this.remotingClient.invokeOneway(addr, request, 1000L);
-	}
-	public void ackMessageAsync(
-			final String addr,
-			final long timeOut,
-			final AckCallback ackCallback,
-			final AckMessageRequestHeader requestHeader //
-	) throws RemotingException, MQBrokerException, InterruptedException {
+            }
+        });
+    }
+
+    public PopResult peekMessage(//
+                                 final String brokerName,
+                                 final String addr, //
+                                 final PeekMessageRequestHeader requestHeader, //
+                                 final long timeoutMillis //
+    ) throws RemotingException, MQBrokerException, InterruptedException {
+        RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.PEEK_MESSAGE, requestHeader);
+        RemotingCommand response = this.remotingClient.invokeSync(addr, request, timeoutMillis);
+        assert response != null;
+        return this.processPopResponse(brokerName, response, requestHeader.getTopic(), requestHeader);
+    }
+
+    public void ackMessage(//
+                           final String addr, //
+                           final AckMessageRequestHeader requestHeader //
+    ) throws RemotingException, MQBrokerException, InterruptedException {
+        RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.ACK_MESSAGE, requestHeader);
+        this.remotingClient.invokeOneway(addr, request, 1000L);
+    }
+
+    public void ackMessageAsync(
+        final String addr,
+        final long timeOut,
+        final AckCallback ackCallback,
+        final AckMessageRequestHeader requestHeader //
+    ) throws RemotingException, MQBrokerException, InterruptedException {
         incSmqAckQPS(addr, requestHeader);
-		final RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.ACK_MESSAGE, requestHeader);
-		this.remotingClient.invokeAsync(addr, request, timeOut, new InvokeCallback() {
+        final RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.ACK_MESSAGE, requestHeader);
+        this.remotingClient.invokeAsync(addr, request, timeOut, new InvokeCallback() {
 
             @Override
             public void operationComplete(ResponseFuture responseFuture) {
@@ -830,7 +843,7 @@ public class MQClientAPIImpl {
                         ackCallback.onException(new MQClientException("send request failed to " + addr + ". Request: " + request, responseFuture.getCause()));
                     } else if (responseFuture.isTimeout()) {
                         ackCallback.onException(new MQClientException("wait response from " + addr + " timeout :" + responseFuture.getTimeoutMillis() + "ms" + ". Request: " + request,
-                                responseFuture.getCause()));
+                            responseFuture.getCause()));
                     } else {
                         ackCallback.onException(new MQClientException("unknown reason. addr: " + addr + ", timeoutMillis: " + timeOut + ". Request: " + request, responseFuture.getCause()));
                     }
@@ -838,55 +851,53 @@ public class MQClientAPIImpl {
 
             }
         });
-	}
-	public void changeInvisibleTimeAsync(//
-			final String brokerName,
-			final String addr, //
-			final ChangeInvisibleTimeRequestHeader requestHeader ,//
-			final long timeoutMillis,
-			final AckCallback ackCallback
-	) throws RemotingException, MQBrokerException, InterruptedException {
+    }
+
+    public void changeInvisibleTimeAsync(//
+                                         final String brokerName,
+                                         final String addr, //
+                                         final ChangeInvisibleTimeRequestHeader requestHeader,//
+                                         final long timeoutMillis,
+                                         final AckCallback ackCallback
+    ) throws RemotingException, MQBrokerException, InterruptedException {
         incSmqChangeQPS(addr, requestHeader);
-		final RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.CHANGE_MESSAGE_INVISIBLETIME, requestHeader);
-		this.remotingClient.invokeAsync(addr, request, timeoutMillis, new InvokeCallback() {
-			@Override
-			public void operationComplete(ResponseFuture responseFuture) {
+        final RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.CHANGE_MESSAGE_INVISIBLETIME, requestHeader);
+        this.remotingClient.invokeAsync(addr, request, timeoutMillis, new InvokeCallback() {
+            @Override
+            public void operationComplete(ResponseFuture responseFuture) {
                 incSmqChangeRT(addr, requestHeader, responseFuture);
                 RemotingCommand response = responseFuture.getResponseCommand();
                 if (response != null) {
                     try {
-                    	ChangeInvisibleTimeResponseHeader responseHeader = (ChangeInvisibleTimeResponseHeader) response.decodeCommandCustomHeader(ChangeInvisibleTimeResponseHeader.class);
-                        AckResult ackResult=new AckResult();
-						if (ResponseCode.SUCCESS == response.getCode()) {
-							ackResult.setStatus(AckStatus.OK);
-							ackResult.setPopTime(responseHeader.getPopTime());
-							ackResult.setExtraInfo(ExtraInfoUtil.buildExtraInfo(requestHeader.getOffset(), responseHeader.getPopTime(), responseHeader.getInvisibleTime(),
-									responseHeader.getReviveQid(), requestHeader.getTopic(), brokerName, requestHeader.getQueueId()) + MessageConst.KEY_SEPARATOR
-									+ requestHeader.getOffset());
-						}else {
-							ackResult.setStatus(AckStatus.NO_EXIST);
-						}
+                        ChangeInvisibleTimeResponseHeader responseHeader = (ChangeInvisibleTimeResponseHeader) response.decodeCommandCustomHeader(ChangeInvisibleTimeResponseHeader.class);
+                        AckResult ackResult = new AckResult();
+                        if (ResponseCode.SUCCESS == response.getCode()) {
+                            ackResult.setStatus(AckStatus.OK);
+                            ackResult.setPopTime(responseHeader.getPopTime());
+                            ackResult.setExtraInfo(ExtraInfoUtil.buildExtraInfo(requestHeader.getOffset(), responseHeader.getPopTime(), responseHeader.getInvisibleTime(),
+                                responseHeader.getReviveQid(), requestHeader.getTopic(), brokerName, requestHeader.getQueueId()) + MessageConst.KEY_SEPARATOR
+                                + requestHeader.getOffset());
+                        } else {
+                            ackResult.setStatus(AckStatus.NO_EXIST);
+                        }
                         assert ackResult != null;
                         ackCallback.onSuccess(ackResult);
                     } catch (Exception e) {
-                    	ackCallback.onException(e);
+                        ackCallback.onException(e);
                     }
                 } else {
                     if (!responseFuture.isSendRequestOK()) {
                         ackCallback.onException(new MQClientException("send request failed to " + addr + ". Request: " + request, responseFuture.getCause()));
                     } else if (responseFuture.isTimeout()) {
-                    	ackCallback.onException(new MQClientException("wait response from " + addr + " timeout :" + responseFuture.getTimeoutMillis() + "ms" + ". Request: " + request,
+                        ackCallback.onException(new MQClientException("wait response from " + addr + " timeout :" + responseFuture.getTimeoutMillis() + "ms" + ". Request: " + request,
                             responseFuture.getCause()));
                     } else {
-                    	ackCallback.onException(new MQClientException("unknown reason. addr: " + addr + ", timeoutMillis: " + timeoutMillis + ". Request: " + request, responseFuture.getCause()));
+                        ackCallback.onException(new MQClientException("unknown reason. addr: " + addr + ", timeoutMillis: " + timeoutMillis + ". Request: " + request, responseFuture.getCause()));
                     }
                 }
-
-
-
-			}
-		});
-	}
+            }
+        });
+    }
     private void pullMessageAsync(
         final String addr,
         final RemotingCommand request,
@@ -957,42 +968,41 @@ public class MQClientAPIImpl {
             responseHeader.getMaxOffset(), null, responseHeader.getSuggestWhichBrokerId(), response.getBody());
     }
 
-	private PopResult processPopResponse(final String brokerName, final RemotingCommand response,String topic, CommandCustomHeader requestHeader) throws MQBrokerException, RemotingCommandException {
-		PopStatus popStatus = PopStatus.NO_NEW_MSG;
-		List<MessageExt> msgFoundList = null;
-		switch (response.getCode()) {
-		case ResponseCode.SUCCESS:
-			popStatus = PopStatus.FOUND;
-			ByteBuffer byteBuffer = ByteBuffer.wrap(response.getBody());
-			msgFoundList = MessageDecoder.decodes(byteBuffer);
-			break;
-		case ResponseCode.POLLING_FULL:
-			popStatus = PopStatus.POLLING_FULL;
-			break;
-		case ResponseCode.POLLING_TIMEOUT:
-			popStatus = PopStatus.POLLING_NOT_FOUND;
-			break;
-		case ResponseCode.PULL_NOT_FOUND:
-			//TODO longji: delete after  next realease
-			popStatus = PopStatus.POLLING_NOT_FOUND;
-			break;
-		default:
-			throw new MQBrokerException(response.getCode(), response.getRemark());
-		}
-		PopResult popResult = new PopResult(popStatus, msgFoundList);
-		PopMessageResponseHeader responseHeader = (PopMessageResponseHeader) response.decodeCommandCustomHeader(PopMessageResponseHeader.class);
-		popResult.setRestNum(responseHeader.getRestNum());
-		// it is a pop command if pop time greater than 0, we should set the check point info to extraInfo field
-		if (popStatus == PopStatus.FOUND) {
-		    Map<String, Long> startOffsetInfo = null;
-		    Map<String, List<Long>> msgOffsetInfo = null;
-			if (requestHeader instanceof PopMessageRequestHeader) {
-				popResult.setInvisibleTime(responseHeader.getInvisibleTime());
-				popResult.setPopTime(responseHeader.getPopTime());
-				startOffsetInfo = ExtraInfoUtil.parseStartOffsetInfo(responseHeader.getStartOffsetInfo());
+    private PopResult processPopResponse(final String brokerName, final RemotingCommand response, String topic, CommandCustomHeader requestHeader) throws MQBrokerException, RemotingCommandException {
+        PopStatus popStatus = PopStatus.NO_NEW_MSG;
+        List<MessageExt> msgFoundList = null;
+        switch (response.getCode()) {
+            case ResponseCode.SUCCESS:
+                popStatus = PopStatus.FOUND;
+                ByteBuffer byteBuffer = ByteBuffer.wrap(response.getBody());
+                msgFoundList = MessageDecoder.decodes(byteBuffer);
+                break;
+            case ResponseCode.POLLING_FULL:
+                popStatus = PopStatus.POLLING_FULL;
+                break;
+            case ResponseCode.POLLING_TIMEOUT:
+                popStatus = PopStatus.POLLING_NOT_FOUND;
+                break;
+            case ResponseCode.PULL_NOT_FOUND:
+                popStatus = PopStatus.POLLING_NOT_FOUND;
+                break;
+            default:
+                throw new MQBrokerException(response.getCode(), response.getRemark());
+        }
+        PopResult popResult = new PopResult(popStatus, msgFoundList);
+        PopMessageResponseHeader responseHeader = (PopMessageResponseHeader) response.decodeCommandCustomHeader(PopMessageResponseHeader.class);
+        popResult.setRestNum(responseHeader.getRestNum());
+        // it is a pop command if pop time greater than 0, we should set the check point info to extraInfo field
+        if (popStatus == PopStatus.FOUND) {
+            Map<String, Long> startOffsetInfo = null;
+            Map<String, List<Long>> msgOffsetInfo = null;
+            if (requestHeader instanceof PopMessageRequestHeader) {
+                popResult.setInvisibleTime(responseHeader.getInvisibleTime());
+                popResult.setPopTime(responseHeader.getPopTime());
+                startOffsetInfo = ExtraInfoUtil.parseStartOffsetInfo(responseHeader.getStartOffsetInfo());
                 msgOffsetInfo = ExtraInfoUtil.parseMsgOffsetInfo(responseHeader.getMsgOffsetInfo());
-			}
-			Map<String/*topicMark@queueId*/, List<Long>/*msg queueOffset*/> sortMap = new HashMap<String, List<Long>>(16);
+            }
+            Map<String/*topicMark@queueId*/, List<Long>/*msg queueOffset*/> sortMap = new HashMap<String, List<Long>>(16);
             for (MessageExt messageExt : msgFoundList) {
                 String key = ExtraInfoUtil.getStartOffsetInfoMapKey(messageExt.getTopic(), messageExt.getQueueId());
                 if (!sortMap.containsKey(key)) {
@@ -1001,15 +1011,15 @@ public class MQClientAPIImpl {
                 sortMap.get(key).add(messageExt.getQueueOffset());
             }
             Map<String, String> map = new HashMap<String, String>(5);
-			for (MessageExt messageExt : msgFoundList) {
-				if (requestHeader instanceof PopMessageRequestHeader) {
+            for (MessageExt messageExt : msgFoundList) {
+                if (requestHeader instanceof PopMessageRequestHeader) {
                     if (startOffsetInfo == null) {
                         // we should set the check point info to extraInfo field , if the command is popMsg
                         // find pop ck offset
                         String key = messageExt.getTopic() + messageExt.getQueueId();
                         if (!map.containsKey(messageExt.getTopic() + messageExt.getQueueId())) {
                             map.put(key, ExtraInfoUtil.buildExtraInfo(messageExt.getQueueOffset(), responseHeader.getPopTime(), responseHeader.getInvisibleTime(), responseHeader.getReviveQid(),
-                                    messageExt.getTopic(), brokerName, messageExt.getQueueId()));
+                                messageExt.getTopic(), brokerName, messageExt.getQueueId()));
 
                         }
                         messageExt.getProperties().put(MessageConst.PROPERTY_POP_CK, map.get(key) + MessageConst.KEY_SEPARATOR + messageExt.getQueueOffset());
@@ -1026,15 +1036,15 @@ public class MQClientAPIImpl {
                                 responseHeader.getReviveQid(), messageExt.getTopic(), brokerName, messageExt.getQueueId(), msgQueueOffset.longValue())
                         );
                     }
-					if (messageExt.getProperties().get(MessageConst.PROPERTY_FIRST_POP_TIME) == null) {
-						messageExt.getProperties().put(MessageConst.PROPERTY_FIRST_POP_TIME, String.valueOf(responseHeader.getPopTime()));
-					}
-				}
-				messageExt.setTopic(topic);
-			}
-		}
-		return popResult;
-	}
+                    if (messageExt.getProperties().get(MessageConst.PROPERTY_FIRST_POP_TIME) == null) {
+                        messageExt.getProperties().put(MessageConst.PROPERTY_FIRST_POP_TIME, String.valueOf(responseHeader.getPopTime()));
+                    }
+                }
+                messageExt.setTopic(topic);
+            }
+        }
+        return popResult;
+    }
 
     public MessageExt viewMessage(final String addr, final long phyoffset, final long timeoutMillis)
         throws RemotingException, MQBrokerException, InterruptedException {
@@ -2539,8 +2549,8 @@ public class MQClientAPIImpl {
     }
 
     public void statisticsMessagesAsync(final String addr, final StatisticsMessagesRequestHeader requestHeader,
-                                final long timeoutMillis, final StatisticsMessagesCallback callback) throws RemotingException, InterruptedException {
-        final RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.STATISTICS_MESSAGES, requestHeader);
+                                        final long timeoutMillis, final StatisticsMessagesCallback callback) throws RemotingException, InterruptedException {
+        final RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.STATISTICS_MESSAGES_V2, requestHeader);
         this.remotingClient.invokeAsync(addr, request, timeoutMillis, new InvokeCallback() {
             @Override
             public void operationComplete(ResponseFuture responseFuture) {
@@ -2558,7 +2568,7 @@ public class MQClientAPIImpl {
                         callback.onException(new MQClientException("send request failed to " + addr + ". Request: " + request, responseFuture.getCause()));
                     } else if (responseFuture.isTimeout()) {
                         callback.onException(new MQClientException("wait response from " + addr + " timeout :" + responseFuture.getTimeoutMillis() + "ms" + ". Request: " + request,
-                                responseFuture.getCause()));
+                            responseFuture.getCause()));
                     } else {
                         callback.onException(new MQClientException("unknown reason. addr: " + addr + ", timeoutMillis: " + timeoutMillis + ". Request: " + request, responseFuture.getCause()));
                     }
@@ -2568,7 +2578,7 @@ public class MQClientAPIImpl {
     }
 
     private StatisticsMessagesResult processStatisticsMessagesResponse(final RemotingCommand response)
-            throws MQBrokerException, RemotingCommandException {
+        throws MQBrokerException, RemotingCommandException {
         StatisticsMessagesResult result = null;
         switch (response.getCode()) {
             case ResponseCode.SUCCESS:
@@ -2587,54 +2597,54 @@ public class MQClientAPIImpl {
     }
 
     private void incSmqPopRT(final String addr, final PopMessageRequestHeader requestHeader, ResponseFuture responseFuture) {
-        if(this.consumerStatsManager != null && responseFuture != null) {
+        if (this.consumerStatsManager != null && responseFuture != null) {
             long popRT = System.currentTimeMillis() - responseFuture.getBeginTimestamp();
-            this.consumerStatsManager.incSmqPopRT(addr, "", requestHeader.getTopic(), popRT);
+            this.consumerStatsManager.incPopRT(addr, "", requestHeader.getTopic(), popRT);
         }
     }
 
     private void incSmqPopQPS(final String addr, final PopMessageRequestHeader requestHeader) {
-        if(this.consumerStatsManager != null) {
-            this.consumerStatsManager.incSmqPopQPS(addr, "", requestHeader.getTopic());
+        if (this.consumerStatsManager != null) {
+            this.consumerStatsManager.incPopQPS(addr, "", requestHeader.getTopic());
         }
     }
 
     private void incSmqPeekRT(final String addr, final PeekMessageRequestHeader requestHeader, ResponseFuture responseFuture) {
-        if(this.consumerStatsManager != null && responseFuture != null) {
+        if (this.consumerStatsManager != null && responseFuture != null) {
             long peekRT = System.currentTimeMillis() - responseFuture.getBeginTimestamp();
-            this.consumerStatsManager.incSmqPeekRT(addr, "", requestHeader.getTopic(), peekRT);
+            this.consumerStatsManager.incPeekRT(addr, "", requestHeader.getTopic(), peekRT);
         }
     }
 
     private void incSmqPeekQPS(final String addr, final PeekMessageRequestHeader requestHeader) {
-        if(this.consumerStatsManager != null) {
-            this.consumerStatsManager.incSmqPeekQPS(addr, "", requestHeader.getTopic());
+        if (this.consumerStatsManager != null) {
+            this.consumerStatsManager.incPeekQPS(addr, "", requestHeader.getTopic());
         }
     }
 
     private void incSmqAckRT(final String addr, final AckMessageRequestHeader requestHeader, ResponseFuture responseFuture) {
-        if(this.consumerStatsManager != null && responseFuture != null) {
+        if (this.consumerStatsManager != null && responseFuture != null) {
             long ackRT = System.currentTimeMillis() - responseFuture.getBeginTimestamp();
-            this.consumerStatsManager.incSmqAckRT(addr, "", requestHeader.getTopic(), ackRT);
+            this.consumerStatsManager.incAckRT(addr, "", requestHeader.getTopic(), ackRT);
         }
     }
 
     private void incSmqAckQPS(final String addr, final AckMessageRequestHeader requestHeader) {
-        if(this.consumerStatsManager != null) {
-            this.consumerStatsManager.incSmqAckQPS(addr, "", requestHeader.getTopic());
+        if (this.consumerStatsManager != null) {
+            this.consumerStatsManager.incAckQPS(addr, "", requestHeader.getTopic());
         }
     }
 
     private void incSmqChangeRT(final String addr, final ChangeInvisibleTimeRequestHeader requestHeader, ResponseFuture responseFuture) {
-        if(this.consumerStatsManager != null && responseFuture != null) {
+        if (this.consumerStatsManager != null && responseFuture != null) {
             long changeRT = System.currentTimeMillis() - responseFuture.getBeginTimestamp();
-            this.consumerStatsManager.incSmqChangeRT(addr, "", requestHeader.getTopic(), changeRT);
+            this.consumerStatsManager.incChangeRT(addr, "", requestHeader.getTopic(), changeRT);
         }
     }
 
     private void incSmqChangeQPS(final String addr, final ChangeInvisibleTimeRequestHeader requestHeader) {
-        if(this.consumerStatsManager != null) {
-            this.consumerStatsManager.incSmqChangeQPS(addr, "", requestHeader.getTopic());
+        if (this.consumerStatsManager != null) {
+            this.consumerStatsManager.incChangeQPS(addr, "", requestHeader.getTopic());
         }
     }
 }

@@ -60,7 +60,7 @@ public class StatsItem {
                 CallSnapshot last = csList.getLast();
                 sum = last.getValue() - first.getValue();
                 long timeStampDiff = last.getTimestamp() - first.getTimestamp();
-                if(timeStampDiff > 0) {
+                if (timeStampDiff > 0) {
                     tps = (sum * 1000.0d) / timeStampDiff;
                 }
 

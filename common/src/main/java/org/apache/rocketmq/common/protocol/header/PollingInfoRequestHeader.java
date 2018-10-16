@@ -29,9 +29,11 @@ public class PollingInfoRequestHeader implements CommandCustomHeader {
     private String topic;
     @CFNotNull
     private int queueId;
+
     @Override
     public void checkFields() throws RemotingCommandException {
     }
+
     public String getConsumerGroup() {
         return consumerGroup;
     }
@@ -49,9 +51,9 @@ public class PollingInfoRequestHeader implements CommandCustomHeader {
     }
 
     public int getQueueId() {
-    	if (queueId < 0) {
-			return -1;
-		}
+        if (queueId < 0) {
+            return -1;
+        }
         return queueId;
     }
 

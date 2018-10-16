@@ -19,60 +19,60 @@ package org.apache.rocketmq.client.consumer;
 import org.apache.rocketmq.remoting.protocol.RemotingSerializable;
 
 public class StatisticsMessagesResult extends RemotingSerializable {
-	private long activeMessages;
-	private long inactiveMessages;
-	private long delayMessages;
-	private long totalMessages;
+    private long activeMessages;
+    private long inactiveMessages;
+    private long delayMessages;
+    private long totalMessages;
 
-	public StatisticsMessagesResult() {
-		this.activeMessages = 0;
-		this.inactiveMessages = 0;
-		this.delayMessages = 0;
-		this.totalMessages = 0;
-	}
+    public StatisticsMessagesResult() {
+        this.activeMessages = 0;
+        this.inactiveMessages = 0;
+        this.delayMessages = 0;
+        this.totalMessages = 0;
+    }
 
-	public StatisticsMessagesResult(long activeMessages, long delayMessages, long totalMessages) {
-		this.activeMessages = activeMessages;
-		this.inactiveMessages = 0;
-		this.delayMessages = delayMessages;
-		this.totalMessages = totalMessages;
-	}
+    public StatisticsMessagesResult(long activeMessages, long delayMessages, long totalMessages) {
+        this.activeMessages = activeMessages;
+        this.inactiveMessages = 0;
+        this.delayMessages = delayMessages;
+        this.totalMessages = totalMessages;
+    }
 
-	public long getActiveMessages() {
-		return activeMessages;
-	}
+    public long getActiveMessages() {
+        return activeMessages;
+    }
 
-	public void setActiveMessages(long activeMessages) {
-		this.activeMessages = activeMessages;
-	}
+    public void setActiveMessages(long activeMessages) {
+        this.activeMessages = activeMessages;
+    }
 
-	public long getInactiveMessages() {
-		return inactiveMessages;
-	}
+    public long getInactiveMessages() {
+        return inactiveMessages;
+    }
 
-	public void setInactiveMessages(long inactiveMessages) {
-		this.inactiveMessages = inactiveMessages;
-	}
+    public void setInactiveMessages(long inactiveMessages) {
+        this.inactiveMessages = inactiveMessages;
+    }
 
-	public long getDelayMessages() {
-		return delayMessages;
-	}
+    public long getDelayMessages() {
+        return delayMessages;
+    }
 
-	public void setDelayMessages(long delayMessages) {
-		this.delayMessages = delayMessages;
-	}
+    public void setDelayMessages(long delayMessages) {
+        this.delayMessages = delayMessages;
+    }
 
-	public long getTotalMessages() {
-		return totalMessages;
-	}
+    public long getTotalMessages() {
+        return totalMessages;
+    }
 
-	public void setTotalMessages(long totalMessages) {
-		this.totalMessages = totalMessages;
-	}
+    public void setTotalMessages(long totalMessages) {
+        this.totalMessages = totalMessages;
+    }
 
-	@Override
-	public String toString() {
-		return "StatisticsMessagesResult [activeMessages=" + activeMessages + ",inactiveMessages="
-				+ inactiveMessages + ",delayMessages=" + delayMessages + ",totalMessages=" + totalMessages + "]";
-	}
+    @Override
+    public String toString() {
+        return "StatisticsMessagesResult [activeMessages=" + activeMessages + ",inactiveMessages="
+            + inactiveMessages + ",delayMessages=" + delayMessages + ",totalMessages=" + totalMessages + "]";
+    }
 }

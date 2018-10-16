@@ -15,11 +15,7 @@
  * limitations under the License.
  */
 package org.apache.rocketmq.client.consumer;
-/**
- * 
- * @author longji.lqs
- *
- */
+
 public enum PopStatus {
     /**
      * Founded
@@ -27,11 +23,11 @@ public enum PopStatus {
     FOUND,
     /**
      * No new message can be pull after polling time out
+     * delete after next realease
      */
-	//TODO longji: delete after  next realease
     NO_NEW_MSG,
     /**
-     * polling pool is full, do not try again immediately. 
+     * polling pool is full, do not try again immediately.
      */
     POLLING_FULL,
     /**
