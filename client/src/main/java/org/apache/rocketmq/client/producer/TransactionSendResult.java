@@ -18,6 +18,8 @@ package org.apache.rocketmq.client.producer;
 
 public class TransactionSendResult extends SendResult {
     private LocalTransactionState localTransactionState;
+    private String errorMessage;
+    private RuntimeException runtimeException;
 
     public TransactionSendResult() {
     }
@@ -28,5 +30,21 @@ public class TransactionSendResult extends SendResult {
 
     public void setLocalTransactionState(LocalTransactionState localTransactionState) {
         this.localTransactionState = localTransactionState;
+    }
+
+    public String getErrorMessage() {
+        return errorMessage;
+    }
+
+    public void setErrorMessage(String errorMessage) {
+        this.errorMessage = errorMessage;
+    }
+
+    public RuntimeException getRuntimeException() {
+        return runtimeException;
+    }
+
+    public void setRuntimeException(RuntimeException runtimeException) {
+        this.runtimeException = runtimeException;
     }
 }

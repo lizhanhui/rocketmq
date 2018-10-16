@@ -16,12 +16,12 @@
  */
 package org.apache.rocketmq.store.timer;
 
+import org.apache.rocketmq.logging.InternalLogger;
 import java.sql.Timestamp;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import org.slf4j.Logger;
 
 public class PerfCounter {
 
@@ -37,7 +37,7 @@ public class PerfCounter {
         }
     };
 
-    private Logger logger;
+    private InternalLogger logger;
     private String prefix = "DEFAULT";
 
     public float getLastTps() {
@@ -55,7 +55,7 @@ public class PerfCounter {
         this(5001, null, null);
     }
 
-    public PerfCounter(int slots, Logger logger, String prefix) {
+    public PerfCounter(int slots, InternalLogger logger, String prefix) {
         if (slots < 3000) {
             throw new RuntimeException("slots must bigger than 3000, but:%s" + slots);
         }
@@ -210,14 +210,14 @@ public class PerfCounter {
     }
 
     public static class Ticks {
-        private final Logger logger;
+        private final InternalLogger logger;
         private final Map<String, PerfCounter> perfs = new ConcurrentHashMap<>();
 
         public Ticks() {
             this(null);
         }
 
-        public Ticks(Logger logger) {
+        public Ticks(InternalLogger logger) {
             this.logger = logger;
         }
 

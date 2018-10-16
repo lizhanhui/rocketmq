@@ -19,6 +19,7 @@ package org.apache.rocketmq.client.impl;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -28,8 +29,23 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import io.netty.channel.EventLoopGroup;
+import io.netty.util.concurrent.EventExecutorGroup;
+
 import org.apache.rocketmq.client.ClientConfig;
-import org.apache.rocketmq.client.consumer.*;
+import org.apache.rocketmq.client.consumer.AckCallback;
+import org.apache.rocketmq.client.consumer.AckResult;
+import org.apache.rocketmq.client.consumer.AckStatus;
+import org.apache.rocketmq.client.consumer.NotificationCallback;
+import org.apache.rocketmq.client.consumer.PollingInfoCallback;
+import org.apache.rocketmq.client.consumer.PopCallback;
+import org.apache.rocketmq.client.consumer.PopResult;
+import org.apache.rocketmq.client.consumer.PopStatus;
+import org.apache.rocketmq.client.consumer.PullCallback;
+import org.apache.rocketmq.client.consumer.PullResult;
+import org.apache.rocketmq.client.consumer.PullStatus;
+import org.apache.rocketmq.client.consumer.StatisticsMessagesCallback;
+import org.apache.rocketmq.client.consumer.StatisticsMessagesResult;
 import org.apache.rocketmq.client.exception.MQBrokerException;
 import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.client.hook.SendMessageContext;
@@ -145,6 +161,7 @@ import org.apache.rocketmq.common.protocol.route.QueueData;
 import org.apache.rocketmq.common.protocol.route.TopicRouteData;
 import org.apache.rocketmq.common.protocol.route.TopicRouteDatas;
 import org.apache.rocketmq.common.subscription.SubscriptionGroupConfig;
+import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.remoting.CommandCustomHeader;
 import org.apache.rocketmq.remoting.InvokeCallback;
 import org.apache.rocketmq.remoting.RPCHook;
@@ -161,12 +178,11 @@ import org.apache.rocketmq.remoting.netty.ResponseFuture;
 import org.apache.rocketmq.remoting.protocol.LanguageCode;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 import org.apache.rocketmq.remoting.protocol.RemotingSerializable;
-import org.slf4j.Logger;
 
 public class MQClientAPIImpl {
 
-    private final static Logger log = ClientLogger.getLog();
-    public static boolean sendSmartMsg =
+    private final static InternalLogger log = ClientLogger.getLog();
+    private static boolean sendSmartMsg =
         Boolean.parseBoolean(System.getProperty("org.apache.rocketmq.client.sendSmartMsg", "true"));
 
     static {
@@ -183,9 +199,16 @@ public class MQClientAPIImpl {
     public MQClientAPIImpl(final NettyClientConfig nettyClientConfig,
         final ClientRemotingProcessor clientRemotingProcessor,
         RPCHook rpcHook, final ClientConfig clientConfig) {
+        this(nettyClientConfig, clientRemotingProcessor, rpcHook, clientConfig, null, null);
+    }
+
+    public MQClientAPIImpl(final NettyClientConfig nettyClientConfig,
+        final ClientRemotingProcessor clientRemotingProcessor,
+        RPCHook rpcHook, final ClientConfig clientConfig,
+        final EventLoopGroup eventLoopGroup, final EventExecutorGroup eventExecutorGroup) {
         this.clientConfig = clientConfig;
         topAddressing = new TopAddressing(MixAll.getWSAddr(), clientConfig.getUnitName());
-        this.remotingClient = new NettyRemotingClient(nettyClientConfig, null);
+        this.remotingClient = new NettyRemotingClient(nettyClientConfig, null, eventLoopGroup, eventExecutorGroup);
         this.clientRemotingProcessor = clientRemotingProcessor;
 
         this.remotingClient.registerRPCHook(rpcHook);
@@ -228,13 +251,9 @@ public class MQClientAPIImpl {
     }
 
     public void updateNameServerAddressList(final String addrs) {
-        List<String> lst = new ArrayList<String>();
         String[] addrArray = addrs.split(";");
-        for (String addr : addrArray) {
-            lst.add(addr);
-        }
-
-        this.remotingClient.updateNameServerAddressList(lst);
+        List<String> list = Arrays.asList(addrArray);
+        this.remotingClient.updateNameServerAddressList(list);
     }
 
     public void start() {
@@ -627,12 +646,12 @@ public class MQClientAPIImpl {
 		assert response != null;
 		return this.processPopResponse(brokerName, response,requestHeader.getTopic(), requestHeader);
 	}
-	public void popMessageAsync(//
-			final String brokerName,
-			final String addr, //
-			final PopMessageRequestHeader requestHeader, //
-			final long timeoutMillis ,//
-            final PopCallback popCallback//
+	public void popMessageAsync(
+        final String brokerName,
+        final String addr, //
+        final PopMessageRequestHeader requestHeader, //
+        final long timeoutMillis ,//
+        final PopCallback popCallback//
         ) throws RemotingException, InterruptedException {
             incSmqPopQPS(addr, requestHeader);
             final RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.POP_MESSAGE, requestHeader);
@@ -662,12 +681,12 @@ public class MQClientAPIImpl {
                 }
             });
         }
-	public void notificationAsync(//
-			final String brokerName,
-			final String addr, //
-			final NotificationRequestHeader requestHeader, //
-			final long timeoutMillis ,//
-            final NotificationCallback callback//
+	public void notificationAsync(
+        final String brokerName,
+        final String addr, //
+        final NotificationRequestHeader requestHeader, //
+        final long timeoutMillis ,//
+        final NotificationCallback callback//
         ) throws RemotingException, InterruptedException {
             final RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.NOTIFICATION, requestHeader);
             this.remotingClient.invokeAsync(addr, request, timeoutMillis, new InvokeCallback() {
@@ -693,13 +712,13 @@ public class MQClientAPIImpl {
                     }
                 }
             });
-        }	
-	public void pollingInfoAsync(//
-			final String brokerName,
-			final String addr, //
-			final PollingInfoRequestHeader requestHeader, //
-			final long timeoutMillis ,//
-            final PollingInfoCallback callback//
+        }
+	public void pollingInfoAsync(
+        final String brokerName,
+        final String addr, //
+        final PollingInfoRequestHeader requestHeader, //
+        final long timeoutMillis ,//
+        final PollingInfoCallback callback//
         ) throws RemotingException, InterruptedException {
             final RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.POLLING_INFO, requestHeader);
             this.remotingClient.invokeAsync(addr, request, timeoutMillis, new InvokeCallback() {
@@ -760,7 +779,7 @@ public class MQClientAPIImpl {
                     }
                 }
             });
-        }	
+        }
 	public PopResult peekMessage(//
 			final String brokerName,
 			final String addr, //
@@ -779,8 +798,8 @@ public class MQClientAPIImpl {
 		RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.ACK_MESSAGE, requestHeader);
 		this.remotingClient.invokeOneway(addr, request, 1000L);
 	}
-	public void ackMessageAsync(//
-			final String addr, //
+	public void ackMessageAsync(
+			final String addr,
 			final long timeOut,
 			final AckCallback ackCallback,
 			final AckMessageRequestHeader requestHeader //
@@ -862,9 +881,9 @@ public class MQClientAPIImpl {
                     	ackCallback.onException(new MQClientException("unknown reason. addr: " + addr + ", timeoutMillis: " + timeoutMillis + ". Request: " + request, responseFuture.getCause()));
                     }
                 }
-				
-			
-				
+
+
+
 			}
 		});
 	}
@@ -937,7 +956,7 @@ public class MQClientAPIImpl {
         return new PullResultExt(pullStatus, responseHeader.getNextBeginOffset(), responseHeader.getMinOffset(),
             responseHeader.getMaxOffset(), null, responseHeader.getSuggestWhichBrokerId(), response.getBody());
     }
-    
+
 	private PopResult processPopResponse(final String brokerName, final RemotingCommand response,String topic, CommandCustomHeader requestHeader) throws MQBrokerException, RemotingCommandException {
 		PopStatus popStatus = PopStatus.NO_NEW_MSG;
 		List<MessageExt> msgFoundList = null;
@@ -1016,7 +1035,7 @@ public class MQClientAPIImpl {
 		}
 		return popResult;
 	}
-	
+
     public MessageExt viewMessage(final String addr, final long phyoffset, final long timeoutMillis)
         throws RemotingException, MQBrokerException, InterruptedException {
         ViewMessageRequestHeader requestHeader = new ViewMessageRequestHeader();
@@ -1226,7 +1245,7 @@ public class MQClientAPIImpl {
         final long timeoutMillis
     ) throws RemotingException, MQBrokerException, InterruptedException {
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.HEART_BEAT, null);
-
+        request.setLanguage(clientConfig.getLanguage());
         request.setBody(heartbeatData.encode());
         RemotingCommand response = this.remotingClient.invokeSync(addr, request, timeoutMillis);
         assert response != null;

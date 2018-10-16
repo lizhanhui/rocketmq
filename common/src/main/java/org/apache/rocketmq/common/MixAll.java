@@ -41,25 +41,19 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.rocketmq.common.annotation.ImportantField;
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.common.help.FAQUrl;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.rocketmq.logging.InternalLogger;
+import org.apache.rocketmq.logging.InternalLoggerFactory;
 
 public class MixAll {
-    private static final Logger log = LoggerFactory.getLogger(LoggerName.COMMON_LOGGER_NAME);
+    private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.COMMON_LOGGER_NAME);
 
     public static final String ROCKETMQ_HOME_ENV = "ROCKETMQ_HOME";
     public static final String ROCKETMQ_HOME_PROPERTY = "rocketmq.home.dir";
     public static final String NAMESRV_ADDR_ENV = "NAMESRV_ADDR";
     public static final String NAMESRV_ADDR_PROPERTY = "rocketmq.namesrv.addr";
     public static final String MESSAGE_COMPRESS_LEVEL = "rocketmq.message.compressLevel";
-
-    public static final String NAME_SRV_DOMAIN_ENV_KEY = "NAME_SRV_QUERY_DOMAIN";
-    public static final String NAME_SRV_DOMAIN_JAVA_OPTION_KEY = "rocketmq.namesrv.domain";
     public static final String DEFAULT_NAMESRV_ADDR_LOOKUP = "jmenv.tbsite.net";
-    public static final String WS_DOMAIN_NAME =
-        System.getProperty(NAME_SRV_DOMAIN_JAVA_OPTION_KEY,
-            null == System.getenv(NAME_SRV_DOMAIN_ENV_KEY) ? DEFAULT_NAMESRV_ADDR_LOOKUP : System.getenv(NAME_SRV_DOMAIN_ENV_KEY));
-
+    public static final String WS_DOMAIN_NAME = System.getProperty("rocketmq.namesrv.domain", DEFAULT_NAMESRV_ADDR_LOOKUP);
     public static final String WS_DOMAIN_SUBGROUP = System.getProperty("rocketmq.namesrv.domain.subgroup", "nsaddr");
     //http://jmenv.tbsite.net:8080/rocketmq/nsaddr
     //public static final String WS_ADDR = "http://" + WS_DOMAIN_NAME + ":8080/rocketmq/" + WS_DOMAIN_SUBGROUP;
@@ -104,7 +98,7 @@ public class MixAll {
      * @return Endpoint to query name server address list through HTTP request.
      */
     public static String getWSAddr() {
-        String wsDomainName = WS_DOMAIN_NAME;
+        String wsDomainName = System.getProperty("rocketmq.namesrv.domain", DEFAULT_NAMESRV_ADDR_LOOKUP);
         String wsDomainSubgroup = System.getProperty("rocketmq.namesrv.domain.subgroup", "nsaddr");
         String wsAddr = "http://" + wsDomainName + ":8080/rocketmq/" + wsDomainSubgroup;
         if (wsDomainName.indexOf(":") > 0) {
@@ -241,11 +235,11 @@ public class MixAll {
         return null;
     }
 
-    public static void printObjectProperties(final Logger logger, final Object object) {
+    public static void printObjectProperties(final InternalLogger logger, final Object object) {
         printObjectProperties(logger, object, false);
     }
 
-    public static void printObjectProperties(final Logger logger, final Object object,
+    public static void printObjectProperties(final InternalLogger logger, final Object object,
         final boolean onlyImportantField) {
         Field[] fields = object.getClass().getDeclaredFields();
         for (Field field : fields) {

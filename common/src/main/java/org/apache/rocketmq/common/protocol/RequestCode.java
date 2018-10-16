@@ -179,5 +179,10 @@ public class RequestCode {
 
     public static final int QUERY_CONSUME_QUEUE = 321;
 
+    @Deprecated
     public static final int STATISTICS_MESSAGES = 322;
+
+    public static final int QUERY_DATA_VERSION = 322;
+
+    public static final int STATISTICS_MESSAGES_V2 = 350;
 }
