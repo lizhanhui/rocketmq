@@ -458,15 +458,10 @@ public class AckMessageProcessor implements NettyRequestProcessor {
                             for (int j = 0; j < popCheckPoint.getN(); j++) {
                                 if (!DataConverter.getBit(popCheckPoint.getBm(), j)) {
                                     // retry msg
-                                    MessageExt messageExt;
-                                    if (popCheckPoint.getD() == null || popCheckPoint.getD().isEmpty()) {
-                                        messageExt = getBizMessage(popCheckPoint.getT(), popCheckPoint.getSo() + j, popCheckPoint.getQ());
-                                    } else {
-                                        messageExt = getBizMessage(popCheckPoint.getT(), popCheckPoint.getSo() + popCheckPoint.getD().get(j), popCheckPoint.getQ());
-                                    }
+                                    MessageExt messageExt = getBizMessage(popCheckPoint.getT(), popCheckPoint.ackOffsetByIndex((byte) j), popCheckPoint.getQ());
                                     if (messageExt == null) {
                                         POP_LOGGER.warn("reviveQueueId={},can not get biz msg topic is {}, offset is {} , then continue ", queueId, popCheckPoint.getT(),
-                                            popCheckPoint.getSo() + j);
+                                            popCheckPoint.ackOffsetByIndex((byte) j));
                                         continue;
                                     }
                                     //skip ck from last epoch
