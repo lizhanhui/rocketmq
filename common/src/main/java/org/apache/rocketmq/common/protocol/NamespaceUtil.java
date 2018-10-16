@@ -30,17 +30,6 @@ public class NamespaceUtil {
         return wrapNamespace(getNamespace(request), resource);
     }
 
-    public static String withNamespaceAndRetry(RemotingCommand request, String consumerGroup) {
-        if (StringUtils.isEmpty(consumerGroup)) {
-            return null;
-        }
-
-        return new StringBuffer()
-            .append(MixAll.RETRY_GROUP_TOPIC_PREFIX)
-            .append(withNamespace(request, consumerGroup))
-            .toString();
-    }
-
     public static String wrapNamespace(String namespace, String resource) {
         if (StringUtils.isEmpty(namespace) || StringUtils.isEmpty(resource) || isSystemResource(resource)) {
             return resource;
@@ -60,6 +49,21 @@ public class NamespaceUtil {
 
         return strBuffer.append(resource).toString();
 
+    }
+
+    public static String withNamespaceAndRetry(RemotingCommand request, String consumerGroup) {
+        return wrapNamespaceAndRetry(getNamespace(request), consumerGroup);
+    }
+
+    public static String wrapNamespaceAndRetry(String namespace, String consumerGroup) {
+        if (StringUtils.isEmpty(consumerGroup)) {
+            return null;
+        }
+
+        return new StringBuffer()
+            .append(MixAll.RETRY_GROUP_TOPIC_PREFIX)
+            .append(wrapNamespace(namespace, consumerGroup))
+            .toString();
     }
 
     public static String getResource(String resourceWithNamespace) {
