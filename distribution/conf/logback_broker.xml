@@ -296,6 +296,20 @@
         </triggeringPolicy>
     </appender>
 
+    <appender name="RocketmqAccountAppender"
+              class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${user.home}/logs/rocketmqlogs/account.log</file>
+        <append>true</append>
+        <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
+            <fileNamePattern>${user.home}/logs/rocketmqlogs/otherdays/account.%i.log.gz</fileNamePattern>
+            <minIndex>1</minIndex>
+            <maxIndex>2</maxIndex>
+        </rollingPolicy>
+        <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+            <maxFileSize>500MB</maxFileSize>
+        </triggeringPolicy>
+    </appender>
+
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <append>true</append>
         <encoder>
@@ -362,6 +376,11 @@
     <logger name="RocketmqCommercial" additivity="false">
         <level value="INFO"/>
         <appender-ref ref="RocketmqCommercialAppender"/>
+    </logger>
+
+    <logger name="RocketmqAccount" additivity="false">
+        <level value="INFO"/>
+        <appender-ref ref="RocketmqAccountAppender"/>
     </logger>
 
     <logger name="RocketmqFilter" additivity="false">

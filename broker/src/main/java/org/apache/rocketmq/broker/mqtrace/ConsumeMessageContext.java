@@ -31,6 +31,8 @@ public class ConsumeMessageContext {
     private String status;
     private Object mqTraceContext;
 
+    private String accountOwnerParent;
+    private String accountOwnerSelf;
     private String commercialOwner;
     private BrokerStatsManager.StatsType commercialRcvStats;
     private int commercialRcvTimes;
@@ -114,6 +116,22 @@ public class ConsumeMessageContext {
 
     public void setBodyLength(int bodyLength) {
         this.bodyLength = bodyLength;
+    }
+
+    public String getAccountOwnerParent() {
+        return accountOwnerParent;
+    }
+
+    public void setAccountOwnerParent(String accountOwnerParent) {
+        this.accountOwnerParent = accountOwnerParent;
+    }
+
+    public String getAccountOwnerSelf() {
+        return accountOwnerSelf;
+    }
+
+    public void setAccountOwnerSelf(String accountOwnerSelf) {
+        this.accountOwnerSelf = accountOwnerSelf;
     }
 
     public String getCommercialOwner() {

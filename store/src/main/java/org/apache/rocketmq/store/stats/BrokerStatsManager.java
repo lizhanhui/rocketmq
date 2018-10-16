@@ -53,8 +53,16 @@ public class BrokerStatsManager {
     public static final String COMMERCIAL_RCV_SIZE = "COMMERCIAL_RCV_SIZE";
     public static final String COMMERCIAL_PERM_FAILURES = "COMMERCIAL_PERM_FAILURES";
     public static final String COMMERCIAL_OWNER = "Owner";
-    public static final String COMMERCIAL_OWNER_PARENT = "OWNER_PARENT";
-    public static final String COMMERCIAL_OWNER_SELF = "OWNER_SELF";
+
+    public static final String ACCOUNT_SEND_TIMES = "ACCOUNT_SEND_TIMES";
+    public static final String ACCOUNT_SNDBCK_TIMES = "ACCOUNT_SNDBCK_TIMES";
+    public static final String ACCOUNT_RCV_TIMES = "ACCOUNT_RCV_TIMES";
+    public static final String ACCOUNT_RCV_EPOLLS = "ACCOUNT_RCV_EPOLLS";
+    public static final String ACCOUNT_SEND_SIZE = "ACCOUNT_SEND_SIZE";
+    public static final String ACCOUNT_RCV_SIZE = "ACCOUNT_RCV_SIZE";
+    public static final String ACCOUNT_OWNER_PARENT = "OWNER_PARENT";
+    public static final String ACCOUNT_OWNER_SELF = "OWNER_SELF";
+
     // Message Size limit for one api-calling count.
     public static final double SIZE_PER_COUNT = 64 * 1024;
 
@@ -77,11 +85,14 @@ public class BrokerStatsManager {
      */
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.ROCKETMQ_STATS_LOGGER_NAME);
     private static final InternalLogger COMMERCIAL_LOG = InternalLoggerFactory.getLogger(LoggerName.COMMERCIAL_LOGGER_NAME);
+    private static final InternalLogger ACCOUNT_LOG = InternalLoggerFactory.getLogger(LoggerName.ACCOUNT_LOGGER_NAME);
     private static final InternalLogger DLQ_STAT_LOG = InternalLoggerFactory.getLogger(LoggerName.DLQ_STATS_LOGGER_NAME);
     private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryImpl(
         "BrokerStatsThread"));
     private final ScheduledExecutorService commercialExecutor = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryImpl(
         "CommercialStatsThread"));
+    private final ScheduledExecutorService accountExecutor = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryImpl(
+        "AccountStatsThread"));
     private final HashMap<String, StatsItemSet> statsTable = new HashMap<String, StatsItemSet>();
     private final String clusterName;
     private final MomentStatsItemSet momentStatsItemSetFallSize = new MomentStatsItemSet(GROUP_GET_FALL_SIZE, scheduledExecutorService, log);
@@ -105,6 +116,13 @@ public class BrokerStatsManager {
         this.statsTable.put(BROKER_GET_FROM_DISK_SIZE, new StatsItemSet(BROKER_GET_FROM_DISK_SIZE, this.scheduledExecutorService, log));
 
         this.statsTable.put(SNDBCK2DLQ_TIMES, new StatsItemSet(SNDBCK2DLQ_TIMES, this.scheduledExecutorService, DLQ_STAT_LOG));
+
+        this.statsTable.put(ACCOUNT_SEND_TIMES, new StatsItemSet(ACCOUNT_SEND_TIMES, this.accountExecutor, ACCOUNT_LOG));
+        this.statsTable.put(ACCOUNT_RCV_TIMES, new StatsItemSet(ACCOUNT_RCV_TIMES, this.accountExecutor, ACCOUNT_LOG));
+        this.statsTable.put(ACCOUNT_SEND_SIZE, new StatsItemSet(ACCOUNT_SEND_SIZE, this.accountExecutor, ACCOUNT_LOG));
+        this.statsTable.put(ACCOUNT_RCV_SIZE, new StatsItemSet(ACCOUNT_RCV_SIZE, this.accountExecutor, ACCOUNT_LOG));
+        this.statsTable.put(ACCOUNT_RCV_EPOLLS, new StatsItemSet(ACCOUNT_RCV_EPOLLS, this.accountExecutor, ACCOUNT_LOG));
+        this.statsTable.put(ACCOUNT_SNDBCK_TIMES, new StatsItemSet(ACCOUNT_SNDBCK_TIMES, this.accountExecutor, ACCOUNT_LOG));
 
         this.statsTable.put(COMMERCIAL_SEND_TIMES, new StatsItemSet(COMMERCIAL_SEND_TIMES, this.commercialExecutor, COMMERCIAL_LOG));
         this.statsTable.put(COMMERCIAL_RCV_TIMES, new StatsItemSet(COMMERCIAL_RCV_TIMES, this.commercialExecutor, COMMERCIAL_LOG));
@@ -250,9 +268,29 @@ public class BrokerStatsManager {
         this.statsTable.get(key).addValue(statsKey, incValue, 1);
     }
 
+    public void incAccountValue(final String key, final String accountOwnerSelf, final String accountOwnerParent, final String group,
+                                final String topic, final String type, final int incValue) {
+        final String statsKey = buildAccountStatsKey(accountOwnerSelf, accountOwnerParent, topic, group, type);
+        this.statsTable.get(key).addValue(statsKey, incValue, 1);
+    }
+
     public String buildCommercialStatsKey(String owner, String topic, String group, String type) {
         StringBuffer strBuilder = new StringBuffer();
         strBuilder.append(owner);
+        strBuilder.append("@");
+        strBuilder.append(topic);
+        strBuilder.append("@");
+        strBuilder.append(group);
+        strBuilder.append("@");
+        strBuilder.append(type);
+        return strBuilder.toString();
+    }
+
+    public String buildAccountStatsKey(String accountOwnerSelf, String accountOwnerParent, String topic, String group, String type) {
+        StringBuffer strBuilder = new StringBuffer();
+        strBuilder.append(accountOwnerParent);
+        strBuilder.append("@");
+        strBuilder.append(accountOwnerSelf);
         strBuilder.append("@");
         strBuilder.append(topic);
         strBuilder.append("@");

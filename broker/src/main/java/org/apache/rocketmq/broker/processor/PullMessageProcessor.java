@@ -326,12 +326,16 @@ public class PullMessageProcessor implements NettyRequestProcessor {
             }
 
             if (this.hasConsumeMessageHook()) {
+                String owner = request.getExtFields().get(BrokerStatsManager.COMMERCIAL_OWNER);
+                String ownerParent = request.getExtFields().get(BrokerStatsManager.ACCOUNT_OWNER_PARENT);
+                String ownerSelf = request.getExtFields().get(BrokerStatsManager.ACCOUNT_OWNER_SELF);
+
                 ConsumeMessageContext context = new ConsumeMessageContext();
                 context.setConsumerGroup(requestHeader.getConsumerGroup());
                 context.setTopic(requestHeader.getTopic());
                 context.setQueueId(requestHeader.getQueueId());
-
-                String owner = request.getExtFields().get(BrokerStatsManager.COMMERCIAL_OWNER);
+                context.setAccountOwnerParent(ownerParent);
+                context.setAccountOwnerSelf(ownerSelf);
 
                 switch (response.getCode()) {
                     case ResponseCode.SUCCESS:
