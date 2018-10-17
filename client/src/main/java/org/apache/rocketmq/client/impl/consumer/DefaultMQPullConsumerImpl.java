@@ -962,8 +962,7 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner, MQPopConsumer
             requestHeader.setOffset(offset);
             requestHeader.setConsumerGroup(consumerGroup);
             requestHeader.setExtraInfo(extraInfo);
-            String brokerAddr = MixAll.brokerVIPChannel(this.defaultMQPullConsumer.isVipChannelEnabled(), findBrokerResult.getBrokerAddr());
-            this.mQClientFactory.getMQClientAPIImpl().ackMessage(brokerAddr, requestHeader);
+            this.mQClientFactory.getMQClientAPIImpl().ackMessage(findBrokerResult.getBrokerAddr(), requestHeader);
             return;
         }
         throw new MQClientException("The broker[" + mq.getBrokerName() + "] not exist", null);
@@ -985,8 +984,7 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner, MQPopConsumer
             requestHeader.setOffset(offset);
             requestHeader.setConsumerGroup(consumerGroup);
             requestHeader.setExtraInfo(extraInfo);
-            String brokerAddr = MixAll.brokerVIPChannel(this.defaultMQPullConsumer.isVipChannelEnabled(), findBrokerResult.getBrokerAddr());
-            this.mQClientFactory.getMQClientAPIImpl().ackMessageAsync(brokerAddr, timeOut, callback, requestHeader);
+            this.mQClientFactory.getMQClientAPIImpl().ackMessageAsync(findBrokerResult.getBrokerAddr(), timeOut, callback, requestHeader);
             return;
         }
         throw new MQClientException("The broker[" + mq.getBrokerName() + "] not exist", null);
@@ -1010,8 +1008,7 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner, MQPopConsumer
             requestHeader.setConsumerGroup(consumerGroup);
             requestHeader.setExtraInfo(extraInfo);
             requestHeader.setInvisibleTime(invisibleTime);
-            String brokerAddr = MixAll.brokerVIPChannel(this.defaultMQPullConsumer.isVipChannelEnabled(), findBrokerResult.getBrokerAddr());
-            this.mQClientFactory.getMQClientAPIImpl().changeInvisibleTimeAsync(mq.getBrokerName(), brokerAddr, requestHeader, timeoutMillis, callback);
+            this.mQClientFactory.getMQClientAPIImpl().changeInvisibleTimeAsync(mq.getBrokerName(), findBrokerResult.getBrokerAddr(), requestHeader, timeoutMillis, callback);
             return;
         }
         throw new MQClientException("The broker[" + mq.getBrokerName() + "] not exist", null);
