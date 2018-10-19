@@ -1610,7 +1610,7 @@ public class MQClientAPIImpl {
         MQBrokerException {
         QuerySubscriptionByConsumerRequestHeader requestHeader = new QuerySubscriptionByConsumerRequestHeader();
         requestHeader.setGroup(group);
-        requestHeader.setGroup(topic);
+        requestHeader.setTopic(topic);
         if (null != this.clientConfig.getNamespace()) {
             requestHeader.setNamespace(this.clientConfig.getNamespace());
         }
