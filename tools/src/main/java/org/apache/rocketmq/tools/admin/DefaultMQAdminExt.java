@@ -46,6 +46,7 @@ import org.apache.rocketmq.common.protocol.body.QueueTimeSpan;
 import org.apache.rocketmq.common.protocol.body.SubscriptionGroupWrapper;
 import org.apache.rocketmq.common.protocol.body.TopicConfigSerializeWrapper;
 import org.apache.rocketmq.common.protocol.body.TopicList;
+import org.apache.rocketmq.common.protocol.heartbeat.SubscriptionData;
 import org.apache.rocketmq.common.protocol.route.QueueData;
 import org.apache.rocketmq.common.protocol.route.TopicRouteData;
 import org.apache.rocketmq.common.protocol.route.TopicRouteDatas;
@@ -375,6 +376,18 @@ public class DefaultMQAdminExt extends ClientConfig implements MQAdminExt {
         String topic) throws InterruptedException, MQBrokerException, RemotingException,
         MQClientException {
         return this.defaultMQAdminExtImpl.queryTopicConsumeByWho(topic);
+    }
+
+    @Override
+    public TopicList queryTopicsByConsumer(String group)
+        throws InterruptedException, MQBrokerException, RemotingException, MQClientException {
+        return this.defaultMQAdminExtImpl.queryTopicsByConsumer(group);
+    }
+
+    @Override
+    public SubscriptionData querySubscription(String group, String topic)
+        throws InterruptedException, MQBrokerException, RemotingException, MQClientException {
+        return this.defaultMQAdminExtImpl.querySubscription(group, topic);
     }
 
     @Override

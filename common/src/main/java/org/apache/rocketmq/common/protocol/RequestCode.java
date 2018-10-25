@@ -134,6 +134,9 @@ public class RequestCode {
 
     public static final int GET_TOPICS_BY_CLUSTER = 224;
 
+    public static final int QUERY_TOPICS_BY_CONSUMER = 343;
+    public static final int QUERY_SUBSCRIPTION_BY_CONSUMER = 345;
+
     public static final int REGISTER_FILTER_SERVER = 301;
     public static final int REGISTER_MESSAGE_FILTER_CLASS = 302;
 

@@ -45,6 +45,7 @@ import org.apache.rocketmq.common.protocol.body.QueueTimeSpan;
 import org.apache.rocketmq.common.protocol.body.SubscriptionGroupWrapper;
 import org.apache.rocketmq.common.protocol.body.TopicConfigSerializeWrapper;
 import org.apache.rocketmq.common.protocol.body.TopicList;
+import org.apache.rocketmq.common.protocol.heartbeat.SubscriptionData;
 import org.apache.rocketmq.common.protocol.route.QueueData;
 import org.apache.rocketmq.common.protocol.route.TopicRouteData;
 import org.apache.rocketmq.common.protocol.route.TopicRouteDatas;
@@ -167,7 +168,7 @@ public interface MQAdminExt extends MQAdmin {
         InterruptedException, MQClientException;
 
     Map<String, Map<MessageQueue, Long>> getConsumeStatus(String topic, String group,
-                                                          String clientAddr) throws RemotingException,
+        String clientAddr) throws RemotingException,
         MQBrokerException, InterruptedException, MQClientException;
 
     void createOrUpdateOrderConf(String key, String value,
@@ -176,6 +177,10 @@ public interface MQAdminExt extends MQAdmin {
 
     GroupList queryTopicConsumeByWho(final String topic) throws RemotingConnectException, RemotingSendRequestException,
         RemotingTimeoutException, InterruptedException, MQBrokerException, RemotingException, MQClientException;
+
+    TopicList queryTopicsByConsumer(final String group) throws InterruptedException, MQBrokerException, RemotingException, MQClientException;
+
+    SubscriptionData querySubscription(final String group, final String topic) throws InterruptedException, MQBrokerException, RemotingException, MQClientException;
 
     List<QueueTimeSpan> queryConsumeTimeSpan(final String topic,
         final String group) throws InterruptedException, MQBrokerException,

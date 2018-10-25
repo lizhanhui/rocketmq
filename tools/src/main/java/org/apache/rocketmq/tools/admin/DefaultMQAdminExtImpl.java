@@ -655,6 +655,44 @@ public class DefaultMQAdminExtImpl implements MQAdminExt, MQAdminExtInner {
     }
 
     @Override
+    public SubscriptionData querySubscription(String group, String topic)
+        throws InterruptedException, MQBrokerException, RemotingException, MQClientException {
+        TopicRouteData topicRouteData = this.examineTopicRouteInfo(topic);
+
+        for (BrokerData bd : topicRouteData.getBrokerDatas()) {
+            String addr = bd.selectBrokerAddr();
+            if (addr != null) {
+                return this.mqClientInstance.getMQClientAPIImpl().querySubscriptionByConsumer(addr, group, topic,
+                    timeoutMillis);
+            }
+
+            break;
+        }
+
+        return null;
+    }
+
+    @Override
+    public TopicList queryTopicsByConsumer(String group)
+        throws InterruptedException, MQBrokerException, RemotingException, MQClientException {
+        String retryTopic = MixAll.getRetryTopic(group);
+        TopicRouteData topicRouteData = this.examineTopicRouteInfo(retryTopic);
+        TopicList result = new TopicList();
+
+        //Query all brokers
+        for (BrokerData bd : topicRouteData.getBrokerDatas()) {
+            String addr = bd.selectBrokerAddr();
+            if (addr != null) {
+                TopicList topicList =
+                    this.mqClientInstance.getMQClientAPIImpl().queryTopicsByConsumer(addr, group, timeoutMillis * 3);
+                result.getTopicList().addAll(topicList.getTopicList());
+            }
+        }
+
+        return result;
+    }
+
+    @Override
     public List<QueueTimeSpan> queryConsumeTimeSpan(final String topic,
         final String group) throws InterruptedException, MQBrokerException,
         RemotingException, MQClientException {
