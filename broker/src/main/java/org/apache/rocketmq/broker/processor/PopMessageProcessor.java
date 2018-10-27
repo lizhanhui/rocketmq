@@ -735,6 +735,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
         ConcurrentHashMap<String, PopCheckPointWrapper> buffer = new ConcurrentHashMap<>(10240);
         private volatile boolean serving = true;
         private AtomicInteger counter = new AtomicInteger(0);
+        private int scanTimes = 0;
 
         @Override
         public String getServiceName() {
@@ -875,10 +876,16 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 
             long eclipse = System.currentTimeMillis() - startTime;
             if (eclipse > brokerController.getBrokerConfig().getPopCkStayBufferTimeOut() - 1000) {
-                POP_LOGGER.warn("[PopBuffer]scan stop, because eclipse too long, eclipse:{}, toStoreAck:{}, size:{}", eclipse, count, counter.get());
+                POP_LOGGER.warn("[PopBuffer]scan stop, because eclipse too long, PopBufferEclipse={}, PopBufferToStoreAck={}, PopBufferSize={}", eclipse, count, counter.get());
                 this.serving = false;
             } else {
-                POP_LOGGER.info("[PopBuffer]scan, eclipse:{}, toStoreAck:{}, size:{}", eclipse, count, counter.get());
+                POP_LOGGER.info("[PopBuffer]scan, PopBufferEclipse={}, PopBufferToStoreAck={}, PopBufferSize={}", eclipse, count, counter.get());
+            }
+            scanTimes++;
+
+            if (scanTimes >= 180) {
+                counter.set(this.buffer.size());
+                scanTimes = 0;
             }
         }
 
@@ -919,7 +926,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
             }
         }
 
-        public boolean addAk(AckMsg ackMsg) {
+        public boolean addAk(int reviveQid, AckMsg ackMsg) {
             if (!brokerController.getBrokerConfig().isEnablePopBufferMerge()) {
                 return false;
             }
@@ -929,7 +936,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
             try {
                 PopCheckPointWrapper pointWrapper = this.buffer.get(ackMsg.getT() + ackMsg.getC() + ackMsg.getQ() + ackMsg.getSo() + ackMsg.getPt());
                 if (pointWrapper == null) {
-                    POP_LOGGER.error("[PopBuffer]add ack fail, no ck, {}", ackMsg);
+                    POP_LOGGER.error("[PopBuffer]add ack fail, rqId={}, no ck, {}", reviveQid, ackMsg);
                     return false;
                 }
 
@@ -937,12 +944,12 @@ public class PopMessageProcessor implements NettyRequestProcessor {
                 long now = System.currentTimeMillis();
 
                 if (point.getRt() - now < brokerController.getBrokerConfig().getPopCkStayBufferTimeOut() + 1500) {
-                    POP_LOGGER.error("[PopBuffer]add ack fail, almost timeout for revive, {}, {}, {}", pointWrapper, ackMsg, now);
+                    POP_LOGGER.error("[PopBuffer]add ack fail, rqId={}, almost timeout for revive, {}, {}, {}", reviveQid, pointWrapper, ackMsg, now);
                     return false;
                 }
 
                 if (now - point.getPt() > brokerController.getBrokerConfig().getPopCkStayBufferTime() - 1500) {
-                    POP_LOGGER.error("[PopBuffer]add ack fail, stay too long, {}, {}, {}", pointWrapper, ackMsg, now);
+                    POP_LOGGER.error("[PopBuffer]add ack fail, rqId={}, stay too long, {}, {}, {}", reviveQid, pointWrapper, ackMsg, now);
                     return false;
                 }
 
@@ -950,12 +957,12 @@ public class PopMessageProcessor implements NettyRequestProcessor {
                 if (indexOfAck > -1) {
                     markBitCAS(pointWrapper.getBits(), indexOfAck);
                 } else {
-                    POP_LOGGER.error("[PopBuffer]Invalid index of ack, {}, {}", ackMsg, point);
+                    POP_LOGGER.error("[PopBuffer]Invalid index of ack, reviveQid={}, {}, {}", reviveQid, ackMsg, point);
                     return true;
                 }
 
                 if (brokerController.getBrokerConfig().isEnablePopLog()) {
-                    POP_LOGGER.info("[PopBuffer]add ack, {}, {}", pointWrapper, ackMsg);
+                    POP_LOGGER.info("[PopBuffer]add ack, rqId={}, {}, {}", reviveQid, pointWrapper, ackMsg);
                 }
 
                 // check ak done
@@ -965,7 +972,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
                 }
                 return true;
             } catch (Throwable e) {
-                POP_LOGGER.error("[PopBuffer]add ack error, " + ackMsg, e);
+                POP_LOGGER.error("[PopBuffer]add ack error, rqId=" + reviveQid + ", " + ackMsg, e);
             }
 
             return false;

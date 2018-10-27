@@ -133,13 +133,15 @@ public class ChangeInvisibleTimeProcessor implements NettyRequestProcessor {
         ackMsg.setQ(requestHeader.getQueueId());
         ackMsg.setPt(ExtraInfoUtil.getPopTime(extraInfo));
 
-        if (brokerController.getPopMessageProcessor().getPopAckBufferMergeService().addAk(ackMsg)) {
+        int rqId = ExtraInfoUtil.getReviveQid(extraInfo);
+
+        if (brokerController.getPopMessageProcessor().getPopAckBufferMergeService().addAk(rqId, ackMsg)) {
             return;
         }
 
         msgInner.setTopic(reviveTopic);
         msgInner.setBody(JSON.toJSONString(ackMsg).getBytes(DataConverter.charset));
-        msgInner.setQueueId(ExtraInfoUtil.getReviveQid(extraInfo));
+        msgInner.setQueueId(rqId);
         msgInner.setTags(PopAckConstants.ACK_TAG);
         msgInner.setBornTimestamp(System.currentTimeMillis());
         msgInner.setBornHost(this.brokerController.getStoreHost());
