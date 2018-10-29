@@ -29,8 +29,7 @@ public class GetConsumerStatusRequestHeader implements CommandCustomHeader {
     private String group;
     @CFNullable
     private String clientAddr;
-    @CFNullable
-    private String namespace;
+
 
     @Override
     public void checkFields() throws RemotingCommandException {
@@ -58,13 +57,5 @@ public class GetConsumerStatusRequestHeader implements CommandCustomHeader {
 
     public void setClientAddr(String clientAddr) {
         this.clientAddr = clientAddr;
-    }
-
-    public String getNamespace() {
-        return namespace;
-    }
-
-    public void setNamespace(String namespace) {
-        this.namespace = namespace;
     }
 }

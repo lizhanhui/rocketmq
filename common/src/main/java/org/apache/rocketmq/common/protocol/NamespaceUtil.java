@@ -66,9 +66,10 @@ public class NamespaceUtil {
             .toString();
     }
 
-    public static String getResource(String resourceWithNamespace) {
-        if (StringUtils.isEmpty(resourceWithNamespace)) {
-            return null;
+    public static String getResource(String resourceWithNamespace, String namespace) {
+        if (StringUtils.isEmpty(resourceWithNamespace) || StringUtils.isEmpty(namespace) ||
+            !resourceWithNamespace.contains(namespace)) {
+            return resourceWithNamespace;
         }
 
         if (isRetryTopic(resourceWithNamespace)) {
@@ -79,8 +80,7 @@ public class NamespaceUtil {
             resourceWithNamespace = resourceWithNamespace.substring(DLQ_PREFIX_LENGTH);
         }
 
-        int indexOfSeparator = resourceWithNamespace.indexOf(NAMESPACE_SEPARATOR) + 1;
-        return resourceWithNamespace.substring(indexOfSeparator);
+        return resourceWithNamespace.substring(namespace.length() + 1);
     }
 
     public static String getNamespace(RemotingCommand request) {

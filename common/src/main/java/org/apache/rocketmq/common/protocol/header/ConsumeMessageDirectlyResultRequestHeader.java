@@ -32,7 +32,6 @@ public class ConsumeMessageDirectlyResultRequestHeader implements CommandCustomH
     @CFNullable
     private String brokerName;
     @CFNullable
-    private String namespace;
 
     @Override
     public void checkFields() throws RemotingCommandException {
@@ -68,13 +67,5 @@ public class ConsumeMessageDirectlyResultRequestHeader implements CommandCustomH
 
     public void setMsgId(String msgId) {
         this.msgId = msgId;
-    }
-
-    public String getNamespace() {
-        return namespace;
-    }
-
-    public void setNamespace(String namespace) {
-        this.namespace = namespace;
     }
 }
