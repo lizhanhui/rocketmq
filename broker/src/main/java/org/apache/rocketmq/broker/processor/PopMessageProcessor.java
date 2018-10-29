@@ -31,6 +31,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -75,7 +76,6 @@ import org.apache.rocketmq.store.PutMessageStatus;
 import org.apache.rocketmq.store.SelectMappedBufferResult;
 import org.apache.rocketmq.store.pop.AckMsg;
 import org.apache.rocketmq.store.pop.PopCheckPoint;
-import org.apache.rocketmq.util.cache.LockManager;
 
 import com.alibaba.fastjson.JSON;
 import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap;
@@ -98,6 +98,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
     private AtomicLong totalPollingNum = new AtomicLong(0);
     private PopLongPollingService popLongPollingService;
     private PopAckBufferMergeService popAckBufferMergeService;
+    private QueueLockManager queueLockManager;
 
     public PopMessageProcessor(final BrokerController brokerController) {
         this.brokerController = brokerController;
@@ -107,6 +108,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
         this.pollingMap = new ConcurrentLinkedHashMap.Builder<String, LinkedBlockingDeque<PopRequest>>().maximumWeightedCapacity(this.brokerController.getBrokerConfig().getPopPollingMapSize()).build();
         this.popAckBufferMergeService = new PopAckBufferMergeService();
         this.popLongPollingService = new PopLongPollingService();
+        this.queueLockManager = new QueueLockManager();
     }
 
     public PopLongPollingService getPopLongPollingService() {
@@ -115,6 +117,10 @@ public class PopMessageProcessor implements NettyRequestProcessor {
 
     public PopAckBufferMergeService getPopAckBufferMergeService() {
         return popAckBufferMergeService;
+    }
+
+    public QueueLockManager getQueueLockManager() {
+        return queueLockManager;
     }
 
     @Override
@@ -423,7 +429,8 @@ public class PopMessageProcessor implements NettyRequestProcessor {
                                  ExpressionMessageFilter messageFilter, StringBuilder startOffsetInfo, StringBuilder msgOffsetInfo) {
         String topic = isRetry ? KeyBuilder.buildPopRetryTopic(requestHeader.getTopic(), requestHeader.getConsumerGroup()) : requestHeader.getTopic();
         long offset = getPopOffset(topic, requestHeader, queueId);
-        if (!LockManager.tryLock(LockManager.buildKey(topic, requestHeader.getConsumerGroup(), queueId), PopAckConstants.lockTime)) {
+        String lockKey = topic + PopAckConstants.SPLIT + requestHeader.getConsumerGroup() + PopAckConstants.SPLIT + queueId;
+        if (!queueLockManager.tryLock(lockKey)) {
             restNum = this.brokerController.getMessageStore().getMaxOffsetInQueue(topic, queueId) - offset + restNum;
             return restNum;
         }
@@ -455,7 +462,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
                     queueId, getMessageTmpResult.getNextBeginOffset());
             }
         } finally {
-            LockManager.unLock(LockManager.buildKey(topic, requestHeader.getConsumerGroup(), queueId));
+            queueLockManager.unLock(lockKey);
         }
         if (getMessageTmpResult != null) {
             for (SelectMappedBufferResult mapedBuffer : getMessageTmpResult.getMessageMapedList()) {
@@ -1063,6 +1070,110 @@ public class PopMessageProcessor implements NettyRequestProcessor {
                 }
             }
             return true;
+        }
+    }
+
+    class TimedLock {
+        private final AtomicBoolean lock;
+        private volatile long lockTime;
+
+        public TimedLock() {
+            this.lock = new AtomicBoolean(true);
+            this.lockTime = System.currentTimeMillis();
+        }
+
+        public boolean tryLock() {
+            boolean ret = lock.compareAndSet(true, false);
+            if (ret) {
+                this.lockTime = System.currentTimeMillis();
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        public void unLock() {
+            lock.set(true);
+        }
+
+        public boolean isLock() {
+            return !lock.get();
+        }
+
+        public long getLockTime() {
+            return lockTime;
+        }
+    }
+
+    public class QueueLockManager extends ServiceThread {
+        private ConcurrentHashMap<String, TimedLock> expiredLocalCache = new ConcurrentHashMap<>(100000);
+
+        public boolean tryLock(String key) {
+            TimedLock timedLock = expiredLocalCache.get(key);
+
+            if (timedLock == null) {
+                TimedLock old = expiredLocalCache.putIfAbsent(key, new TimedLock());
+                if (old != null) {
+                    return false;
+                } else {
+                    timedLock = expiredLocalCache.get(key);
+                }
+            }
+
+            if (timedLock == null) {
+                return false;
+            }
+
+            return timedLock.tryLock();
+        }
+
+        /**
+         * is not thread safe, may cause duplicate lock
+         *
+         * @param usedExpireMillis
+         * @return
+         */
+        public int cleanUnusedLock(final long usedExpireMillis) {
+            Iterator<Map.Entry<String, TimedLock>> iterator = expiredLocalCache.entrySet().iterator();
+
+            int total = 0;
+            while (iterator.hasNext()) {
+                Map.Entry<String, TimedLock> entry = iterator.next();
+
+                if (System.currentTimeMillis() - entry.getValue().getLockTime() > usedExpireMillis) {
+                    iterator.remove();
+                    POP_LOGGER.info("Remove unused queue lock: {}, {}, {}", entry.getKey(), entry.getValue().getLockTime(),
+                        entry.getValue().isLock());
+                }
+
+                total++;
+            }
+
+            return total;
+        }
+
+        public void unLock(String key) {
+            TimedLock timedLock = expiredLocalCache.get(key);
+            if (timedLock != null) {
+                timedLock.unLock();
+            }
+        }
+
+        @Override
+        public String getServiceName() {
+            return "QueueLockManager";
+        }
+
+        @Override
+        public void run() {
+            while (!isStopped()) {
+                try {
+                    this.waitForRunning(60000);
+                    int count = cleanUnusedLock(60000);
+                    POP_LOGGER.info("QueueLockSize={}", count);
+                } catch (Throwable e) {
+                }
+            }
         }
     }
 }

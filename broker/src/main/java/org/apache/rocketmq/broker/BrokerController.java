@@ -768,6 +768,7 @@ public class BrokerController {
 
         {
             this.popMessageProcessor.getPopLongPollingService().shutdown();
+            this.popMessageProcessor.getQueueLockManager().shutdown();
         }
 
         if (this.remotingServer != null) {
@@ -878,6 +879,7 @@ public class BrokerController {
         {
             this.popMessageProcessor.getPopLongPollingService().start();
             this.popMessageProcessor.getPopAckBufferMergeService().start();
+            this.popMessageProcessor.getQueueLockManager().start();
             this.ackMessageProcessor.startPopReviveService();
         }
 
