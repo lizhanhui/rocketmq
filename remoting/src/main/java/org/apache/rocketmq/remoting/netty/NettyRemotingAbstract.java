@@ -188,7 +188,7 @@ public abstract class NettyRemotingAbstract {
                             exception = e;
                         }
 
-                        if (exception != null) {
+                        if (exception == null) {
                             response = pair.getObject1().processRequest(ctx, cmd);
                         } else {
                             response = RemotingCommand.createResponseCommand(null);
