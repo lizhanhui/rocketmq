@@ -69,6 +69,7 @@ import org.apache.rocketmq.common.filter.ExpressionType;
 import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.message.MessageQueue;
+import org.apache.rocketmq.common.protocol.ResponseCode;
 import org.apache.rocketmq.common.protocol.body.ConsumeMessageDirectlyResult;
 import org.apache.rocketmq.common.protocol.body.ConsumerRunningInfo;
 import org.apache.rocketmq.common.protocol.heartbeat.ConsumeType;
@@ -156,7 +157,7 @@ public class MQClientInstance {
         this.defaultMQProducer.resetClientConfig(clientConfig);
 
         this.consumerStatsManager = new ConsumerStatsManager(this.scheduledExecutorService);
-
+        this.mQClientAPIImpl.setConsumerStatsManager(consumerStatsManager);
         log.info("created a new client Instance, FactoryIndex: {} ClinetID: {} {} {}, serializeType={}",
             this.instanceIndex,
             this.clientId,
@@ -346,6 +347,12 @@ public class MQClientInstance {
                     if (subList != null) {
                         for (SubscriptionData subData : subList) {
                             topicList.add(subData.getTopic());
+                        }
+                    }
+                    if (impl instanceof DefaultMQPullConsumerImpl) {
+                        DefaultMQPullConsumerImpl consumer = (DefaultMQPullConsumerImpl) impl;
+                        if (consumer.getDefaultMQPullConsumer().isAutoUpdateTopicRoute()) {
+                            topicList.addAll(consumer.getRebalanceImpl().getSubscriptionInner().keySet());
                         }
                     }
                 }
@@ -664,6 +671,10 @@ public class MQClientInstance {
                 } catch (Exception e) {
                     if (!topic.startsWith(MixAll.RETRY_GROUP_TOPIC_PREFIX) && !topic.equals(MixAll.DEFAULT_TOPIC)) {
                         log.warn("updateTopicRouteInfoFromNameServer Exception", e);
+                        if (e instanceof MQClientException && ResponseCode.TOPIC_NOT_EXIST == ((MQClientException) e).getResponseCode()) {
+                            // clean no used topic
+                            cleanNoneRouteTopic(topic);
+                        }
                     }
                 } finally {
                     this.lockNamesrv.unlock();
@@ -676,6 +687,40 @@ public class MQClientInstance {
         }
 
         return false;
+    }
+
+    private void cleanNoneRouteTopic(String topic) {
+        // clean no used topic
+        TopicRouteData prev = this.topicRouteTable.remove(topic);
+        if (prev != null) {
+            log.info("cleanNoneRouteTopic remove topic route data, {}, {}", topic, prev);
+        }
+
+        {
+            Iterator<Entry<String, MQProducerInner>> it = this.producerTable.entrySet().iterator();
+            while (it.hasNext()) {
+                Entry<String, MQProducerInner> entry = it.next();
+                MQProducerInner impl = entry.getValue();
+                if (impl != null) {
+                    impl.removeTopicPublishInfo(topic);
+                }
+            }
+        }
+
+        {
+            Iterator<Entry<String, MQConsumerInner>> it = this.consumerTable.entrySet().iterator();
+            while (it.hasNext()) {
+                Entry<String, MQConsumerInner> entry = it.next();
+                MQConsumerInner impl = entry.getValue();
+                if (impl != null) {
+                    impl.removeTopicSubscribeInfo(topic);
+                }
+            }
+        }
+
+        {
+            this.defaultMQProducer.getDefaultMQProducerImpl().removeTopicPublishInfo(topic);
+        }
     }
 
     private HeartbeatData prepareHeartbeatData() {

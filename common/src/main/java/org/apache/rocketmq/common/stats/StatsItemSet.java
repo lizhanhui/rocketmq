@@ -18,6 +18,7 @@
 package org.apache.rocketmq.common.stats;
 
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -29,6 +30,7 @@ import org.apache.rocketmq.logging.InternalLogger;
 public class StatsItemSet {
     private final ConcurrentMap<String/* key */, StatsItem> statsItemTable =
         new ConcurrentHashMap<String, StatsItem>(128);
+///
 
     private final String statsName;
     private final ScheduledExecutorService scheduledExecutorService;
@@ -116,7 +118,17 @@ public class StatsItemSet {
         Iterator<Entry<String, StatsItem>> it = this.statsItemTable.entrySet().iterator();
         while (it.hasNext()) {
             Entry<String, StatsItem> next = it.next();
-            next.getValue().samplingInMinutes();
+            StatsItem statsItem = next.getValue();
+            statsItem.samplingInMinutes();
+
+            LinkedList<CallSnapshot> csList = statsItem.getCsListHour();
+            if (csList != null && csList.size() >= 7) {
+                CallSnapshot first = csList.getFirst();
+                CallSnapshot last = csList.getLast();
+                if ((first.getTimes() == last.getTimes()) && (first.getValue() == last.getValue())) {
+                    it.remove();
+                }
+            }
         }
     }
 

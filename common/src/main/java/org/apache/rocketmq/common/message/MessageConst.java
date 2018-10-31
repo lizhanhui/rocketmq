@@ -41,6 +41,18 @@ public class MessageConst {
     public static final String PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX = "UNIQ_KEY";
     public static final String PROPERTY_MAX_RECONSUME_TIMES = "MAX_RECONSUME_TIMES";
     public static final String PROPERTY_CONSUME_START_TIMESTAMP = "CONSUME_START_TIME";
+    public static final String PROPERTY_TIMER_DELAY_SEC = "TIMER_DELAY_SEC";
+    public static final String PROPERTY_TIMER_DELIVER_MS = "TIMER_DELIVER_MS";
+    public static final String PROPERTY_TIMER_IN_MS = "TIMER_IN_MS";
+    public static final String PROPERTY_TIMER_OUT_MS = "TIMER_OUT_MS";
+    public static final String PROPERTY_TIMER_ENQUEUE_MS = "TIMER_ENQUEUE_MS";
+    public static final String PROPERTY_TIMER_DEQUEUE_MS = "TIMER_DEQUEUE_MS";
+    public static final String PROPERTY_TIMER_ROLL_TIMES = "TIMER_ROLL_TIMES";
+    public static final String PROPERTY_TIMER_DEL_UNIQKEY = "TIMER_DEL_UNIQKEY";
+    public static final String PROPERTY_TIMER_DELAY_LEVEL = "TIMER_DELAY_LEVEL";
+    public static final String PROPERTY_POP_CK = "POP_CK";
+    public static final String PROPERTY_POP_CK_OFFSET = "POP_CK_OFFSET";
+    public static final String PROPERTY_FIRST_POP_TIME = "1ST_POP_TIME";
 
     public static final String KEY_SEPARATOR = " ";
 
@@ -69,5 +81,14 @@ public class MessageConst {
         STRING_HASH_SET.add(PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX);
         STRING_HASH_SET.add(PROPERTY_MAX_RECONSUME_TIMES);
         STRING_HASH_SET.add(PROPERTY_CONSUME_START_TIMESTAMP);
+        STRING_HASH_SET.add(PROPERTY_TIMER_IN_MS);
+        STRING_HASH_SET.add(PROPERTY_TIMER_OUT_MS);
+        STRING_HASH_SET.add(PROPERTY_TIMER_ENQUEUE_MS);
+        STRING_HASH_SET.add(PROPERTY_TIMER_DEQUEUE_MS);
+        STRING_HASH_SET.add(PROPERTY_TIMER_ROLL_TIMES);
+        STRING_HASH_SET.add(PROPERTY_POP_CK);
+        STRING_HASH_SET.add(PROPERTY_POP_CK_OFFSET);
+        STRING_HASH_SET.add(PROPERTY_FIRST_POP_TIME);
+
     }
 }
