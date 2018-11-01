@@ -347,6 +347,17 @@ public class DefaultMQProducerImpl implements MQProducerInner {
     }
 
     @Override
+    public void removeTopicPublishInfo(String topic) {
+        if (!this.defaultMQProducer.isAutoCleanTopicRouteNotFound()) {
+            return;
+        }
+        TopicPublishInfo prev = this.topicPublishInfoTable.remove(topic);
+        if (prev != null) {
+            log.info("removeTopicPublishInfo {}, {}, {}", this.defaultMQProducer.getProducerGroup(), topic, prev);
+        }
+    }
+
+    @Override
     public boolean isUnitMode() {
         return this.defaultMQProducer.isUnitMode();
     }
@@ -574,20 +585,24 @@ public class DefaultMQProducerImpl implements MQProducerInner {
             null).setResponseCode(ClientErrorCode.NOT_FOUND_TOPIC_EXCEPTION);
     }
 
-    private TopicPublishInfo tryToFindTopicPublishInfo(final String topic) {
+    private TopicPublishInfo tryToFindTopicPublishInfo(final String topic) throws MQClientException {
         TopicPublishInfo topicPublishInfo = this.topicPublishInfoTable.get(topic);
         if (null == topicPublishInfo || !topicPublishInfo.ok()) {
-            this.topicPublishInfoTable.putIfAbsent(topic, new TopicPublishInfo());
+//            this.topicPublishInfoTable.putIfAbsent(topic, new TopicPublishInfo());
             this.mQClientFactory.updateTopicRouteInfoFromNameServer(topic);
             topicPublishInfo = this.topicPublishInfoTable.get(topic);
         }
 
-        if (topicPublishInfo.isHaveTopicRouterInfo() || topicPublishInfo.ok()) {
+        if (topicPublishInfo != null && (topicPublishInfo.isHaveTopicRouterInfo() || topicPublishInfo.ok())) {
             return topicPublishInfo;
         } else {
-            this.mQClientFactory.updateTopicRouteInfoFromNameServer(topic, true, this.defaultMQProducer);
-            topicPublishInfo = this.topicPublishInfoTable.get(topic);
-            return topicPublishInfo;
+            if (defaultMQProducer.isUseDefaultTopicIfNotFound()) {
+                this.mQClientFactory.updateTopicRouteInfoFromNameServer(topic, true, this.defaultMQProducer);
+                topicPublishInfo = this.topicPublishInfoTable.get(topic);
+                return topicPublishInfo;
+            } else {
+                throw new MQClientException(ResponseCode.TOPIC_NOT_EXIST, "Topic " + topic + " not exist!");
+            }
         }
     }
 

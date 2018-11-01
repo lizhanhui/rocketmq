@@ -1028,6 +1028,10 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
     }
 
     @Override
+    public void removeTopicSubscribeInfo(String topic) {
+    }
+
+    @Override
     public boolean isSubscribeTopicNeedUpdate(String topic) {
         Map<String, SubscriptionData> subTable = this.getSubscriptionInner();
         if (subTable != null) {

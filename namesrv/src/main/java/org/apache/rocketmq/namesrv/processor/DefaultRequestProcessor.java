@@ -47,12 +47,14 @@ import org.apache.rocketmq.common.protocol.header.namesrv.QueryDataVersionReques
 import org.apache.rocketmq.common.protocol.header.namesrv.QueryDataVersionResponseHeader;
 import org.apache.rocketmq.common.protocol.header.namesrv.RegisterBrokerRequestHeader;
 import org.apache.rocketmq.common.protocol.header.namesrv.RegisterBrokerResponseHeader;
+import org.apache.rocketmq.common.protocol.header.namesrv.RegisterTopicRequestHeader;
 import org.apache.rocketmq.common.protocol.header.namesrv.UnRegisterBrokerRequestHeader;
 import org.apache.rocketmq.common.protocol.header.namesrv.WipeWritePermOfBrokerRequestHeader;
 import org.apache.rocketmq.common.protocol.header.namesrv.WipeWritePermOfBrokerResponseHeader;
 import org.apache.rocketmq.common.protocol.route.TopicRouteData;
 import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.logging.InternalLoggerFactory;
+import org.apache.rocketmq.common.protocol.route.TopicRouteDatas;
 import org.apache.rocketmq.namesrv.NamesrvController;
 import org.apache.rocketmq.remoting.common.RemotingHelper;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
@@ -108,6 +110,8 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
                 return getAllTopicListFromNameserver(ctx, request);
             case RequestCode.DELETE_TOPIC_IN_NAMESRV:
                 return deleteTopicInNamesrv(ctx, request);
+            case RequestCode.REGISTER_TOPIC_IN_NAMESRV:
+                return registerTopicToNamesrv(ctx, request);
             case RequestCode.GET_KVLIST_BY_NAMESPACE:
                 return this.getKVListByNamespace(ctx, request);
             case RequestCode.GET_TOPICS_BY_CLUSTER:
@@ -342,26 +346,51 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         final GetRouteInfoRequestHeader requestHeader =
             (GetRouteInfoRequestHeader) request.decodeCommandCustomHeader(GetRouteInfoRequestHeader.class);
 
-        String topic = NamespaceUtil.withNamespace(request, requestHeader.getTopic());
-        TopicRouteData topicRouteData = this.namesrvController.getRouteInfoManager().pickupTopicRouteData(topic);
+        if (requestHeader.getTopic().indexOf(GetRouteInfoRequestHeader.split) < 0) {
+            String topic = NamespaceUtil.withNamespace(request, requestHeader.getTopic());
+            TopicRouteData topicRouteData = this.namesrvController.getRouteInfoManager().pickupTopicRouteData(topic);
 
-        if (topicRouteData != null) {
+            if (topicRouteData != null) {
+                if (this.namesrvController.getNamesrvConfig().isOrderMessageEnable()) {
+                    String orderTopicConf =
+                        this.namesrvController.getKvConfigManager().getKVConfig(
+                            NamesrvUtil.NAMESPACE_ORDER_TOPIC_CONFIG, topic);
+                    topicRouteData.setOrderTopicConf(orderTopicConf);
+                }
+
+                byte[] content = topicRouteData.encode();
+                response.setBody(content);
+                response.setCode(ResponseCode.SUCCESS);
+                response.setRemark(null);
+                return response;
+            }
+
+            response.setCode(ResponseCode.TOPIC_NOT_EXIST);
+            response.setRemark("No topic route info in name server for the topic: " + topic
+                + FAQUrl.suggestTodo(FAQUrl.APPLY_TOPIC_URL));
+            return response;
+        }
+
+        String[] topics = requestHeader.getTopic().split(String.valueOf(GetRouteInfoRequestHeader.split));
+        TopicRouteDatas topicRouteDatas = new TopicRouteDatas();
+
+        for (String topic : topics) {
+            TopicRouteData topicRouteData = this.namesrvController.getRouteInfoManager().pickupTopicRouteData(topic);
+            if (topicRouteData == null) {
+                continue;
+            }
+
             if (this.namesrvController.getNamesrvConfig().isOrderMessageEnable()) {
                 String orderTopicConf =
                     this.namesrvController.getKvConfigManager().getKVConfig(NamesrvUtil.NAMESPACE_ORDER_TOPIC_CONFIG, topic);
                 topicRouteData.setOrderTopicConf(orderTopicConf);
             }
 
-            byte[] content = topicRouteData.encode();
-            response.setBody(content);
-            response.setCode(ResponseCode.SUCCESS);
-            response.setRemark(null);
-            return response;
+            topicRouteDatas.getTopics().put(topic, topicRouteData);
         }
-
-        response.setCode(ResponseCode.TOPIC_NOT_EXIST);
-        response.setRemark("No topic route info in name server for the topic: " + topic
-            + FAQUrl.suggestTodo(FAQUrl.APPLY_TOPIC_URL));
+        response.setBody(topicRouteDatas.encode());
+        response.setCode(ResponseCode.SUCCESS);
+        response.setRemark(null);
         return response;
     }
 
@@ -402,6 +431,22 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         byte[] body = this.namesrvController.getRouteInfoManager().getAllTopicList();
 
         response.setBody(body);
+        response.setCode(ResponseCode.SUCCESS);
+        response.setRemark(null);
+        return response;
+    }
+
+    private RemotingCommand registerTopicToNamesrv(ChannelHandlerContext ctx, RemotingCommand request) throws RemotingCommandException {
+        final RemotingCommand response = RemotingCommand.createResponseCommand(null);
+
+        final RegisterTopicRequestHeader requestHeader =
+            (RegisterTopicRequestHeader) request.decodeCommandCustomHeader(RegisterTopicRequestHeader.class);
+
+        TopicRouteData topicRouteData = TopicRouteData.decode(request.getBody(), TopicRouteData.class);
+        if (topicRouteData != null && topicRouteData.getQueueDatas() != null && !topicRouteData.getQueueDatas().isEmpty()) {
+            this.namesrvController.getRouteInfoManager().registerTopic(requestHeader.getTopic(), topicRouteData.getQueueDatas());
+        }
+
         response.setCode(ResponseCode.SUCCESS);
         response.setRemark(null);
         return response;

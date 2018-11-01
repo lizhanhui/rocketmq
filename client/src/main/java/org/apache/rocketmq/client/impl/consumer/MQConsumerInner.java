@@ -44,6 +44,8 @@ public interface MQConsumerInner {
 
     void updateTopicSubscribeInfo(final String topic, final Set<MessageQueue> info);
 
+    void removeTopicSubscribeInfo(final String topic);
+
     boolean isSubscribeTopicNeedUpdate(final String topic);
 
     boolean isUnitMode();

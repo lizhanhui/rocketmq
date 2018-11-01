@@ -29,6 +29,7 @@ public class ClientConfig {
     public static final String SEND_MESSAGE_WITH_VIP_CHANNEL_PROPERTY = "com.rocketmq.sendMessageWithVIPChannel";
     public static final String DECODE_READ_BODY = "com.rocketmq.read.body";
     public static final String DECODE_DECOMPRESS_BODY = "com.rocketmq.decompress.body";
+    public static final String AUTO_CLEAN_NO_ROUTE_TOPIC = "com.rocketmq.autoclean.noroute.topic";
     public static final String CLIENT_CALLBACK_EXECUTOR_THREAD_NUMS = "client.callback.executor.thread.nums";
 
     private String namesrvAddr = System.getProperty(MixAll.NAMESRV_ADDR_PROPERTY, System.getenv(MixAll.NAMESRV_ADDR_ENV));
@@ -55,6 +56,7 @@ public class ClientConfig {
     private boolean vipChannelEnabled = Boolean.parseBoolean(System.getProperty(SEND_MESSAGE_WITH_VIP_CHANNEL_PROPERTY, "true"));
     private boolean decodeReadBody = Boolean.parseBoolean(System.getProperty(DECODE_READ_BODY, "true"));
     private boolean decodeDecompressBody = Boolean.parseBoolean(System.getProperty(DECODE_DECOMPRESS_BODY, "true"));
+    private boolean autoCleanTopicRouteNotFound = Boolean.parseBoolean(System.getProperty(AUTO_CLEAN_NO_ROUTE_TOPIC, "false"));
 
     private boolean useTLS = TlsSystemConfig.tlsEnable;
 
@@ -112,6 +114,7 @@ public class ClientConfig {
         this.useTLS = cc.useTLS;
         this.language = cc.language;
         this.namespace = cc.namespace;
+        this.autoCleanTopicRouteNotFound = cc.autoCleanTopicRouteNotFound;
     }
 
     public ClientConfig cloneClientConfig() {
@@ -131,6 +134,7 @@ public class ClientConfig {
         cc.useTLS = useTLS;
         cc.language = language;
         cc.namespace = namespace;
+        cc.autoCleanTopicRouteNotFound = autoCleanTopicRouteNotFound;
         return cc;
     }
 
@@ -238,6 +242,14 @@ public class ClientConfig {
         this.namespace = namespace;
     }
 
+    public boolean isAutoCleanTopicRouteNotFound() {
+        return autoCleanTopicRouteNotFound;
+    }
+
+    public void setAutoCleanTopicRouteNotFound(boolean autoCleanTopicRouteNotFound) {
+        this.autoCleanTopicRouteNotFound = autoCleanTopicRouteNotFound;
+    }
+
     @Override
     public String toString() {
         return "ClientConfig [namesrvAddr=" + namesrvAddr + ", clientIP=" + clientIP + ", instanceName=" + instanceName
@@ -245,8 +257,7 @@ public class ClientConfig {
             + ", heartbeatBrokerInterval=" + heartbeatBrokerInterval + ", persistConsumerOffsetInterval="
             + persistConsumerOffsetInterval + ", unitMode=" + unitMode + ", unitName=" + unitName + ", vipChannelEnabled="
             + vipChannelEnabled + ", decodeReadBody=" + decodeReadBody + ", decodeDecompressBody=" + decodeDecompressBody
-            + ", useTLS=" + useTLS + ", language=" + language.name() + ", namespace=" + namespace + "]";
+            + ", useTLS=" + useTLS + ", language=" + language.name() + ", namespace=" + namespace
+            + ", autoCleanNoRouteTopic=" + autoCleanTopicRouteNotFound + "]";
     }
-
-
 }

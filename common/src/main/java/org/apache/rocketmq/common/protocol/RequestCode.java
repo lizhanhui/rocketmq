@@ -22,6 +22,12 @@ public class RequestCode {
     public static final int SEND_MESSAGE = 10;
 
     public static final int PULL_MESSAGE = 11;
+    public static final int POP_MESSAGE = 50;
+    public static final int ACK_MESSAGE = 51;
+    public static final int PEEK_MESSAGE = 52;
+    public static final int CHANGE_MESSAGE_INVISIBLETIME = 53;
+    public static final int NOTIFICATION = 54;
+    public static final int POLLING_INFO = 55;
 
     public static final int QUERY_MESSAGE = 12;
     public static final int QUERY_BROKER_OFFSET = 13;
@@ -70,6 +76,10 @@ public class RequestCode {
 
     public static final int CHECK_CLIENT_CONFIG = 46;
 
+    public static final int GET_TIMER_CHECK_POINT = 60;
+
+    public static final int GET_TIMER_METRICS = 61;
+
     public static final int PUT_KV_CONFIG = 100;
 
     public static final int GET_KV_CONFIG = 101;
@@ -107,6 +117,7 @@ public class RequestCode {
     public static final int DELETE_TOPIC_IN_BROKER = 215;
 
     public static final int DELETE_TOPIC_IN_NAMESRV = 216;
+    public static final int REGISTER_TOPIC_IN_NAMESRV = 217;
     public static final int GET_KVLIST_BY_NAMESPACE = 219;
 
     public static final int RESET_CONSUMER_CLIENT_OFFSET = 220;
@@ -117,9 +128,12 @@ public class RequestCode {
 
     public static final int INVOKE_BROKER_TO_GET_CONSUMER_STATUS = 223;
 
-    public static final int GET_TOPICS_BY_CLUSTER = 224;
+    public static final int UPDATE_AND_CREATE_SUB_INIT_OFFSET = 224;
 
     public static final int QUERY_TOPIC_CONSUME_BY_WHO = 300;
+
+    public static final int GET_TOPICS_BY_CLUSTER = 224;
+
     public static final int QUERY_TOPICS_BY_CONSUMER = 343;
     public static final int QUERY_SUBSCRIPTION_BY_CONSUMER = 345;
 
@@ -168,5 +182,10 @@ public class RequestCode {
 
     public static final int QUERY_CONSUME_QUEUE = 321;
 
+    @Deprecated
+    public static final int STATISTICS_MESSAGES = 322;
+
     public static final int QUERY_DATA_VERSION = 322;
+
+    public static final int STATISTICS_MESSAGES_V2 = 350;
 }

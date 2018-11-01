@@ -43,5 +43,10 @@
             <artifactId>logback-core</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.conversantmedia</groupId>
+            <artifactId>disruptor</artifactId>
+            <version>1.2.10</version>
+        </dependency>
     </dependencies>
 </project>

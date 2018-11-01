@@ -124,6 +124,11 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     private int maxMessageSize = 1024 * 1024 * 4; // 4M
 
     /**
+     * If topic route not found when sending message, whether use the default topic route.
+     */
+    private boolean useDefaultTopicIfNotFound = true;
+
+    /**
      * Default constructor.
      */
     public DefaultMQProducer() {
@@ -625,6 +630,10 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     }
 
     @Override
+    public void send(Collection<Message> msgs, SendCallback sendCallback, long timeout) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+        this.defaultMQProducerImpl.send(batch(msgs), sendCallback, timeout);
+    }
+
     public SendResult send(Collection<Message> msgs,
         MessageQueue messageQueue) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
         return this.defaultMQProducerImpl.send(batch(msgs), messageQueue);
@@ -634,6 +643,11 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     public SendResult send(Collection<Message> msgs, MessageQueue messageQueue,
         long timeout) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
         return this.defaultMQProducerImpl.send(batch(msgs), messageQueue, timeout);
+    }
+
+    @Override
+    public void send(Collection<Message> msgs, MessageQueue mq, SendCallback sendCallback, long timeout) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+        this.defaultMQProducerImpl.send(batch(msgs), mq, sendCallback, timeout);
     }
 
     /**
@@ -789,5 +803,13 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
             throw new MQClientException("The producer service state not OK", null);
         }
         this.defaultMQProducerImpl.setEventExecutorGroup(eventExecutorGroup);
+    }
+
+    public boolean isUseDefaultTopicIfNotFound() {
+        return useDefaultTopicIfNotFound;
+    }
+
+    public void setUseDefaultTopicIfNotFound(boolean useDefaultTopicIfNotFound) {
+        this.useDefaultTopicIfNotFound = useDefaultTopicIfNotFound;
     }
 }
