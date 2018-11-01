@@ -1832,7 +1832,6 @@ public class MQClientAPIImpl {
         requestHeader.setClientId(clientId);
         requestHeader.setMsgId(msgId);
 
-
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.CONSUME_MESSAGE_DIRECTLY, requestHeader);
 
         RemotingCommand response = this.remotingClient.invokeSync(MixAll.brokerVIPChannel(this.clientConfig.isVipChannelEnabled(), addr),
