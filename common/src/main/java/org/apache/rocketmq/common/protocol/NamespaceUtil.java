@@ -73,11 +73,11 @@ public class NamespaceUtil {
         }
 
         if (isRetryTopic(resourceWithNamespace)) {
-            resourceWithNamespace = resourceWithNamespace.substring(RETRY_PREFIX_LENGTH);
+            return resourceWithNamespace.substring(RETRY_PREFIX_LENGTH).substring(namespace.length() + 1);
         }
 
         if (isDLQTopic(resourceWithNamespace)) {
-            resourceWithNamespace = resourceWithNamespace.substring(DLQ_PREFIX_LENGTH);
+            return resourceWithNamespace.substring(DLQ_PREFIX_LENGTH).substring(namespace.length() + 1);
         }
 
         return resourceWithNamespace.substring(namespace.length() + 1);
@@ -107,7 +107,7 @@ public class NamespaceUtil {
         return MixAll.isSystemTopic(resource) || MixAll.isSysConsumerGroup(resource) || MixAll.DEFAULT_TOPIC.equals(resource);
     }
 
-    private static boolean isRetryTopic(String resource) {
+    public static boolean isRetryTopic(String resource) {
         if (StringUtils.isEmpty(resource)) {
             return false;
         }
@@ -115,7 +115,7 @@ public class NamespaceUtil {
         return resource.startsWith(MixAll.RETRY_GROUP_TOPIC_PREFIX);
     }
 
-    private static boolean isDLQTopic(String resource) {
+    public static boolean isDLQTopic(String resource) {
         if (StringUtils.isEmpty(resource)) {
             return false;
         }
