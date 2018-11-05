@@ -18,6 +18,7 @@ package org.apache.rocketmq.store.config;
 
 import java.io.File;
 import org.apache.rocketmq.common.annotation.ImportantField;
+import org.apache.rocketmq.common.message.MessageVersion;
 import org.apache.rocketmq.store.ConsumeQueue;
 
 public class MessageStoreConfig {
@@ -82,6 +83,11 @@ public class MessageStoreConfig {
     private int putMsgIndexHightWater = 600000;
     // The maximum size of a single log file,default is 512K
     private int maxMessageSize = 1024 * 1024 * 4;
+    // Maximum length of topic
+    private int maxTopicLength = Byte.MAX_VALUE;
+    // Message magic code and related store logic.
+    @ImportantField
+    private String messageVersion = MessageVersion.MESSAGE_VERSION_V1.name();
     // Whether check the CRC32 of the records consumed.
     // This ensures no on-the-wire or on-disk corruption to the messages occurred.
     // This check adds some overhead,so it may be disabled in cases seeking extreme performance.
@@ -142,6 +148,29 @@ public class MessageStoreConfig {
     private boolean transientStorePoolEnable = false;
     private int transientStorePoolSize = 5;
     private boolean fastFailIfNoBufferInStorePool = false;
+
+
+    private boolean timerWheelEnable = true;
+    private int mappedFileSizeTimerLog = 100 * 1024 * 1024;
+    private int timerRollWindowSec = 3600 * 24 * 2;
+    private int timerMaxDelaySec = 3600 * 24 * 3;
+    private int timerFlushIntervalMs = 1000;
+    private int timerProgressLogIntervalMs = 10 * 1000;
+    private int timerGetMessageThreadNum = 3;
+    private int timerPutMessageThreadNum = 3;
+    private boolean timerEnqueuePutMsg2Queue = false;
+    private boolean timerWarmEnable = false;
+    private boolean timerSkipUnknownError = false;
+    private boolean timerInterceptDelayLevel = false;
+    private boolean timerEnableDisruptor = false;
+    private String timerCheckMetricsWhen = "05";
+    private boolean timerEnableCheckMetrics = true;
+
+    private int timerCongestNumEachSec = Integer.MAX_VALUE;
+
+    private boolean timerStopEnqueue = false;
+    private boolean timerStopDequeue = false;
+
 
     @ImportantField
     private boolean wakeCommitWhenPutMessage = true;
@@ -266,6 +295,22 @@ public class MessageStoreConfig {
 
     public void setMaxMessageSize(int maxMessageSize) {
         this.maxMessageSize = maxMessageSize;
+    }
+
+    public int getMaxTopicLength() {
+        return maxTopicLength;
+    }
+
+    public void setMaxTopicLength(int maxTopicLength) {
+        this.maxTopicLength = maxTopicLength;
+    }
+
+    public String getMessageVersion() {
+        return messageVersion;
+    }
+
+    public void setMessageVersion(String messageVersion) {
+        this.messageVersion = messageVersion;
     }
 
     public boolean isCheckCRCOnRecover() {
@@ -669,11 +714,154 @@ public class MessageStoreConfig {
         this.commitCommitLogThoroughInterval = commitCommitLogThoroughInterval;
     }
 
+    public int getMappedFileSizeTimerLog() {
+        return mappedFileSizeTimerLog;
+    }
+
+    public void setMappedFileSizeTimerLog(final int mappedFileSizeTimerLog) {
+        this.mappedFileSizeTimerLog = mappedFileSizeTimerLog;
+    }
+
+    public int getTimerRollWindowSec() {
+        return timerRollWindowSec;
+    }
+
+    public void setTimerRollWindowSec(final int timerRollWindowSec) {
+        this.timerRollWindowSec = timerRollWindowSec;
+    }
+
+    public int getTimerMaxDelaySec() {
+        return timerMaxDelaySec;
+    }
+
+    public void setTimerMaxDelaySec(final int timerMaxDelaySec) {
+        this.timerMaxDelaySec = timerMaxDelaySec;
+    }
+
+    public int getTimerFlushIntervalMs() {
+        return timerFlushIntervalMs;
+    }
+
+    public void setTimerFlushIntervalMs(final int timerFlushIntervalMs) {
+        this.timerFlushIntervalMs = timerFlushIntervalMs;
+    }
+
+    public int getTimerProgressLogIntervalMs() {
+        return timerProgressLogIntervalMs;
+    }
+
+    public void setTimerProgressLogIntervalMs(final int timerProgressLogIntervalMs) {
+        this.timerProgressLogIntervalMs = timerProgressLogIntervalMs;
+    }
+
+    public boolean isTimerWarmEnable() {
+        return timerWarmEnable;
+    }
+
+    public void setTimerWarmEnable(final boolean timerWarmEnable) {
+        this.timerWarmEnable = timerWarmEnable;
+    }
+
+    public boolean isTimerWheelEnable() {
+        return timerWheelEnable;
+    }
+
+    public void setTimerWheelEnable(boolean timerWheelEnable) {
+        this.timerWheelEnable = timerWheelEnable;
+    }
+
+    public int getTimerGetMessageThreadNum() {
+        return timerGetMessageThreadNum;
+    }
+
+    public void setTimerGetMessageThreadNum(int timerGetMessageThreadNum) {
+        this.timerGetMessageThreadNum = timerGetMessageThreadNum;
+    }
+
+    public boolean isTimerSkipUnknownError() {
+        return timerSkipUnknownError;
+    }
+
+    public void setTimerSkipUnknownError(boolean timerSkipUnknownError) {
+        this.timerSkipUnknownError = timerSkipUnknownError;
+    }
+
+    public boolean isTimerInterceptDelayLevel() {
+        return timerInterceptDelayLevel;
+    }
+
+    public void setTimerInterceptDelayLevel(boolean timerInterceptDelayLevel) {
+        this.timerInterceptDelayLevel = timerInterceptDelayLevel;
+    }
+
+    public int getTimerPutMessageThreadNum() {
+        return timerPutMessageThreadNum;
+    }
+
+    public void setTimerPutMessageThreadNum(int timerPutMessageThreadNum) {
+        this.timerPutMessageThreadNum = timerPutMessageThreadNum;
+    }
+
+    public boolean isTimerEnableDisruptor() {
+        return timerEnableDisruptor;
+    }
+
+    public void setTimerEnableDisruptor(boolean timerEnableDisruptor) {
+        this.timerEnableDisruptor = timerEnableDisruptor;
+    }
+
+    public int getTimerCongestNumEachSec() {
+        return timerCongestNumEachSec;
+    }
+
+    public void setTimerCongestNumEachSec(int timerCongestNumEachSec) {
+        this.timerCongestNumEachSec = timerCongestNumEachSec;
+    }
+
+    public String getTimerCheckMetricsWhen() {
+        return timerCheckMetricsWhen;
+    }
+
+    public void setTimerCheckMetricsWhen(String timerCheckMetricsWhen) {
+        this.timerCheckMetricsWhen = timerCheckMetricsWhen;
+    }
+
+    public boolean isTimerEnableCheckMetrics() {
+        return timerEnableCheckMetrics;
+    }
+
+    public void setTimerEnableCheckMetrics(boolean timerEnableCheckMetrics) {
+        this.timerEnableCheckMetrics = timerEnableCheckMetrics;
+    }
+
+    public boolean isTimerStopEnqueue() {
+        return timerStopEnqueue;
+    }
+
+    public void setTimerStopEnqueue(boolean timerStopEnqueue) {
+        this.timerStopEnqueue = timerStopEnqueue;
+    }
+
+    public boolean isTimerStopDequeue() {
+        return timerStopDequeue;
+    }
+
+    public void setTimerStopDequeue(boolean timerStopDequeue) {
+        this.timerStopDequeue = timerStopDequeue;
+    }
     public boolean isWakeCommitWhenPutMessage() {
         return wakeCommitWhenPutMessage;
     }
 
     public void setWakeCommitWhenPutMessage(boolean wakeCommitWhenPutMessage) {
         this.wakeCommitWhenPutMessage = wakeCommitWhenPutMessage;
+    }
+
+    public boolean isTimerEnqueuePutMsg2Queue() {
+        return timerEnqueuePutMsg2Queue;
+    }
+
+    public void setTimerEnqueuePutMsg2Queue(boolean timerEnqueuePutMsg2Queue) {
+        this.timerEnqueuePutMsg2Queue = timerEnqueuePutMsg2Queue;
     }
 }

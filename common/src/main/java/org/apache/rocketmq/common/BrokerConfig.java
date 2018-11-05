@@ -18,6 +18,7 @@ package org.apache.rocketmq.common;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+
 import org.apache.rocketmq.common.annotation.ImportantField;
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.common.constant.PermName;
@@ -58,12 +59,13 @@ public class BrokerConfig {
      */
     private int sendMessageThreadPoolNums = 1; //16 + Runtime.getRuntime().availableProcessors() * 4;
     private int pullMessageThreadPoolNums = 16 + Runtime.getRuntime().availableProcessors() * 2;
+    private int ackMessageThreadPoolNums = 1;
     private int queryMessageThreadPoolNums = 8 + Runtime.getRuntime().availableProcessors();
 
     private int adminBrokerThreadPoolNums = 16;
     private int clientManageThreadPoolNums = 32;
     private int consumerManageThreadPoolNums = 32;
-    private int heartbeatThreadPoolNums = Math.min(32,Runtime.getRuntime().availableProcessors());
+    private int heartbeatThreadPoolNums = Math.min(32, Runtime.getRuntime().availableProcessors());
 
     private int flushConsumerOffsetInterval = 1000 * 5;
 
@@ -75,6 +77,7 @@ public class BrokerConfig {
     private boolean fetchNamesrvAddrByAddressServer = false;
     private int sendThreadPoolQueueCapacity = 10000;
     private int pullThreadPoolQueueCapacity = 100000;
+    private int ackThreadPoolQueueCapacity = 10000;
     private int queryThreadPoolQueueCapacity = 20000;
     private int clientManagerThreadPoolQueueCapacity = 1000000;
     private int consumerManagerThreadPoolQueueCapacity = 1000000;
@@ -111,6 +114,7 @@ public class BrokerConfig {
     private long waitTimeMillsInSendQueue = 200;
     private long waitTimeMillsInPullQueue = 5 * 1000;
     private long waitTimeMillsInHeartbeatQueue = 31 * 1000;
+    private long waitTimeMillsInAckQueue = 200;
 
     private long startAcceptSendRequestTimeStamp = 0L;
 
@@ -144,14 +148,65 @@ public class BrokerConfig {
     private boolean forceRegister = true;
 
     /**
-     *
      * This configurable item defines interval of topics registration of broker to name server. Allowing values are
      * between 10, 000 and 60, 000 milliseconds.
-     *
      */
     private int registerNameServerPeriod = 1000 * 30;
 
     private boolean netWorkFlowController = true;
+
+    private int popPollingSize = 1024;
+    private int popPollingMapSize = 100000;
+    // 20w cost 200M heap memory.
+    private long maxPopPollingSize = 100000;
+    private int reviveQueueNum = 8;
+    private long reviveInterval = 1000;
+    private long reviveMaxSlow = 10;
+    private long reviveScanTime = 10000;
+    private boolean enablePopLog = false;
+    private boolean enablePopBufferMerge = false;
+    private int popCkStayBufferTime = 10 * 1000;
+    private int popCkStayBufferTimeOut = 3 * 1000;
+
+    public long getMaxPopPollingSize() {
+        return maxPopPollingSize;
+    }
+
+    public void setMaxPopPollingSize(long maxPopPollingSize) {
+        this.maxPopPollingSize = maxPopPollingSize;
+    }
+
+    public int getPopPollingMapSize() {
+        return popPollingMapSize;
+    }
+
+    public void setPopPollingMapSize(int popPollingMapSize) {
+        this.popPollingMapSize = popPollingMapSize;
+    }
+
+    public long getReviveScanTime() {
+        return reviveScanTime;
+    }
+
+    public void setReviveScanTime(long reviveScanTime) {
+        this.reviveScanTime = reviveScanTime;
+    }
+
+    public long getReviveMaxSlow() {
+        return reviveMaxSlow;
+    }
+
+    public void setReviveMaxSlow(long reviveMaxSlow) {
+        this.reviveMaxSlow = reviveMaxSlow;
+    }
+
+    public boolean isEnablePopLog() {
+        return enablePopLog;
+    }
+
+    public void setEnablePopLog(boolean enablePopLog) {
+        this.enablePopLog = enablePopLog;
+    }
 
     public boolean isTraceOn() {
         return traceOn;
@@ -175,6 +230,14 @@ public class BrokerConfig {
 
     public void setWaitTimeMillsInSendQueue(final long waitTimeMillsInSendQueue) {
         this.waitTimeMillsInSendQueue = waitTimeMillsInSendQueue;
+    }
+
+    public long getWaitTimeMillsInAckQueue() {
+        return waitTimeMillsInAckQueue;
+    }
+
+    public void setWaitTimeMillsInAckQueue(long waitTimeMillsInAckQueue) {
+        this.waitTimeMillsInAckQueue = waitTimeMillsInAckQueue;
     }
 
     public long getConsumerFallbehindThreshold() {
@@ -347,6 +410,14 @@ public class BrokerConfig {
         this.pullMessageThreadPoolNums = pullMessageThreadPoolNums;
     }
 
+    public int getAckMessageThreadPoolNums() {
+        return ackMessageThreadPoolNums;
+    }
+
+    public void setAckMessageThreadPoolNums(int ackMessageThreadPoolNums) {
+        this.ackMessageThreadPoolNums = ackMessageThreadPoolNums;
+    }
+
     public int getQueryMessageThreadPoolNums() {
         return queryMessageThreadPoolNums;
     }
@@ -441,6 +512,14 @@ public class BrokerConfig {
 
     public void setPullThreadPoolQueueCapacity(int pullThreadPoolQueueCapacity) {
         this.pullThreadPoolQueueCapacity = pullThreadPoolQueueCapacity;
+    }
+
+    public int getAckThreadPoolQueueCapacity() {
+        return ackThreadPoolQueueCapacity;
+    }
+
+    public void setAckThreadPoolQueueCapacity(int ackThreadPoolQueueCapacity) {
+        this.ackThreadPoolQueueCapacity = ackThreadPoolQueueCapacity;
     }
 
     public int getQueryThreadPoolQueueCapacity() {
@@ -619,6 +698,14 @@ public class BrokerConfig {
         this.enablePropertyFilter = enablePropertyFilter;
     }
 
+    public void setPopPollingSize(int popPollingSize) {
+        this.popPollingSize = popPollingSize;
+    }
+
+    public int getPopPollingSize() {
+        return popPollingSize;
+    }
+
     public boolean isUseLockFreeProducerManager() {
         return useLockFreeProducerManager;
     }
@@ -633,6 +720,46 @@ public class BrokerConfig {
 
     public void setRejectPullConsumerEnable(final boolean rejectPullConsumerEnable) {
         this.rejectPullConsumerEnable = rejectPullConsumerEnable;
+    }
+
+    public int getReviveQueueNum() {
+        return reviveQueueNum;
+    }
+
+    public void setReviveQueueNum(int reviveQueueNum) {
+        this.reviveQueueNum = reviveQueueNum;
+    }
+
+    public long getReviveInterval() {
+        return reviveInterval;
+    }
+
+    public void setReviveInterval(long reviveInterval) {
+        this.reviveInterval = reviveInterval;
+    }
+
+    public int getPopCkStayBufferTime() {
+        return popCkStayBufferTime;
+    }
+
+    public void setPopCkStayBufferTime(int popCkStayBufferTime) {
+        this.popCkStayBufferTime = popCkStayBufferTime;
+    }
+
+    public int getPopCkStayBufferTimeOut() {
+        return popCkStayBufferTimeOut;
+    }
+
+    public void setPopCkStayBufferTimeOut(int popCkStayBufferTimeOut) {
+        this.popCkStayBufferTimeOut = popCkStayBufferTimeOut;
+    }
+
+    public boolean isEnablePopBufferMerge() {
+        return enablePopBufferMerge;
+    }
+
+    public void setEnablePopBufferMerge(boolean enablePopBufferMerge) {
+        this.enablePopBufferMerge = enablePopBufferMerge;
     }
 
     public boolean isCompressedRegister() {

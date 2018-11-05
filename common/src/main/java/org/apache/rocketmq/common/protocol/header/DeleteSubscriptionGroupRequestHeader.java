@@ -28,6 +28,8 @@ public class DeleteSubscriptionGroupRequestHeader implements CommandCustomHeader
     @CFNullable
     private String namespace;
 
+    private boolean cleanOffset = false;
+
     @Override
     public void checkFields() throws RemotingCommandException {
     }
@@ -46,5 +48,13 @@ public class DeleteSubscriptionGroupRequestHeader implements CommandCustomHeader
 
     public void setNamespace(String namespace) {
         this.namespace = namespace;
+    }
+
+    public boolean isCleanOffset() {
+        return cleanOffset;
+    }
+
+    public void setCleanOffset(boolean cleanOffset) {
+        this.cleanOffset = cleanOffset;
     }
 }

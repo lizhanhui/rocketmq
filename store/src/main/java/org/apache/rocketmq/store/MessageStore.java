@@ -16,11 +16,13 @@
  */
 package org.apache.rocketmq.store;
 
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Set;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.message.MessageExtBatch;
+import org.apache.rocketmq.store.timer.TimerMessageStore;
 
 /**
  * This class defines contracting interfaces to implement, allowing third-party vendor to use customized message store.
@@ -358,4 +360,19 @@ public interface MessageStore {
      * @return Consume queue.
      */
     ConsumeQueue getConsumeQueue(String topic, int queueId);
+
+    /**
+     * use FileChannel
+     * @param offset
+     * @param size
+     * @param byteBuffer
+     * @return
+     */
+    public boolean getData(long offset, int size, ByteBuffer byteBuffer);
+
+
+    long getTimingMessageCount(String topic);
+
+    TimerMessageStore getTimerMessageStore();
+    void setTimerMessageStore(TimerMessageStore timerMessageStore);
 }

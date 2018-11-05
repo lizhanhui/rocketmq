@@ -39,6 +39,8 @@ public class MessageDecoder {
     public final static int MESSAGE_PHYSIC_OFFSET_POSTION = 28;
     public final static int MESSAGE_STORE_TIMESTAMP_POSTION = 56;
     public final static int MESSAGE_MAGIC_CODE = 0xAABBCCDD ^ 1880681586 + 8;
+    public final static int MESSAGE_MAGIC_CODE_V2 = 0xAABBCCDD ^ 1880681586 + 4;
+
     public static final char NAME_VALUE_SEPARATOR = 1;
     public static final char PROPERTY_SEPARATOR = 2;
     public static final int BODY_SIZE_POSITION = 4 // 1 TOTALSIZE
@@ -100,13 +102,16 @@ public class MessageDecoder {
      * @param byteBuffer msg commit log buffer.
      */
     public static Map<String, String> decodeProperties(java.nio.ByteBuffer byteBuffer) {
+        int magicCode = byteBuffer.getInt(MESSAGE_MAGIC_CODE_POSTION);
+        MessageVersion messageVersion = MessageVersion.valueOfMagicCode(magicCode);
+        int topicSizeLength = messageVersion.getTopicLengthSize();
         int topicLengthPosition = BODY_SIZE_POSITION + 4 + byteBuffer.getInt(BODY_SIZE_POSITION);
 
-        byte topicLength = byteBuffer.get(topicLengthPosition);
+        int topicLength = messageVersion.getTopicLength(byteBuffer, topicLengthPosition);
 
-        short propertiesLength = byteBuffer.getShort(topicLengthPosition + 1 + topicLength);
+        short propertiesLength = byteBuffer.getShort(topicLengthPosition + topicSizeLength + topicLength);
 
-        byteBuffer.position(topicLengthPosition + 1 + topicLength + 2);
+        byteBuffer.position(topicLengthPosition + topicSizeLength + topicLength + 2);
 
         if (propertiesLength > 0) {
             byte[] properties = new byte[propertiesLength];
@@ -130,10 +135,11 @@ public class MessageDecoder {
         return decode(byteBuffer, readBody, true, false);
     }
 
-    public static byte[] encode(MessageExt messageExt, boolean needCompress) throws Exception {
+    public static byte[] encode(MessageExt messageExt, boolean needCompress, MessageVersion version) throws Exception {
+        final int magicCode = version.getMagicCode();
         byte[] body = messageExt.getBody();
         byte[] topics = messageExt.getTopic().getBytes(CHARSET_UTF8);
-        byte topicLen = (byte) topics.length;
+        int topicLen = topics.length;
         String properties = messageProperties2String(messageExt.getProperties());
         byte[] propertiesBytes = properties.getBytes(CHARSET_UTF8);
         short propertiesLength = (short) propertiesBytes.length;
@@ -163,7 +169,7 @@ public class MessageDecoder {
                 + 4 // 13 RECONSUMETIMES
                 + 8 // 14 Prepared Transaction Offset
                 + 4 + bodyLength // 14 BODY
-                + 1 + topicLen // 15 TOPIC
+                + version.getTopicLengthSize() + topicLen // 15 TOPIC
                 + 2 + propertiesLength // 16 propertiesLength
                 + 0;
             byteBuffer = ByteBuffer.allocate(storeSize);
@@ -172,7 +178,7 @@ public class MessageDecoder {
         byteBuffer.putInt(storeSize);
 
         // 2 MAGICCODE
-        byteBuffer.putInt(MESSAGE_MAGIC_CODE);
+        byteBuffer.putInt(magicCode);
 
         // 3 BODYCRC
         int bodyCRC = messageExt.getBodyCRC();
@@ -228,7 +234,7 @@ public class MessageDecoder {
         byteBuffer.put(newBody);
 
         // 16 TOPIC
-        byteBuffer.put(topicLen);
+        version.putTopicLength(byteBuffer, topicLen);
         byteBuffer.put(topics);
 
         // 17 properties
@@ -238,6 +244,10 @@ public class MessageDecoder {
         return byteBuffer.array();
     }
 
+    public static byte[] encode(MessageExt messageExt, boolean needCompress) throws Exception {
+        return encode(messageExt, needCompress, MessageVersion.MESSAGE_VERSION_V1);
+    }
+
     public static MessageExt decode(
         java.nio.ByteBuffer byteBuffer, final boolean readBody, final boolean deCompressBody) {
         return decode(byteBuffer, readBody, deCompressBody, false);
@@ -245,6 +255,17 @@ public class MessageDecoder {
 
     public static MessageExt decode(
         java.nio.ByteBuffer byteBuffer, final boolean readBody, final boolean deCompressBody, final boolean isClient) {
+        return decode(byteBuffer, readBody, deCompressBody, isClient, false, true);
+    }
+
+    public static MessageExt decode(
+        java.nio.ByteBuffer byteBuffer, final boolean readBody, final boolean deCompressBody, final boolean isClient, final boolean isSetPropertiesString) {
+
+        return decode(byteBuffer, readBody, deCompressBody, isClient, isSetPropertiesString, true);
+    }
+
+    public static MessageExt decode(
+        java.nio.ByteBuffer byteBuffer, final boolean readBody, final boolean deCompressBody, final boolean isClient, final boolean isSetPropertiesString, final boolean checkCRC) {
         try {
 
             MessageExt msgExt;
@@ -259,7 +280,9 @@ public class MessageDecoder {
             msgExt.setStoreSize(storeSize);
 
             // 2 MAGICCODE
-            byteBuffer.getInt();
+            int magicCode = byteBuffer.getInt();
+            MessageVersion version = MessageVersion.valueOfMagicCode(magicCode);
+            msgExt.setVersion(version);
 
             // 3 BODYCRC
             int bodyCRC = byteBuffer.getInt();
@@ -332,8 +355,8 @@ public class MessageDecoder {
             }
 
             // 16 TOPIC
-            byte topicLen = byteBuffer.get();
-            byte[] topic = new byte[(int) topicLen];
+            int topicLen = version.getTopicLength(byteBuffer);
+            byte[] topic = new byte[topicLen];
             byteBuffer.get(topic);
             msgExt.setTopic(new String(topic, CHARSET_UTF8));
 
@@ -354,7 +377,6 @@ public class MessageDecoder {
             if (isClient) {
                 ((MessageClientExt) msgExt).setOffsetMsgId(msgId);
             }
-
             return msgExt;
         } catch (Exception e) {
             byteBuffer.position(byteBuffer.limit());

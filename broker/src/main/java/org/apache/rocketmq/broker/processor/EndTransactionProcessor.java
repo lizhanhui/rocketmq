@@ -174,6 +174,18 @@ public class EndTransactionProcessor implements NettyRequestProcessor {
                         response.setCode(ResponseCode.SYSTEM_ERROR);
                         response.setRemark("OS page cache busy, please try another machine");
                         break;
+                    case WHEEL_TIMER_NOT_ENABLE:
+                        response.setCode(ResponseCode.SYSTEM_ERROR);
+                        response.setRemark("Wheel timer is not enabled");
+                        break;
+                    case WHEEL_TIMER_FLOW_CONTROL:
+                        response.setCode(ResponseCode.SYSTEM_ERROR);
+                        response.setRemark("Wheel timer is busy, start flow control for a while");
+                        break;
+                    case WHEEL_TIMER_MSG_ILLEGAL:
+                        response.setCode(ResponseCode.MESSAGE_ILLEGAL);
+                        response.setRemark("Wheel timer message illegal, the delay time should not be bigger than the max delay; or if set del msg, the delay time should bigger than the current time");
+                        break;
                     case UNKNOWN_ERROR:
                         response.setCode(ResponseCode.SYSTEM_ERROR);
                         response.setRemark("UNKNOWN_ERROR");
