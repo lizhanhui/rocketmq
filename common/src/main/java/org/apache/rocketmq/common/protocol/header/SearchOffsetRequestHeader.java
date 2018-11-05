@@ -22,6 +22,7 @@ package org.apache.rocketmq.common.protocol.header;
 
 import org.apache.rocketmq.remoting.CommandCustomHeader;
 import org.apache.rocketmq.remoting.annotation.CFNotNull;
+import org.apache.rocketmq.remoting.annotation.CFNullable;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 
 public class SearchOffsetRequestHeader implements CommandCustomHeader {
@@ -31,6 +32,8 @@ public class SearchOffsetRequestHeader implements CommandCustomHeader {
     private Integer queueId;
     @CFNotNull
     private Long timestamp;
+    @CFNullable
+    private String namespace;
 
     @Override
     public void checkFields() throws RemotingCommandException {
@@ -61,4 +64,11 @@ public class SearchOffsetRequestHeader implements CommandCustomHeader {
         this.timestamp = timestamp;
     }
 
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
+    }
 }

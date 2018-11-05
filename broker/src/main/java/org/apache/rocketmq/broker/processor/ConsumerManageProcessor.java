@@ -16,12 +16,13 @@
  */
 package org.apache.rocketmq.broker.processor;
 
-import io.netty.channel.ChannelHandlerContext;
 import java.util.List;
+
+import io.netty.channel.ChannelHandlerContext;
 import org.apache.rocketmq.broker.BrokerController;
 import org.apache.rocketmq.broker.client.ConsumerGroupInfo;
 import org.apache.rocketmq.common.constant.LoggerName;
-import org.apache.rocketmq.logging.InternalLogger;
+import org.apache.rocketmq.common.protocol.NamespaceUtil;
 import org.apache.rocketmq.common.protocol.RequestCode;
 import org.apache.rocketmq.common.protocol.ResponseCode;
 import org.apache.rocketmq.common.protocol.header.GetConsumerListByGroupRequestHeader;
@@ -31,6 +32,7 @@ import org.apache.rocketmq.common.protocol.header.QueryConsumerOffsetRequestHead
 import org.apache.rocketmq.common.protocol.header.QueryConsumerOffsetResponseHeader;
 import org.apache.rocketmq.common.protocol.header.UpdateConsumerOffsetRequestHeader;
 import org.apache.rocketmq.common.protocol.header.UpdateConsumerOffsetResponseHeader;
+import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.remoting.common.RemotingHelper;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
@@ -75,9 +77,9 @@ public class ConsumerManageProcessor implements NettyRequestProcessor {
             (GetConsumerListByGroupRequestHeader) request
                 .decodeCommandCustomHeader(GetConsumerListByGroupRequestHeader.class);
 
+        String consumerGroup = NamespaceUtil.withNamespace(request, requestHeader.getConsumerGroup());
         ConsumerGroupInfo consumerGroupInfo =
-            this.brokerController.getConsumerManager().getConsumerGroupInfo(
-                requestHeader.getConsumerGroup());
+            this.brokerController.getConsumerManager().getConsumerGroupInfo(consumerGroup);
         if (consumerGroupInfo != null) {
             List<String> clientIds = consumerGroupInfo.getAllClientId();
             if (!clientIds.isEmpty()) {
@@ -88,16 +90,14 @@ public class ConsumerManageProcessor implements NettyRequestProcessor {
                 response.setRemark(null);
                 return response;
             } else {
-                log.warn("getAllClientId failed, {} {}", requestHeader.getConsumerGroup(),
-                    RemotingHelper.parseChannelRemoteAddr(ctx.channel()));
+                log.warn("getAllClientId failed, {} {}", consumerGroup, RemotingHelper.parseChannelRemoteAddr(ctx.channel()));
             }
         } else {
-            log.warn("getConsumerGroupInfo failed, {} {}", requestHeader.getConsumerGroup(),
-                RemotingHelper.parseChannelRemoteAddr(ctx.channel()));
+            log.warn("getConsumerGroupInfo failed, {} {}", consumerGroup, RemotingHelper.parseChannelRemoteAddr(ctx.channel()));
         }
 
         response.setCode(ResponseCode.SYSTEM_ERROR);
-        response.setRemark("no consumer for this group, " + requestHeader.getConsumerGroup());
+        response.setRemark("no consumer for this group, " + consumerGroup);
         return response;
     }
 
@@ -108,8 +108,11 @@ public class ConsumerManageProcessor implements NettyRequestProcessor {
         final UpdateConsumerOffsetRequestHeader requestHeader =
             (UpdateConsumerOffsetRequestHeader) request
                 .decodeCommandCustomHeader(UpdateConsumerOffsetRequestHeader.class);
-        this.brokerController.getConsumerOffsetManager().commitOffset(RemotingHelper.parseChannelRemoteAddr(ctx.channel()), requestHeader.getConsumerGroup(),
-            requestHeader.getTopic(), requestHeader.getQueueId(), requestHeader.getCommitOffset());
+        String topic = NamespaceUtil.withNamespace(request, requestHeader.getTopic());
+        String consumerGroup = NamespaceUtil.withNamespace(request, requestHeader.getConsumerGroup());
+
+        this.brokerController.getConsumerOffsetManager().commitOffset(RemotingHelper.parseChannelRemoteAddr(
+            ctx.channel()), consumerGroup, topic, requestHeader.getQueueId(), requestHeader.getCommitOffset());
         response.setCode(ResponseCode.SUCCESS);
         response.setRemark(null);
         return response;
@@ -125,9 +128,10 @@ public class ConsumerManageProcessor implements NettyRequestProcessor {
             (QueryConsumerOffsetRequestHeader) request
                 .decodeCommandCustomHeader(QueryConsumerOffsetRequestHeader.class);
 
-        long offset =
-            this.brokerController.getConsumerOffsetManager().queryOffset(
-                requestHeader.getConsumerGroup(), requestHeader.getTopic(), requestHeader.getQueueId());
+        String topic = NamespaceUtil.withNamespace(request, requestHeader.getTopic());
+        String consumerGroup = NamespaceUtil.withNamespace(request, requestHeader.getConsumerGroup());
+        long offset = this.brokerController.getConsumerOffsetManager().queryOffset(consumerGroup, topic,
+            requestHeader.getQueueId());
 
         if (offset >= 0) {
             responseHeader.setOffset(offset);
@@ -135,11 +139,9 @@ public class ConsumerManageProcessor implements NettyRequestProcessor {
             response.setRemark(null);
         } else {
             long minOffset =
-                this.brokerController.getMessageStore().getMinOffsetInQueue(requestHeader.getTopic(),
-                    requestHeader.getQueueId());
-            if (minOffset <= 0
-                && !this.brokerController.getMessageStore().checkInDiskByConsumeOffset(
-                requestHeader.getTopic(), requestHeader.getQueueId(), 0)) {
+                this.brokerController.getMessageStore().getMinOffsetInQueue(topic, requestHeader.getQueueId());
+            if (minOffset <= 0 && !this.brokerController.getMessageStore().checkInDiskByConsumeOffset(topic,
+                requestHeader.getQueueId(), 0)) {
                 responseHeader.setOffset(0L);
                 response.setCode(ResponseCode.SUCCESS);
                 response.setRemark(null);

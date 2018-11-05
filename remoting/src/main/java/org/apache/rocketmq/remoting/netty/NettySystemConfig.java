@@ -28,6 +28,10 @@ public class NettySystemConfig {
         "com.rocketmq.remoting.clientAsyncSemaphoreValue";
     public static final String COM_ROCKETMQ_REMOTING_CLIENT_ONEWAY_SEMAPHORE_VALUE =
         "com.rocketmq.remoting.clientOnewaySemaphoreValue";
+    public static final String COM_ROCKETMQ_REMOTING_WRITE_BUFFER_HIGH_WATER_MARK_VALUE =
+        "com.rocketmq.remoting.write.buffer.high.water.mark";
+    public static final String COM_ROCKETMQ_REMOTING_WRITE_BUFFER_LOW_WATER_MARK =
+        "com.rocketmq.remoting.write.buffer.low.water.mark";
 
     public static final boolean NETTY_POOLED_BYTE_BUF_ALLOCATOR_ENABLE = //
         Boolean.parseBoolean(System.getProperty(COM_ROCKETMQ_REMOTING_NETTY_POOLED_BYTE_BUF_ALLOCATOR_ENABLE, "false"));
@@ -39,4 +43,10 @@ public class NettySystemConfig {
         Integer.parseInt(System.getProperty(COM_ROCKETMQ_REMOTING_SOCKET_SNDBUF_SIZE, "65535"));
     public static int socketRcvbufSize =
         Integer.parseInt(System.getProperty(COM_ROCKETMQ_REMOTING_SOCKET_RCVBUF_SIZE, "65535"));
+
+    public static int writeBufferHighWaterMark =
+        Integer.parseInt(System.getProperty(COM_ROCKETMQ_REMOTING_WRITE_BUFFER_HIGH_WATER_MARK_VALUE, "67108864"));//64M
+
+    public static int writeBufferLowWaterMark =
+        Integer.parseInt(System.getProperty(COM_ROCKETMQ_REMOTING_WRITE_BUFFER_LOW_WATER_MARK, "1048576")); //1MB
 }

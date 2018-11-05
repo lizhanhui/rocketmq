@@ -29,6 +29,8 @@ public class GetConsumerRunningInfoRequestHeader implements CommandCustomHeader 
     private String clientId;
     @CFNullable
     private boolean jstackEnable;
+    @CFNullable
+    private String namespace;
 
     @Override
     public void checkFields() throws RemotingCommandException {
@@ -56,5 +58,13 @@ public class GetConsumerRunningInfoRequestHeader implements CommandCustomHeader 
 
     public void setJstackEnable(boolean jstackEnable) {
         this.jstackEnable = jstackEnable;
+    }
+
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
     }
 }

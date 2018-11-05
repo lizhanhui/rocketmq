@@ -23,6 +23,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
+
+import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.client.exception.MQBrokerException;
 import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.client.impl.FindBrokerResult;
@@ -30,10 +32,10 @@ import org.apache.rocketmq.client.impl.factory.MQClientInstance;
 import org.apache.rocketmq.client.log.ClientLogger;
 import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.common.UtilAll;
-import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.common.message.MessageQueue;
 import org.apache.rocketmq.common.protocol.header.QueryConsumerOffsetRequestHeader;
 import org.apache.rocketmq.common.protocol.header.UpdateConsumerOffsetRequestHeader;
+import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.remoting.exception.RemotingException;
 
 /**
@@ -215,6 +217,9 @@ public class RemoteBrokerOffsetStore implements OffsetStore {
             requestHeader.setConsumerGroup(this.groupName);
             requestHeader.setQueueId(mq.getQueueId());
             requestHeader.setCommitOffset(offset);
+            if (StringUtils.isNotEmpty(this.mQClientFactory.getClientConfig().getNamespace())) {
+                requestHeader.setNamespace(this.mQClientFactory.getClientConfig().getNamespace());
+            }
 
             if (isOneway) {
                 this.mQClientFactory.getMQClientAPIImpl().updateConsumerOffsetOneway(
@@ -239,6 +244,9 @@ public class RemoteBrokerOffsetStore implements OffsetStore {
 
         if (findBrokerResult != null) {
             QueryConsumerOffsetRequestHeader requestHeader = new QueryConsumerOffsetRequestHeader();
+            if (StringUtils.isNotEmpty(this.mQClientFactory.getClientConfig().getNamespace())) {
+                requestHeader.setNamespace(this.mQClientFactory.getClientConfig().getNamespace());
+            }
             requestHeader.setTopic(mq.getTopic());
             requestHeader.setConsumerGroup(this.groupName);
             requestHeader.setQueueId(mq.getQueueId());

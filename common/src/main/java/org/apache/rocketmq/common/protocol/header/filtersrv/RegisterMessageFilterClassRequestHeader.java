@@ -19,6 +19,7 @@ package org.apache.rocketmq.common.protocol.header.filtersrv;
 
 import org.apache.rocketmq.remoting.CommandCustomHeader;
 import org.apache.rocketmq.remoting.annotation.CFNotNull;
+import org.apache.rocketmq.remoting.annotation.CFNullable;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 
 public class RegisterMessageFilterClassRequestHeader implements CommandCustomHeader {
@@ -30,6 +31,8 @@ public class RegisterMessageFilterClassRequestHeader implements CommandCustomHea
     private String className;
     @CFNotNull
     private Integer classCRC;
+    @CFNullable
+    private String namespace;
 
     @Override
     public void checkFields() throws RemotingCommandException {
@@ -65,5 +68,13 @@ public class RegisterMessageFilterClassRequestHeader implements CommandCustomHea
 
     public void setClassCRC(Integer classCRC) {
         this.classCRC = classCRC;
+    }
+
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
     }
 }

@@ -38,6 +38,9 @@ public class ConsumeMessageContext {
     private int commercialRcvTimes;
     private int commercialRcvSize;
 
+    private String topicWithNamespace;
+    private String consumerGroupWithNamespace;
+
     public String getConsumerGroup() {
         return consumerGroup;
     }
@@ -164,5 +167,21 @@ public class ConsumeMessageContext {
 
     public void setCommercialRcvSize(final int commercialRcvSize) {
         this.commercialRcvSize = commercialRcvSize;
+    }
+
+    public String getTopicWithNamespace() {
+        return topicWithNamespace;
+    }
+
+    public void setTopicWithNamespace(String topicWithNamespace) {
+        this.topicWithNamespace = topicWithNamespace;
+    }
+
+    public String getConsumerGroupWithNamespace() {
+        return consumerGroupWithNamespace;
+    }
+
+    public void setConsumerGroupWithNamespace(String consumerGroupWithNamespace) {
+        this.consumerGroupWithNamespace = consumerGroupWithNamespace;
     }
 }

@@ -29,6 +29,7 @@ import org.apache.rocketmq.broker.BrokerPathConfigHelper;
 import org.apache.rocketmq.common.ConfigManager;
 import org.apache.rocketmq.common.UtilAll;
 import org.apache.rocketmq.common.constant.LoggerName;
+import org.apache.rocketmq.common.protocol.NamespaceUtil;
 import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.remoting.protocol.RemotingSerializable;
@@ -183,15 +184,16 @@ public class ConsumerOffsetManager extends ConfigManager {
         this.offsetTable = offsetTable;
     }
 
-    public Map<Integer, Long> queryMinOffsetInAllGroup(final String topic, final String filterGroups) {
+    public Map<Integer, Long> queryMinOffsetInAllGroup(final String topic, final String namespace, final String filterGroups) {
 
         Map<Integer, Long> queueMinOffset = new HashMap<Integer, Long>();
         Set<String> topicGroups = this.offsetTable.keySet();
         if (!UtilAll.isBlank(filterGroups)) {
             for (String group : filterGroups.split(",")) {
                 Iterator<String> it = topicGroups.iterator();
+                String filteredGroup = NamespaceUtil.wrapNamespace(namespace, group);
                 while (it.hasNext()) {
-                    if (group.equals(it.next().split(TOPIC_GROUP_SEPARATOR)[1])) {
+                    if (filteredGroup.equals(it.next().split(TOPIC_GROUP_SEPARATOR)[1])) {
                         it.remove();
                     }
                 }

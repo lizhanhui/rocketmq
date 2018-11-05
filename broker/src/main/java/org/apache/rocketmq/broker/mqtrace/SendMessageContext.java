@@ -21,7 +21,9 @@ import org.apache.rocketmq.common.message.MessageType;
 import org.apache.rocketmq.store.stats.BrokerStatsManager;
 
 public class SendMessageContext {
+    /** producer group without namespace. */
     private String producerGroup;
+    /** topic without namespace. */
     private String topic;
     private String msgId;
     private String originMsgId;
@@ -47,6 +49,10 @@ public class SendMessageContext {
     private BrokerStatsManager.StatsType commercialSendStats;
     private int commercialSendSize;
     private int commercialSendTimes;
+    /** topic with namespace. */
+    private String topicWithNamespace;
+    /** producer group with namespace. */
+    private String producerGroupWithNamespace;
 
     public boolean isSuccess() {
         return isSuccess;
@@ -246,5 +252,21 @@ public class SendMessageContext {
 
     public void setCommercialSendTimes(final int commercialSendTimes) {
         this.commercialSendTimes = commercialSendTimes;
+    }
+
+    public String getTopicWithNamespace() {
+        return topicWithNamespace;
+    }
+
+    public void setTopicWithNamespace(String topicWithNamespace) {
+        this.topicWithNamespace = topicWithNamespace;
+    }
+
+    public String getProducerGroupWithNamespace() {
+        return producerGroupWithNamespace;
+    }
+
+    public void setProducerGroupWithNamespace(String producerGroupWithNamespace) {
+        this.producerGroupWithNamespace = producerGroupWithNamespace;
     }
 }

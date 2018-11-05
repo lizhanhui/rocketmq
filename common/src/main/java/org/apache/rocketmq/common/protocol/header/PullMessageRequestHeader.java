@@ -48,6 +48,8 @@ public class PullMessageRequestHeader implements CommandCustomHeader {
     private Long subVersion;
     private String expressionType;
     private String subProperties;
+    @CFNullable
+    private String namespace;
 
     @Override
     public void checkFields() throws RemotingCommandException {
@@ -147,5 +149,13 @@ public class PullMessageRequestHeader implements CommandCustomHeader {
 
     public void setSubProperties(String subProperties) {
         this.subProperties = subProperties;
+    }
+
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
     }
 }

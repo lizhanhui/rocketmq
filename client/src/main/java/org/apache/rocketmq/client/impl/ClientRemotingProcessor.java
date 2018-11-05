@@ -16,19 +16,21 @@
  */
 package org.apache.rocketmq.client.impl;
 
-import io.netty.channel.ChannelHandlerContext;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
+
+import io.netty.channel.ChannelHandlerContext;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.client.impl.factory.MQClientInstance;
 import org.apache.rocketmq.client.impl.producer.MQProducerInner;
 import org.apache.rocketmq.client.log.ClientLogger;
 import org.apache.rocketmq.common.UtilAll;
-import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.common.message.MessageConst;
 import org.apache.rocketmq.common.message.MessageDecoder;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.message.MessageQueue;
+import org.apache.rocketmq.common.protocol.NamespaceUtil;
 import org.apache.rocketmq.common.protocol.RequestCode;
 import org.apache.rocketmq.common.protocol.ResponseCode;
 import org.apache.rocketmq.common.protocol.body.ConsumeMessageDirectlyResult;
@@ -41,6 +43,7 @@ import org.apache.rocketmq.common.protocol.header.GetConsumerRunningInfoRequestH
 import org.apache.rocketmq.common.protocol.header.GetConsumerStatusRequestHeader;
 import org.apache.rocketmq.common.protocol.header.NotifyConsumerIdsChangedRequestHeader;
 import org.apache.rocketmq.common.protocol.header.ResetOffsetRequestHeader;
+import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.remoting.common.RemotingHelper;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 import org.apache.rocketmq.remoting.netty.NettyRequestProcessor;
@@ -115,9 +118,15 @@ public class ClientRemotingProcessor implements NettyRequestProcessor {
         try {
             final NotifyConsumerIdsChangedRequestHeader requestHeader =
                 (NotifyConsumerIdsChangedRequestHeader) request.decodeCommandCustomHeader(NotifyConsumerIdsChangedRequestHeader.class);
-            log.info("receive broker's notification[{}], the consumer group: {} changed, rebalance immediately",
-                RemotingHelper.parseChannelRemoteAddr(ctx.channel()),
-                requestHeader.getConsumerGroup());
+
+            String namespace = this.mqClientFactory.getClientConfig().getNamespace();
+            String consumerGroup = requestHeader.getConsumerGroup();
+            if (StringUtils.isNotEmpty(namespace)) {
+                consumerGroup = NamespaceUtil.getResource(consumerGroup, namespace);
+            }
+
+            log.info("receive broker's notification[{}], the consumer namespace={}, group={} changed, rebalance immediately",
+                RemotingHelper.parseChannelRemoteAddr(ctx.channel()), namespace, consumerGroup);
             this.mqClientFactory.rebalanceImmediately();
         } catch (Exception e) {
             log.error("notifyConsumerIdsChanged exception", RemotingHelper.exceptionSimpleDesc(e));
@@ -129,15 +138,25 @@ public class ClientRemotingProcessor implements NettyRequestProcessor {
         RemotingCommand request) throws RemotingCommandException {
         final ResetOffsetRequestHeader requestHeader =
             (ResetOffsetRequestHeader) request.decodeCommandCustomHeader(ResetOffsetRequestHeader.class);
-        log.info("invoke reset offset operation from broker. brokerAddr={}, topic={}, group={}, timestamp={}",
-            RemotingHelper.parseChannelRemoteAddr(ctx.channel()), requestHeader.getTopic(), requestHeader.getGroup(),
+
+        String namespace = this.mqClientFactory.getClientConfig().getNamespace();
+        String topic = requestHeader.getTopic();
+        String consumerGroup = requestHeader.getGroup();
+        if (StringUtils.isNotEmpty(namespace)) {
+            topic = NamespaceUtil.getResource(topic, namespace);
+            consumerGroup = NamespaceUtil.getResource(consumerGroup, namespace);
+        }
+
+        log.info("invoke reset offset operation from broker. brokerAddr={}, namespace={}, topic={}, group={}, timestamp={}",
+            RemotingHelper.parseChannelRemoteAddr(ctx.channel()), namespace, topic, consumerGroup,
             requestHeader.getTimestamp());
         Map<MessageQueue, Long> offsetTable = new HashMap<MessageQueue, Long>();
         if (request.getBody() != null) {
             ResetOffsetBody body = ResetOffsetBody.decode(request.getBody(), ResetOffsetBody.class);
-            offsetTable = body.getOffsetTable();
+            offsetTable = this.mqClientFactory.parseOffsetTableFromBroker(body.getOffsetTable(), namespace);
         }
-        this.mqClientFactory.resetOffset(requestHeader.getTopic(), requestHeader.getGroup(), offsetTable);
+
+        this.mqClientFactory.resetOffset(topic, consumerGroup, offsetTable);
         return null;
     }
 
@@ -148,7 +167,15 @@ public class ClientRemotingProcessor implements NettyRequestProcessor {
         final GetConsumerStatusRequestHeader requestHeader =
             (GetConsumerStatusRequestHeader) request.decodeCommandCustomHeader(GetConsumerStatusRequestHeader.class);
 
-        Map<MessageQueue, Long> offsetTable = this.mqClientFactory.getConsumerStatus(requestHeader.getTopic(), requestHeader.getGroup());
+        String namespace = this.mqClientFactory.getClientConfig().getNamespace();
+        String topic = requestHeader.getTopic();
+        String consumerGroup = requestHeader.getGroup();
+        if (StringUtils.isNotEmpty(namespace)) {
+            topic = NamespaceUtil.getResource(topic, namespace);
+            consumerGroup = NamespaceUtil.getResource(consumerGroup, namespace);
+        }
+
+        Map<MessageQueue, Long> offsetTable = this.mqClientFactory.getConsumerStatus(topic, consumerGroup);
         GetConsumerStatusBody body = new GetConsumerStatusBody();
         body.setMessageQueueTable(offsetTable);
         response.setBody(body.encode());
@@ -162,7 +189,12 @@ public class ClientRemotingProcessor implements NettyRequestProcessor {
         final GetConsumerRunningInfoRequestHeader requestHeader =
             (GetConsumerRunningInfoRequestHeader) request.decodeCommandCustomHeader(GetConsumerRunningInfoRequestHeader.class);
 
-        ConsumerRunningInfo consumerRunningInfo = this.mqClientFactory.consumerRunningInfo(requestHeader.getConsumerGroup());
+        String namespace = this.mqClientFactory.getClientConfig().getNamespace();
+        String consumerGroup = requestHeader.getConsumerGroup();
+        if (StringUtils.isNotEmpty(namespace)) {
+            consumerGroup = NamespaceUtil.getResource(consumerGroup, namespace);
+        }
+        ConsumerRunningInfo consumerRunningInfo = this.mqClientFactory.consumerRunningInfo(consumerGroup);
         if (null != consumerRunningInfo) {
             if (requestHeader.isJstackEnable()) {
                 Map<Thread, StackTraceElement[]> map = Thread.getAllStackTraces();
@@ -174,7 +206,7 @@ public class ClientRemotingProcessor implements NettyRequestProcessor {
             response.setBody(consumerRunningInfo.encode());
         } else {
             response.setCode(ResponseCode.SYSTEM_ERROR);
-            response.setRemark(String.format("The Consumer Group <%s> not exist in this consumer", requestHeader.getConsumerGroup()));
+            response.setRemark(String.format("The Consumer Group <%s> not exist in this consumer", consumerGroup));
         }
 
         return response;
@@ -189,15 +221,20 @@ public class ClientRemotingProcessor implements NettyRequestProcessor {
 
         final MessageExt msg = MessageDecoder.decode(ByteBuffer.wrap(request.getBody()));
 
+        String namespace = this.mqClientFactory.getClientConfig().getNamespace();
+        String consumerGroup = requestHeader.getConsumerGroup();
+        if (StringUtils.isNotEmpty(namespace)) {
+            consumerGroup = NamespaceUtil.getResource(consumerGroup, namespace);
+        }
         ConsumeMessageDirectlyResult result =
-            this.mqClientFactory.consumeMessageDirectly(msg, requestHeader.getConsumerGroup(), requestHeader.getBrokerName());
+            this.mqClientFactory.consumeMessageDirectly(msg, consumerGroup, requestHeader.getBrokerName());
 
         if (null != result) {
             response.setCode(ResponseCode.SUCCESS);
             response.setBody(result.encode());
         } else {
             response.setCode(ResponseCode.SYSTEM_ERROR);
-            response.setRemark(String.format("The Consumer Group <%s> not exist in this consumer", requestHeader.getConsumerGroup()));
+            response.setRemark("The Consumer Group " + consumerGroup + " not exist in this consumer");
         }
 
         return response;

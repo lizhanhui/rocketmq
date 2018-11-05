@@ -15,32 +15,23 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.common.protocol.header;
+package org.apache.rocketmq.common.protocol.body;
 
-import org.apache.rocketmq.remoting.CommandCustomHeader;
-import org.apache.rocketmq.remoting.annotation.CFNotNull;
-import org.apache.rocketmq.remoting.annotation.CFNullable;
-import org.apache.rocketmq.remoting.exception.RemotingCommandException;
+import org.apache.rocketmq.common.protocol.heartbeat.SubscriptionData;
+import org.apache.rocketmq.remoting.protocol.RemotingSerializable;
 
-public class GetConsumerStatusRequestHeader implements CommandCustomHeader {
-    @CFNotNull
-    private String topic;
-    @CFNotNull
+public class QuerySubscriptionResponseBody extends RemotingSerializable {
+
+    private SubscriptionData subscriptionData;
     private String group;
-    @CFNullable
-    private String clientAddr;
+    private String topic;
 
-
-    @Override
-    public void checkFields() throws RemotingCommandException {
+    public SubscriptionData getSubscriptionData() {
+        return subscriptionData;
     }
 
-    public String getTopic() {
-        return topic;
-    }
-
-    public void setTopic(String topic) {
-        this.topic = topic;
+    public void setSubscriptionData(SubscriptionData subscriptionData) {
+        this.subscriptionData = subscriptionData;
     }
 
     public String getGroup() {
@@ -51,11 +42,11 @@ public class GetConsumerStatusRequestHeader implements CommandCustomHeader {
         this.group = group;
     }
 
-    public String getClientAddr() {
-        return clientAddr;
+    public String getTopic() {
+        return topic;
     }
 
-    public void setClientAddr(String clientAddr) {
-        this.clientAddr = clientAddr;
+    public void setTopic(String topic) {
+        this.topic = topic;
     }
 }

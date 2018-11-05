@@ -16,9 +16,10 @@
  */
 package org.apache.rocketmq.broker.processor;
 
-import io.netty.channel.ChannelHandlerContext;
 import java.net.SocketAddress;
 import java.util.List;
+
+import io.netty.channel.ChannelHandlerContext;
 import org.apache.rocketmq.broker.BrokerController;
 import org.apache.rocketmq.broker.mqtrace.ConsumeMessageContext;
 import org.apache.rocketmq.broker.mqtrace.ConsumeMessageHook;
@@ -36,6 +37,7 @@ import org.apache.rocketmq.common.message.MessageConst;
 import org.apache.rocketmq.common.message.MessageDecoder;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.message.MessageExtBatch;
+import org.apache.rocketmq.common.protocol.NamespaceUtil;
 import org.apache.rocketmq.common.protocol.RequestCode;
 import org.apache.rocketmq.common.protocol.ResponseCode;
 import org.apache.rocketmq.common.protocol.header.ConsumerSendMsgBackRequestHeader;
@@ -66,7 +68,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
     @Override
     public RemotingCommand processRequest(ChannelHandlerContext ctx,
         RemotingCommand request) throws RemotingCommandException {
-        SendMessageContext mqtraceContext;
+        SendMessageContext traceContext;
         switch (request.getCode()) {
             case RequestCode.CONSUMER_SEND_MSG_BACK:
                 return this.consumerSendMsgBack(ctx, request);
@@ -76,17 +78,17 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
                     return null;
                 }
 
-                mqtraceContext = buildMsgContext(ctx, requestHeader);
-                this.executeSendMessageHookBefore(ctx, request, mqtraceContext);
+                traceContext = buildMsgContext(ctx, requestHeader);
+                this.executeSendMessageHookBefore(ctx, request, traceContext);
 
                 RemotingCommand response;
                 if (requestHeader.isBatch()) {
-                    response = this.sendBatchMessage(ctx, request, mqtraceContext, requestHeader);
+                    response = this.sendBatchMessage(ctx, request, traceContext, requestHeader);
                 } else {
-                    response = this.sendMessage(ctx, request, mqtraceContext, requestHeader);
+                    response = this.sendMessage(ctx, request, traceContext, requestHeader);
                 }
 
-                this.executeSendMessageHookAfter(response, mqtraceContext);
+                this.executeSendMessageHookAfter(response, traceContext);
                 return response;
         }
     }
@@ -103,11 +105,15 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         final ConsumerSendMsgBackRequestHeader requestHeader =
             (ConsumerSendMsgBackRequestHeader) request.decodeCommandCustomHeader(ConsumerSendMsgBackRequestHeader.class);
 
+        String consumerGroup = NamespaceUtil.withNamespace(request, requestHeader.getGroup());
+        String originalTopic = NamespaceUtil.withNamespace(request, requestHeader.getOriginTopic());
         if (this.hasConsumeMessageHook() && !UtilAll.isBlank(requestHeader.getOriginMsgId())) {
 
             ConsumeMessageContext context = new ConsumeMessageContext();
-            context.setConsumerGroup(requestHeader.getGroup());
             context.setTopic(requestHeader.getOriginTopic());
+            context.setTopicWithNamespace(originalTopic);
+            context.setConsumerGroup(requestHeader.getGroup());
+            context.setConsumerGroupWithNamespace(consumerGroup);
             context.setCommercialRcvStats(BrokerStatsManager.StatsType.SEND_BACK);
             context.setCommercialRcvTimes(1);
             context.setCommercialOwner(request.getExtFields().get(BrokerStatsManager.COMMERCIAL_OWNER));
@@ -118,10 +124,10 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         }
 
         SubscriptionGroupConfig subscriptionGroupConfig =
-            this.brokerController.getSubscriptionGroupManager().findSubscriptionGroupConfig(requestHeader.getGroup());
+            this.brokerController.getSubscriptionGroupManager().findSubscriptionGroupConfig(consumerGroup);
         if (null == subscriptionGroupConfig) {
             response.setCode(ResponseCode.SUBSCRIPTION_GROUP_NOT_EXIST);
-            response.setRemark("subscription group not exist, " + requestHeader.getGroup() + " "
+            response.setRemark("subscription group not exist, " + consumerGroup + " "
                 + FAQUrl.suggestTodo(FAQUrl.SUBSCRIPTION_GROUP_NOT_EXIST));
             return response;
         }
@@ -138,7 +144,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
             return response;
         }
 
-        String newTopic = MixAll.getRetryTopic(requestHeader.getGroup());
+        String newTopic = MixAll.getRetryTopic(consumerGroup);
         int queueIdInt = Math.abs(this.random.nextInt() % 99999999) % subscriptionGroupConfig.getRetryQueueNums();
 
         int topicSysFlag = 0;
@@ -169,10 +175,9 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
             return response;
         }
 
-        String originalTopic = msgExt.getProperty(MessageConst.PROPERTY_RETRY_TOPIC);
-        if (null == originalTopic) {
-            originalTopic = msgExt.getTopic();
-            MessageAccessor.putProperty(msgExt, MessageConst.PROPERTY_RETRY_TOPIC, originalTopic);
+        final String retryTopic = msgExt.getProperty(MessageConst.PROPERTY_RETRY_TOPIC);
+        if (null == retryTopic) {
+            MessageAccessor.putProperty(msgExt, MessageConst.PROPERTY_RETRY_TOPIC, msgExt.getTopic());
         }
         msgExt.setWaitStoreMsgOK(false);
 
@@ -186,8 +191,9 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         boolean isDLQ = false;
         if (msgExt.getReconsumeTimes() >= maxReconsumeTimes
             || delayLevel < 0) {
+
             isDLQ = true;
-            newTopic = MixAll.getDLQTopic(requestHeader.getGroup());
+            newTopic = MixAll.getDLQTopic(consumerGroup);
             queueIdInt = Math.abs(this.random.nextInt() % 99999999) % DLQ_NUMS_PER_GROUP;
 
             topicConfig = this.brokerController.getTopicConfigManager().createTopicInSendMessageBackMethod(newTopic,
@@ -238,7 +244,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
                         backTopic = correctTopic;
                     }
 
-                    this.brokerController.getBrokerStatsManager().incSendBackNums(requestHeader.getGroup(), backTopic);
+                    this.brokerController.getBrokerStatsManager().incSendBackNums(consumerGroup, backTopic);
 
                     if (isDLQ) {
                         String owner = request.getExtFields().get(BrokerStatsManager.COMMERCIAL_OWNER);
@@ -247,8 +253,8 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
                         this.brokerController.getBrokerStatsManager().incDLQStatValue(
                             BrokerStatsManager.SNDBCK2DLQ_TIMES,
                             owner,
-                            requestHeader.getGroup(),
-                            requestHeader.getOriginTopic(),
+                            consumerGroup,
+                            originalTopic,
                             BrokerStatsManager.StatsType.SEND_BACK_TO_DLQ.name(),
                             1);
 
@@ -256,7 +262,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
                             newTopic,
                             owner,
                             originalTopic,
-                            requestHeader.getGroup(),
+                            consumerGroup,
                             uniqKey,
                             putMessageResult.getAppendMessageResult().getStoreTimestamp());
                     }
@@ -292,9 +298,8 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
     }
 
     private boolean handleRetryAndDLQ(SendMessageRequestHeader requestHeader, RemotingCommand response,
-        RemotingCommand request,
-        MessageExt msg, TopicConfig topicConfig) {
-        String newTopic = requestHeader.getTopic();
+        RemotingCommand request, MessageExt msg, TopicConfig topicConfig) {
+        String newTopic = NamespaceUtil.withNamespace(request, requestHeader.getTopic());
         if (null != newTopic && newTopic.startsWith(MixAll.RETRY_GROUP_TOPIC_PREFIX)) {
             String groupName = newTopic.substring(MixAll.RETRY_GROUP_TOPIC_PREFIX.length());
             SubscriptionGroupConfig subscriptionGroupConfig =
@@ -349,11 +354,12 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         response.addExtField(MessageConst.PROPERTY_TRACE_SWITCH, String.valueOf(this.brokerController.getBrokerConfig().isTraceOn()));
 
         log.debug("receive SendMessage request command, {}", request);
+        String topic = NamespaceUtil.withNamespace(request, requestHeader.getTopic());
 
-        final long startTimstamp = this.brokerController.getBrokerConfig().getStartAcceptSendRequestTimeStamp();
-        if (this.brokerController.getMessageStore().now() < startTimstamp) {
+        final long startTimestamp = this.brokerController.getBrokerConfig().getStartAcceptSendRequestTimeStamp();
+        if (this.brokerController.getMessageStore().now() < startTimestamp) {
             response.setCode(ResponseCode.SYSTEM_ERROR);
-            response.setRemark(String.format("broker unable to service, until %s", UtilAll.timeMillisToHumanString2(startTimstamp)));
+            response.setRemark(String.format("broker unable to service, until %s", UtilAll.timeMillisToHumanString2(startTimestamp)));
             return response;
         }
 
@@ -366,14 +372,14 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         final byte[] body = request.getBody();
 
         int queueIdInt = requestHeader.getQueueId();
-        TopicConfig topicConfig = this.brokerController.getTopicConfigManager().selectTopicConfig(requestHeader.getTopic());
+        TopicConfig topicConfig = this.brokerController.getTopicConfigManager().selectTopicConfig(topic);
 
         if (queueIdInt < 0) {
             queueIdInt = Math.abs(this.random.nextInt() % 99999999) % topicConfig.getWriteQueueNums();
         }
 
         MessageExtBrokerInner msgInner = new MessageExtBrokerInner();
-        msgInner.setTopic(requestHeader.getTopic());
+        msgInner.setTopic(topic);
         msgInner.setQueueId(queueIdInt);
 
         if (!handleRetryAndDLQ(requestHeader, response, request, msgInner, topicConfig)) {
@@ -409,6 +415,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         RemotingCommand request, MessageExt msg,
         SendMessageResponseHeader responseHeader, SendMessageContext sendMessageContext, ChannelHandlerContext ctx,
         int queueIdInt) {
+        String topic = NamespaceUtil.withNamespace(request, msg.getTopic());
         if (putMessageResult == null) {
             response.setCode(ResponseCode.SYSTEM_ERROR);
             response.setRemark("store putMessage return null");
@@ -470,9 +477,8 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         String ownerSelf = request.getExtFields().get(BrokerStatsManager.ACCOUNT_OWNER_SELF);
         if (sendOK) {
 
-            this.brokerController.getBrokerStatsManager().incTopicPutNums(msg.getTopic(), putMessageResult.getAppendMessageResult().getMsgNum(), 1);
-            this.brokerController.getBrokerStatsManager().incTopicPutSize(msg.getTopic(),
-                putMessageResult.getAppendMessageResult().getWroteBytes());
+            this.brokerController.getBrokerStatsManager().incTopicPutNums(topic, putMessageResult.getAppendMessageResult().getMsgNum(), 1);
+            this.brokerController.getBrokerStatsManager().incTopicPutSize(topic, putMessageResult.getAppendMessageResult().getWroteBytes());
             this.brokerController.getBrokerStatsManager().incBrokerPutNums(putMessageResult.getAppendMessageResult().getMsgNum());
 
             response.setRemark(null);
@@ -530,11 +536,12 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         response.addExtField(MessageConst.PROPERTY_TRACE_SWITCH, String.valueOf(this.brokerController.getBrokerConfig().isTraceOn()));
 
         log.debug("Receive SendMessage request command {}", request);
+        String topic = NamespaceUtil.withNamespace(request, requestHeader.getTopic());
 
-        final long startTimstamp = this.brokerController.getBrokerConfig().getStartAcceptSendRequestTimeStamp();
-        if (this.brokerController.getMessageStore().now() < startTimstamp) {
+        final long startTimestamp = this.brokerController.getBrokerConfig().getStartAcceptSendRequestTimeStamp();
+        if (this.brokerController.getMessageStore().now() < startTimestamp) {
             response.setCode(ResponseCode.SYSTEM_ERROR);
-            response.setRemark(String.format("broker unable to service, until %s", UtilAll.timeMillisToHumanString2(startTimstamp)));
+            response.setRemark(String.format("broker unable to service, until %s", UtilAll.timeMillisToHumanString2(startTimestamp)));
             return response;
         }
 
@@ -545,25 +552,25 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         }
 
         int queueIdInt = requestHeader.getQueueId();
-        TopicConfig topicConfig = this.brokerController.getTopicConfigManager().selectTopicConfig(requestHeader.getTopic());
+        TopicConfig topicConfig = this.brokerController.getTopicConfigManager().selectTopicConfig(topic);
 
         if (queueIdInt < 0) {
             queueIdInt = Math.abs(this.random.nextInt() % 99999999) % topicConfig.getWriteQueueNums();
         }
 
-        if (requestHeader.getTopic().length() > Byte.MAX_VALUE) {
+        if (topic.length() > Byte.MAX_VALUE) {
             response.setCode(ResponseCode.MESSAGE_ILLEGAL);
-            response.setRemark("message topic length too long " + requestHeader.getTopic().length());
+            response.setRemark("message topic length too long " + topic.length());
             return response;
         }
 
-        if (requestHeader.getTopic() != null && requestHeader.getTopic().startsWith(MixAll.RETRY_GROUP_TOPIC_PREFIX)) {
+        if (topic != null && topic.startsWith(MixAll.RETRY_GROUP_TOPIC_PREFIX)) {
             response.setCode(ResponseCode.MESSAGE_ILLEGAL);
-            response.setRemark("batch request does not support retry group " + requestHeader.getTopic());
+            response.setRemark("batch request does not support retry group " + topic);
             return response;
         }
         MessageExtBatch messageExtBatch = new MessageExtBatch();
-        messageExtBatch.setTopic(requestHeader.getTopic());
+        messageExtBatch.setTopic(topic);
         messageExtBatch.setQueueId(queueIdInt);
 
         int sysFlag = requestHeader.getSysFlag();

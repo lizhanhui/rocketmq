@@ -50,6 +50,8 @@ public class SendMessageRequestHeader implements CommandCustomHeader {
     private boolean unitMode = false;
     @CFNullable
     private boolean batch = false;
+    @CFNullable
+    private String namespace;
     private Integer maxReconsumeTimes;
 
     @Override
@@ -158,5 +160,13 @@ public class SendMessageRequestHeader implements CommandCustomHeader {
 
     public void setBatch(boolean batch) {
         this.batch = batch;
+    }
+
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
     }
 }

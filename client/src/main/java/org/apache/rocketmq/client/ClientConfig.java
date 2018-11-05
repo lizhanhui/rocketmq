@@ -34,6 +34,7 @@ public class ClientConfig {
     private String namesrvAddr = System.getProperty(MixAll.NAMESRV_ADDR_PROPERTY, System.getenv(MixAll.NAMESRV_ADDR_ENV));
     private String clientIP = RemotingUtil.getLocalAddress();
     private String instanceName = System.getProperty("rocketmq.client.name", "DEFAULT");
+    private String namespace;
 
     private int clientCallbackExecutorThreads = Integer.parseInt(System.getProperty(CLIENT_CALLBACK_EXECUTOR_THREAD_NUMS,
         String.valueOf(Runtime.getRuntime().availableProcessors())));
@@ -110,6 +111,7 @@ public class ClientConfig {
         this.decodeDecompressBody = cc.decodeDecompressBody;
         this.useTLS = cc.useTLS;
         this.language = cc.language;
+        this.namespace = cc.namespace;
     }
 
     public ClientConfig cloneClientConfig() {
@@ -128,6 +130,7 @@ public class ClientConfig {
         cc.decodeDecompressBody = decodeDecompressBody;
         cc.useTLS = useTLS;
         cc.language = language;
+        cc.namespace = namespace;
         return cc;
     }
 
@@ -227,6 +230,14 @@ public class ClientConfig {
         this.language = language;
     }
 
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
+    }
+
     @Override
     public String toString() {
         return "ClientConfig [namesrvAddr=" + namesrvAddr + ", clientIP=" + clientIP + ", instanceName=" + instanceName
@@ -234,6 +245,8 @@ public class ClientConfig {
             + ", heartbeatBrokerInterval=" + heartbeatBrokerInterval + ", persistConsumerOffsetInterval="
             + persistConsumerOffsetInterval + ", unitMode=" + unitMode + ", unitName=" + unitName + ", vipChannelEnabled="
             + vipChannelEnabled + ", decodeReadBody=" + decodeReadBody + ", decodeDecompressBody=" + decodeDecompressBody
-            + ", useTLS=" + useTLS + ", language=" + language.name() + "]";
+            + ", useTLS=" + useTLS + ", language=" + language.name() + ", namespace=" + namespace + "]";
     }
+
+
 }
