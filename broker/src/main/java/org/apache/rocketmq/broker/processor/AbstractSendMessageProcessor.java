@@ -36,6 +36,7 @@ import org.apache.rocketmq.common.help.FAQUrl;
 import org.apache.rocketmq.common.message.MessageAccessor;
 import org.apache.rocketmq.common.message.MessageConst;
 import org.apache.rocketmq.common.message.MessageDecoder;
+import org.apache.rocketmq.common.message.MessageType;
 import org.apache.rocketmq.common.protocol.NamespaceUtil;
 import org.apache.rocketmq.common.protocol.RequestCode;
 import org.apache.rocketmq.common.protocol.ResponseCode;
@@ -87,6 +88,7 @@ public abstract class AbstractSendMessageProcessor implements NettyRequestProces
         traceContext.setBrokerAddr(this.brokerController.getBrokerAddr());
         traceContext.setBrokerRegionId(this.brokerController.getBrokerConfig().getRegionId());
         traceContext.setBornTimeStamp(requestHeader.getBornTimestamp());
+        traceContext.setRequestTimeStamp(System.currentTimeMillis());
 
         Map<String, String> properties = MessageDecoder.string2messageProperties(requestHeader.getProperties());
         String uniqueKey = properties.get(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX);
@@ -98,6 +100,10 @@ public abstract class AbstractSendMessageProcessor implements NettyRequestProces
             uniqueKey = "";
         }
         traceContext.setMsgUniqueKey(uniqueKey);
+
+        if (properties.containsKey(MessageConst.PROPERTY_SHARDING_KEY)) {
+            traceContext.setMsgType(MessageType.Order_Msg);
+        }
         return traceContext;
     }
 

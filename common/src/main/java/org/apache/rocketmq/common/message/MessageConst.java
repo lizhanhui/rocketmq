@@ -54,6 +54,7 @@ public class MessageConst {
     public static final String PROPERTY_POP_CK = "POP_CK";
     public static final String PROPERTY_POP_CK_OFFSET = "POP_CK_OFFSET";
     public static final String PROPERTY_FIRST_POP_TIME = "1ST_POP_TIME";
+    public static final String PROPERTY_SHARDING_KEY = "__SHARDINGKEY";
 
     public static final String KEY_SEPARATOR = " ";
 

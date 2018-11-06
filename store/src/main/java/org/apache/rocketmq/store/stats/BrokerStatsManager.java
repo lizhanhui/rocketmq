@@ -308,6 +308,7 @@ public class BrokerStatsManager {
         SEND_FAILURE,
         SEND_BACK,
         SEND_BACK_TO_DLQ,
+        SEND_ORDER,
         SEND_TIMER,
         SEND_TRANSACTION,
         RCV_SUCCESS,
