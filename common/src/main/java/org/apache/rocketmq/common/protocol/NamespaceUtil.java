@@ -39,11 +39,19 @@ public class NamespaceUtil {
         }
 
         if (isRetryTopic(resource)) {
-            return getRetryTopic(resource.substring(resource.indexOf(NAMESPACE_SEPARATOR, RETRY_PREFIX_LENGTH) + 1));
+            int index = resource.indexOf(NAMESPACE_SEPARATOR, RETRY_PREFIX_LENGTH);
+            if (index > 0) {
+                return getRetryTopic(resource.substring(index + 1));
+            }
+            return resource;
         }
 
         if (isDLQTopic(resource)) {
-            return getDLQTopic(resource.substring(resource.indexOf(NAMESPACE_SEPARATOR, DLQ_PREFIX_LENGTH) + 1));
+            int index = resource.indexOf(NAMESPACE_SEPARATOR, DLQ_PREFIX_LENGTH);
+            if (index > 0) {
+                return getDLQTopic(resource.substring(index + 1));
+            }
+            return resource;
         }
 
         int index = resource.indexOf(NAMESPACE_SEPARATOR);
