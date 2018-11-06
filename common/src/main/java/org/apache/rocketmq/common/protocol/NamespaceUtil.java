@@ -21,6 +21,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 
+import static org.apache.rocketmq.common.MixAll.getDLQTopic;
+import static org.apache.rocketmq.common.MixAll.getRetryTopic;
+
 public class NamespaceUtil {
     public static final char NAMESPACE_SEPARATOR = '%';
     public static final int RETRY_PREFIX_LENGTH = MixAll.RETRY_GROUP_TOPIC_PREFIX.length();
@@ -28,6 +31,26 @@ public class NamespaceUtil {
 
     public static String withNamespace(RemotingCommand request, String resource) {
         return wrapNamespace(getNamespace(request), resource);
+    }
+
+    public static String withoutNamespace(String resource) {
+        if (StringUtils.isEmpty(resource) || isSystemResource(resource)) {
+            return resource;
+        }
+
+        if (isRetryTopic(resource)) {
+            return getRetryTopic(resource.substring(resource.indexOf(NAMESPACE_SEPARATOR, RETRY_PREFIX_LENGTH) + 1));
+        }
+
+        if (isDLQTopic(resource)) {
+            return getDLQTopic(resource.substring(resource.indexOf(NAMESPACE_SEPARATOR, DLQ_PREFIX_LENGTH) + 1));
+        }
+
+        int index = resource.indexOf(NAMESPACE_SEPARATOR);
+        if (index > 0) {
+            return resource.substring(index + 1);
+        }
+        return resource;
     }
 
     public static String wrapNamespace(String namespace, String resource) {
@@ -97,6 +120,34 @@ public class NamespaceUtil {
 
         return namespace;
 
+    }
+
+    public static String getNamespace(String resource) {
+        if (StringUtils.isEmpty(resource) || isSystemResource(resource)) {
+            return "";
+        }
+
+        if (isRetryTopic(resource)) {
+            int index = resource.indexOf(NAMESPACE_SEPARATOR, RETRY_PREFIX_LENGTH);
+            if (index > 0) {
+                return resource.substring(RETRY_PREFIX_LENGTH, index);
+            }
+            return "";
+        }
+
+        if (isDLQTopic(resource)) {
+            int index = resource.indexOf(NAMESPACE_SEPARATOR, DLQ_PREFIX_LENGTH);
+            if (index > 0) {
+                return resource.substring(DLQ_PREFIX_LENGTH, index);
+            }
+            return "";
+        }
+
+        int index = resource.indexOf(NAMESPACE_SEPARATOR);
+        if (index > 0) {
+            return resource.substring(0, index);
+        }
+        return "";
     }
 
     private static boolean isSystemResource(String resource) {

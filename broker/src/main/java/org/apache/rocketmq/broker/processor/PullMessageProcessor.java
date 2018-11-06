@@ -91,8 +91,11 @@ public class PullMessageProcessor implements NettyRequestProcessor {
         response.setOpaque(request.getOpaque());
 
         log.debug("receive PullMessage request command, {}", request);
+
         String topic = NamespaceUtil.withNamespace(request, requestHeader.getTopic());
         String consumerGroup = NamespaceUtil.withNamespace(request, requestHeader.getConsumerGroup());
+        String topicNoNamespace = NamespaceUtil.withoutNamespace(requestHeader.getTopic());
+        String consumerGroupNoNamespace = NamespaceUtil.withoutNamespace(requestHeader.getConsumerGroup());
 
         if (!PermName.isReadable(this.brokerController.getBrokerConfig().getBrokerPermission())) {
             response.setCode(ResponseCode.NO_PERMISSION);
@@ -331,9 +334,10 @@ public class PullMessageProcessor implements NettyRequestProcessor {
                 String ownerSelf = request.getExtFields().get(BrokerStatsManager.ACCOUNT_OWNER_SELF);
 
                 ConsumeMessageContext context = new ConsumeMessageContext();
-                context.setTopic(requestHeader.getTopic());
+                context.setNamespace(requestHeader.getNamespace());
+                context.setTopic(topicNoNamespace);
                 context.setTopicWithNamespace(topic);
-                context.setConsumerGroup(requestHeader.getConsumerGroup());
+                context.setConsumerGroup(consumerGroupNoNamespace);
                 context.setConsumerGroupWithNamespace(consumerGroup);
                 context.setQueueId(requestHeader.getQueueId());
                 context.setAccountOwnerParent(ownerParent);

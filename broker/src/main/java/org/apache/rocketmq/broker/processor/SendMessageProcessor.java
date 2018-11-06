@@ -107,12 +107,16 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
 
         String consumerGroup = NamespaceUtil.withNamespace(request, requestHeader.getGroup());
         String originalTopic = NamespaceUtil.withNamespace(request, requestHeader.getOriginTopic());
+        String consumerGroupNoNamespace = NamespaceUtil.withoutNamespace(requestHeader.getGroup());
+        String originalTopicNoNamespace = NamespaceUtil.withoutNamespace(requestHeader.getOriginTopic());
+
         if (this.hasConsumeMessageHook() && !UtilAll.isBlank(requestHeader.getOriginMsgId())) {
 
             ConsumeMessageContext context = new ConsumeMessageContext();
-            context.setTopic(requestHeader.getOriginTopic());
+            context.setNamespace(requestHeader.getNamespace());
+            context.setTopic(originalTopicNoNamespace);
             context.setTopicWithNamespace(originalTopic);
-            context.setConsumerGroup(requestHeader.getGroup());
+            context.setConsumerGroup(consumerGroupNoNamespace);
             context.setConsumerGroupWithNamespace(consumerGroup);
             context.setCommercialRcvStats(BrokerStatsManager.StatsType.SEND_BACK);
             context.setCommercialRcvTimes(1);

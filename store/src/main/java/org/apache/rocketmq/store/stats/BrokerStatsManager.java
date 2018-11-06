@@ -268,9 +268,10 @@ public class BrokerStatsManager {
         this.statsTable.get(key).addValue(statsKey, incValue, 1);
     }
 
-    public void incAccountValue(final String key, final String accountOwnerSelf, final String accountOwnerParent, final String group,
-                                final String topic, final String type, final int incValue) {
-        final String statsKey = buildAccountStatsKey(accountOwnerSelf, accountOwnerParent, topic, group, type);
+    public void incAccountValue(final String key, final String accountOwnerSelf, final String accountOwnerParent,
+                                final String instanceId, final String group, final String topic,
+                                final String type, final int incValue) {
+        final String statsKey = buildAccountStatsKey(accountOwnerSelf, accountOwnerParent, instanceId, topic, group, type);
         this.statsTable.get(key).addValue(statsKey, incValue, 1);
     }
 
@@ -286,11 +287,13 @@ public class BrokerStatsManager {
         return strBuilder.toString();
     }
 
-    public String buildAccountStatsKey(String accountOwnerSelf, String accountOwnerParent, String topic, String group, String type) {
+    public String buildAccountStatsKey(String accountOwnerSelf, String accountOwnerParent, String instanceId, String topic, String group, String type) {
         StringBuffer strBuilder = new StringBuffer();
         strBuilder.append(accountOwnerParent);
         strBuilder.append("@");
         strBuilder.append(accountOwnerSelf);
+        strBuilder.append("@");
+        strBuilder.append(instanceId);
         strBuilder.append("@");
         strBuilder.append(topic);
         strBuilder.append("@");

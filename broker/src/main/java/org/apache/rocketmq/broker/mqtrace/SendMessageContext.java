@@ -21,6 +21,8 @@ import org.apache.rocketmq.common.message.MessageType;
 import org.apache.rocketmq.store.stats.BrokerStatsManager;
 
 public class SendMessageContext {
+    /** namespace */
+    private String namespace;
     /** producer group without namespace. */
     private String producerGroup;
     /** topic without namespace. */
@@ -53,6 +55,14 @@ public class SendMessageContext {
     private String topicWithNamespace;
     /** producer group with namespace. */
     private String producerGroupWithNamespace;
+
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
+    }
 
     public boolean isSuccess() {
         return isSuccess;

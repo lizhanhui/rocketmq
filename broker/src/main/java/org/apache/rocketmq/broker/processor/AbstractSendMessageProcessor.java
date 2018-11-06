@@ -71,13 +71,16 @@ public abstract class AbstractSendMessageProcessor implements NettyRequestProces
 
     protected SendMessageContext buildMsgContext(ChannelHandlerContext ctx,
         SendMessageRequestHeader requestHeader) {
+        String topic = NamespaceUtil.withoutNamespace(requestHeader.getTopic());
+        String producerGroup = NamespaceUtil.withoutNamespace(requestHeader.getProducerGroup());
         String topicWithNamespace = NamespaceUtil.wrapNamespace(requestHeader.getNamespace(), requestHeader.getTopic());
         String producerGroupWithNamespace = NamespaceUtil.wrapNamespace(requestHeader.getNamespace(), requestHeader.getProducerGroup());
         SendMessageContext traceContext;
         traceContext = new SendMessageContext();
-        traceContext.setProducerGroup(requestHeader.getProducerGroup());
+        traceContext.setNamespace(requestHeader.getNamespace());
+        traceContext.setProducerGroup(producerGroup);
         traceContext.setProducerGroupWithNamespace(producerGroupWithNamespace);
-        traceContext.setTopic(requestHeader.getTopic());
+        traceContext.setTopic(topic);
         traceContext.setTopicWithNamespace(topicWithNamespace);
         traceContext.setMsgProps(requestHeader.getProperties());
         traceContext.setBornHost(RemotingHelper.parseChannelRemoteAddr(ctx.channel()));
@@ -254,12 +257,15 @@ public abstract class AbstractSendMessageProcessor implements NettyRequestProces
                 try {
                     final SendMessageRequestHeader requestHeader = parseRequestHeader(request);
 
+                    String topic = NamespaceUtil.withoutNamespace(requestHeader.getTopic());
+                    String producerGroup = NamespaceUtil.withoutNamespace(requestHeader.getProducerGroup());
                     String topicWithNamespace = NamespaceUtil.withNamespace(request, requestHeader.getTopic());
                     String producerGroupWithNamespace = NamespaceUtil.withNamespace(request, requestHeader.getProducerGroup());
                     if (null != requestHeader) {
-                        context.setProducerGroup(requestHeader.getProducerGroup());
+                        context.setNamespace(requestHeader.getNamespace());
+                        context.setProducerGroup(producerGroup);
                         context.setProducerGroupWithNamespace(producerGroupWithNamespace);
-                        context.setTopic(requestHeader.getTopic());
+                        context.setTopic(topic);
                         context.setTopicWithNamespace(topicWithNamespace);
                         context.setBodyLength(request.getBody().length);
                         context.setMsgProps(requestHeader.getProperties());
