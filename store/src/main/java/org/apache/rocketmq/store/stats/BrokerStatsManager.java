@@ -60,6 +60,7 @@ public class BrokerStatsManager {
     public static final String ACCOUNT_RCV_EPOLLS = "ACCOUNT_RCV_EPOLLS";
     public static final String ACCOUNT_SEND_SIZE = "ACCOUNT_SEND_SIZE";
     public static final String ACCOUNT_RCV_SIZE = "ACCOUNT_RCV_SIZE";
+    public static final String ACCOUNT_SEND_RT = "ACCOUNT_SEND_RT";
     public static final String ACCOUNT_OWNER_PARENT = "OWNER_PARENT";
     public static final String ACCOUNT_OWNER_SELF = "OWNER_SELF";
 
@@ -123,6 +124,7 @@ public class BrokerStatsManager {
         this.statsTable.put(ACCOUNT_RCV_SIZE, new StatsItemSet(ACCOUNT_RCV_SIZE, this.accountExecutor, ACCOUNT_LOG));
         this.statsTable.put(ACCOUNT_RCV_EPOLLS, new StatsItemSet(ACCOUNT_RCV_EPOLLS, this.accountExecutor, ACCOUNT_LOG));
         this.statsTable.put(ACCOUNT_SNDBCK_TIMES, new StatsItemSet(ACCOUNT_SNDBCK_TIMES, this.accountExecutor, ACCOUNT_LOG));
+        this.statsTable.put(ACCOUNT_SEND_RT, new StatsItemSet(ACCOUNT_SEND_RT, this.accountExecutor, ACCOUNT_LOG));
 
         this.statsTable.put(COMMERCIAL_SEND_TIMES, new StatsItemSet(COMMERCIAL_SEND_TIMES, this.commercialExecutor, COMMERCIAL_LOG));
         this.statsTable.put(COMMERCIAL_RCV_TIMES, new StatsItemSet(COMMERCIAL_RCV_TIMES, this.commercialExecutor, COMMERCIAL_LOG));

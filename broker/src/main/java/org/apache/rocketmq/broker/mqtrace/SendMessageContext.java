@@ -42,6 +42,7 @@ public class SendMessageContext {
     private String brokerRegionId;
     private String msgUniqueKey;
     private long bornTimeStamp;
+    private long requestTimeStamp;
     private MessageType msgType = MessageType.Trans_msg_Commit;
     private boolean isSuccess = false;
     //For Commercial
@@ -94,6 +95,14 @@ public class SendMessageContext {
 
     public void setBornTimeStamp(final long bornTimeStamp) {
         this.bornTimeStamp = bornTimeStamp;
+    }
+
+    public long getRequestTimeStamp() {
+        return requestTimeStamp;
+    }
+
+    public void setRequestTimeStamp(long requestTimeStamp) {
+        this.requestTimeStamp = requestTimeStamp;
     }
 
     public String getBrokerRegionId() {
