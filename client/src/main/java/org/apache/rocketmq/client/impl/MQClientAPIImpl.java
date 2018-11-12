@@ -31,7 +31,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.client.ClientConfig;
 import org.apache.rocketmq.client.consumer.AckCallback;
@@ -1803,6 +1802,9 @@ public class MQClientAPIImpl {
         RegisterTopicRequestHeader requestHeader = new RegisterTopicRequestHeader();
         requestHeader.setTopic(topic);
 
+        if (null != this.clientConfig.getNamespace()) {
+            requestHeader.setNamespace(this.clientConfig.getNamespace());
+        }
         TopicRouteData topicRouteData = new TopicRouteData();
         topicRouteData.setQueueDatas(queueDatas);
 
@@ -1989,6 +1991,9 @@ public class MQClientAPIImpl {
         final String clientAddr,
         final long timeoutMillis) throws RemotingException, MQClientException, InterruptedException {
         GetConsumerStatusRequestHeader requestHeader = new GetConsumerStatusRequestHeader();
+        if (null != this.clientConfig.getNamespace()) {
+            requestHeader.setNamespace(this.clientConfig.getNamespace());
+        }
         requestHeader.setTopic(topic);
         requestHeader.setGroup(group);
         requestHeader.setClientAddr(clientAddr);

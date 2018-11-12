@@ -16,9 +16,6 @@
  */
 package org.apache.rocketmq.broker.processor;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -26,6 +23,10 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 
+import com.alibaba.fastjson.JSON;
+
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
 import org.apache.rocketmq.broker.BrokerController;
 import org.apache.rocketmq.client.consumer.PullResult;
 import org.apache.rocketmq.client.consumer.PullStatus;
@@ -41,6 +42,7 @@ import org.apache.rocketmq.common.message.MessageAccessor;
 import org.apache.rocketmq.common.message.MessageConst;
 import org.apache.rocketmq.common.message.MessageDecoder;
 import org.apache.rocketmq.common.message.MessageExt;
+import org.apache.rocketmq.common.protocol.NamespaceUtil;
 import org.apache.rocketmq.common.protocol.ResponseCode;
 import org.apache.rocketmq.common.protocol.header.AckMessageRequestHeader;
 import org.apache.rocketmq.common.protocol.header.ExtraInfoUtil;
@@ -60,8 +62,6 @@ import org.apache.rocketmq.store.PutMessageStatus;
 import org.apache.rocketmq.store.config.BrokerRole;
 import org.apache.rocketmq.store.pop.AckMsg;
 import org.apache.rocketmq.store.pop.PopCheckPoint;
-
-import com.alibaba.fastjson.JSON;
 
 public class AckMessageProcessor implements NettyRequestProcessor {
     private static final InternalLogger POP_LOGGER = InternalLoggerFactory.getLogger(LoggerName.ROCKETMQ_POP_LOGGER_NAME);
@@ -106,24 +106,26 @@ public class AckMessageProcessor implements NettyRequestProcessor {
         MessageExtBrokerInner msgInner = new MessageExtBrokerInner();
         AckMsg ackMsg = new AckMsg();
         RemotingCommand response = RemotingCommand.createResponseCommand(ResponseCode.SUCCESS, null);
-        TopicConfig topicConfig = this.brokerController.getTopicConfigManager().selectTopicConfig(requestHeader.getTopic());
+        String topicWithNamespace = NamespaceUtil.withNamespace(request, requestHeader.getTopic());
+        String consumerGroupWithNamespace = NamespaceUtil.withNamespace(request, requestHeader.getConsumerGroup());
+        TopicConfig topicConfig = this.brokerController.getTopicConfigManager().selectTopicConfig(topicWithNamespace);
         if (null == topicConfig) {
-            POP_LOGGER.error("The topic {} not exist, consumer: {} ", requestHeader.getTopic(), RemotingHelper.parseChannelRemoteAddr(channel));
+            POP_LOGGER.error("The topic {} not exist, consumer: {} ", topicWithNamespace, RemotingHelper.parseChannelRemoteAddr(channel));
             response.setCode(ResponseCode.TOPIC_NOT_EXIST);
-            response.setRemark(String.format("topic[%s] not exist, apply first please! %s", requestHeader.getTopic(), FAQUrl.suggestTodo(FAQUrl.APPLY_TOPIC_URL)));
+            response.setRemark(String.format("topic[%s] not exist, apply first please! %s", topicWithNamespace, FAQUrl.suggestTodo(FAQUrl.APPLY_TOPIC_URL)));
             return response;
         }
 
         if (requestHeader.getQueueId() >= topicConfig.getReadQueueNums() || requestHeader.getQueueId() < 0) {
             String errorInfo = String.format("queueId[%d] is illegal, topic:[%s] topicConfig.readQueueNums:[%d] consumer:[%s]",
-                requestHeader.getQueueId(), requestHeader.getTopic(), topicConfig.getReadQueueNums(), channel.remoteAddress());
+                requestHeader.getQueueId(), topicWithNamespace, topicConfig.getReadQueueNums(), channel.remoteAddress());
             POP_LOGGER.warn(errorInfo);
             response.setCode(ResponseCode.MESSAGE_ILLEGAL);
             response.setRemark(errorInfo);
             return response;
         }
-        long minOffset = this.brokerController.getMessageStore().getMinOffsetInQueue(requestHeader.getTopic(), requestHeader.getQueueId());
-        long maxOffset = this.brokerController.getMessageStore().getMaxOffsetInQueue(requestHeader.getTopic(), requestHeader.getQueueId());
+        long minOffset = this.brokerController.getMessageStore().getMinOffsetInQueue(topicWithNamespace, requestHeader.getQueueId());
+        long maxOffset = this.brokerController.getMessageStore().getMaxOffsetInQueue(topicWithNamespace, requestHeader.getQueueId());
         if (requestHeader.getOffset() < minOffset || requestHeader.getOffset() > maxOffset) {
             response.setCode(ResponseCode.NO_MESSAGE);
             return response;
@@ -132,8 +134,8 @@ public class AckMessageProcessor implements NettyRequestProcessor {
 
         ackMsg.setAo(requestHeader.getOffset());
         ackMsg.setSo(ExtraInfoUtil.getCkQueueOffset(extraInfo));
-        ackMsg.setC(requestHeader.getConsumerGroup());
-        ackMsg.setT(requestHeader.getTopic());
+        ackMsg.setC(consumerGroupWithNamespace);
+        ackMsg.setT(topicWithNamespace);
         ackMsg.setQ(requestHeader.getQueueId());
         ackMsg.setPt(ExtraInfoUtil.getPopTime(extraInfo));
 
