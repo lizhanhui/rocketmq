@@ -30,6 +30,7 @@ import java.util.concurrent.ConcurrentMap;
 
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.client.QueryResult;
 import org.apache.rocketmq.client.Validators;
 import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
@@ -59,6 +60,7 @@ import org.apache.rocketmq.common.UtilAll;
 import org.apache.rocketmq.common.consumer.ConsumeFromWhere;
 import org.apache.rocketmq.common.filter.FilterAPI;
 import org.apache.rocketmq.common.help.FAQUrl;
+import org.apache.rocketmq.common.protocol.NamespaceUtil;
 import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.common.message.Message;
 import org.apache.rocketmq.common.message.MessageAccessor;
@@ -1141,6 +1143,21 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
         }
 
         return queueTimeSpan;
+    }
+
+    public void resetRetryAndNamespace(final List<MessageExt> msgs, String consumerGroup) {
+        String consumerGroupWithNamespace = NamespaceUtil.wrapNamespace(this.defaultMQPushConsumer.getNamespace(), consumerGroup);
+        final String groupTopic = MixAll.getRetryTopic(consumerGroupWithNamespace);
+        for (MessageExt msg : msgs) {
+            String retryTopic = msg.getProperty(MessageConst.PROPERTY_RETRY_TOPIC);
+            if (retryTopic != null && groupTopic.equals(msg.getTopic())) {
+                msg.setTopic(retryTopic);
+            }
+
+            if (StringUtils.isNotEmpty(this.defaultMQPushConsumer.getNamespace())) {
+                msg.setTopic(NamespaceUtil.getResource(msg.getTopic(), this.defaultMQPushConsumer.getNamespace()));
+            }
+        }
     }
 
     public ConsumeMessageService getConsumeMessageService() {
