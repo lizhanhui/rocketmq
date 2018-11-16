@@ -59,7 +59,7 @@ public class BrokerConfig {
      */
     private int sendMessageThreadPoolNums = 1; //16 + Runtime.getRuntime().availableProcessors() * 4;
     private int pullMessageThreadPoolNums = 16 + Runtime.getRuntime().availableProcessors() * 2;
-    private int ackMessageThreadPoolNums = 1;
+    private int ackMessageThreadPoolNums = 3;
     private int queryMessageThreadPoolNums = 8 + Runtime.getRuntime().availableProcessors();
 
     private int adminBrokerThreadPoolNums = 16;
@@ -114,7 +114,7 @@ public class BrokerConfig {
     private long waitTimeMillsInSendQueue = 200;
     private long waitTimeMillsInPullQueue = 5 * 1000;
     private long waitTimeMillsInHeartbeatQueue = 31 * 1000;
-    private long waitTimeMillsInAckQueue = 200;
+    private long waitTimeMillsInAckQueue = 3000;
 
     private long startAcceptSendRequestTimeStamp = 0L;
 
