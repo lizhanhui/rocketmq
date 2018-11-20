@@ -394,14 +394,9 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
         final Channel channel = this.getAndCreateChannel(addr);
         if (channel != null && channel.isActive()) {
             try {
-                for (RPCHook rpcHook: rpcHookList) {
-                    rpcHook.doBeforeRequest(addr, request);
-                }
+                doBeforeRequests(addr, request);
                 RemotingCommand response = this.invokeSyncImpl(channel, request, timeoutMillis);
-
-                for (RPCHook rpcHook: rpcHookList) {
-                    rpcHook.doAfterResponse(RemotingHelper.parseChannelRemoteAddr(channel), request, response);
-                }
+                doAfterRequests(request, channel, response);
                 this.updateChannelLastResponseTime(addr);
                 return response;
             } catch (RemotingSendRequestException e) {
@@ -419,6 +414,26 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
         } else {
             this.closeChannel(addr, channel);
             throw new RemotingConnectException(addr);
+        }
+    }
+
+    private void doAfterRequests(RemotingCommand request, Channel channel, RemotingCommand response) {
+        if (rpcHookList == null || rpcHookList.size() < 1) {
+            return;
+        }
+
+        for (RPCHook rpcHook: rpcHookList) {
+            rpcHook.doAfterResponse(RemotingHelper.parseChannelRemoteAddr(channel), request, response);
+        }
+    }
+
+    private void doBeforeRequests(String addr, RemotingCommand request) {
+        if (rpcHookList == null || rpcHookList.size() < 1) {
+            return;
+        }
+
+        for (RPCHook rpcHook : rpcHookList) {
+            rpcHook.doBeforeRequest(addr, request);
         }
     }
 
@@ -562,9 +577,7 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
         final Channel channel = this.getAndCreateChannel(addr);
         if (channel != null && channel.isActive()) {
             try {
-                for (RPCHook rpcHook: rpcHookList) {
-                    rpcHook.doBeforeRequest(addr, request);
-                }
+                doBeforeRequests(addr, request);
                 this.invokeAsyncImpl(channel, request, timeoutMillis, new InvokeCallbackWrapper(invokeCallback, addr));
             } catch (RemotingSendRequestException e) {
                 log.warn("invokeAsync: send request exception, so close the channel[{}]", addr);
@@ -583,9 +596,7 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
         final Channel channel = this.getAndCreateChannel(addr);
         if (channel != null && channel.isActive()) {
             try {
-                for (RPCHook rpcHook: rpcHookList) {
-                    rpcHook.doBeforeRequest(addr, request);
-                }
+                doBeforeRequests(addr, request);
                 this.invokeOnewayImpl(channel, request, timeoutMillis);
             } catch (RemotingSendRequestException e) {
                 log.warn("invokeOneway: send request exception, so close the channel[{}]", addr);
