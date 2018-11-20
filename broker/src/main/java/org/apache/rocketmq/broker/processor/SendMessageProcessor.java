@@ -518,6 +518,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
                 sendMessageContext.setCommercialSendTimes(incValue);
                 sendMessageContext.setCommercialSendSize(wroteSize);
                 sendMessageContext.setCommercialOwner(owner);
+
                 sendMessageContext.setAccountOwnerParent(ownerParent);
                 sendMessageContext.setAccountOwnerSelf(ownerSelf);
             }

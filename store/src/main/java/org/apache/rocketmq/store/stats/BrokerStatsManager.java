@@ -270,10 +270,10 @@ public class BrokerStatsManager {
         this.statsTable.get(key).addValue(statsKey, incValue, 1);
     }
 
-    public void incAccountValue(final String key, final String accountOwnerSelf, final String accountOwnerParent,
+    public void incAccountValue(final String key, final String accountOwnerParent, final String accountOwnerSelf,
                                 final String instanceId, final String group, final String topic,
-                                final String type, final int incValue) {
-        final String statsKey = buildAccountStatsKey(accountOwnerSelf, accountOwnerParent, instanceId, topic, group, type);
+                                final String topicType, final String msgType, final int incValue) {
+        final String statsKey = buildAccountStatsKey(accountOwnerParent, accountOwnerSelf, instanceId, topic, group, topicType, msgType);
         this.statsTable.get(key).addValue(statsKey, incValue, 1);
     }
 
@@ -289,7 +289,7 @@ public class BrokerStatsManager {
         return strBuilder.toString();
     }
 
-    public String buildAccountStatsKey(String accountOwnerSelf, String accountOwnerParent, String instanceId, String topic, String group, String type) {
+    public String buildAccountStatsKey(String accountOwnerParent, String accountOwnerSelf, String instanceId, String topic, String group, String topicType, String msgType) {
         StringBuffer strBuilder = new StringBuffer();
         strBuilder.append(accountOwnerParent);
         strBuilder.append("@");
@@ -301,9 +301,18 @@ public class BrokerStatsManager {
         strBuilder.append("@");
         strBuilder.append(group);
         strBuilder.append("@");
-        strBuilder.append(type);
+        strBuilder.append(topicType);
+        strBuilder.append("@");
+        strBuilder.append(msgType);
         return strBuilder.toString();
     }
+
+    public enum SendSpecialType {
+        SEND_BACK,
+        SEND_BACK_TO_DLQ,
+    }
+
+    // msgTyp
 
     public enum StatsType {
         SEND_SUCCESS,

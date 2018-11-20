@@ -89,6 +89,7 @@ public abstract class AbstractSendMessageProcessor implements NettyRequestProces
         traceContext.setBrokerRegionId(this.brokerController.getBrokerConfig().getRegionId());
         traceContext.setBornTimeStamp(requestHeader.getBornTimestamp());
         traceContext.setRequestTimeStamp(System.currentTimeMillis());
+        traceContext.setTopicConfig(brokerController.getTopicConfigManager().getTopicConfigTable().get(topicWithNamespace));
 
         Map<String, String> properties = MessageDecoder.string2messageProperties(requestHeader.getProperties());
         String uniqueKey = properties.get(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX);
