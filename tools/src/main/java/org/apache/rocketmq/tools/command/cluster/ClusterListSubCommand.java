@@ -230,11 +230,14 @@ public class ClusterListSubCommand implements SubCommand {
                             earliestMessageTimeStamp = kvTable.getTable().get("earliestMessageTimeStamp");
                             commitLogDiskRatio = kvTable.getTable().get("commitLogDiskRatio");
 
-                            timerReadBehind = Long.valueOf(kvTable.getTable().get("timerReadBehind"));
-                            timerOffsetBehind = Long.valueOf(kvTable.getTable().get("timerOffsetBehind"));
-                            timerCongestNum = Long.valueOf(kvTable.getTable().get("timerCongestNum"));
-                            timerEnqueueTps = Float.valueOf(kvTable.getTable().get("timerEnqueueTps"));
-                            timerDequeueTps = Float.valueOf(kvTable.getTable().get("timerDequeueTps"));
+                            try {
+                                timerReadBehind = Long.valueOf(kvTable.getTable().get("timerReadBehind"));
+                                timerOffsetBehind = Long.valueOf(kvTable.getTable().get("timerOffsetBehind"));
+                                timerCongestNum = Long.valueOf(kvTable.getTable().get("timerCongestNum"));
+                                timerEnqueueTps = Float.valueOf(kvTable.getTable().get("timerEnqueueTps"));
+                                timerDequeueTps = Float.valueOf(kvTable.getTable().get("timerDequeueTps"));
+                            } catch (Throwable e) {
+                            }
 
                             version = kvTable.getTable().get("brokerVersionDesc");
                             {
