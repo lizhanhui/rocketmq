@@ -123,6 +123,24 @@ public class PopMessageProcessor implements NettyRequestProcessor {
         return queueLockManager;
     }
 
+    public static String genAckUniqueId(AckMsg ackMsg) {
+        return ackMsg.getT()
+                + PopAckConstants.SPLIT + ackMsg.getQ()
+                + PopAckConstants.SPLIT + ackMsg.getAo()
+                + PopAckConstants.SPLIT + ackMsg.getC()
+                + PopAckConstants.SPLIT + ackMsg.getPt()
+                + PopAckConstants.SPLIT + PopAckConstants.ACK_TAG;
+    }
+
+    public static String genCkUniqueId(PopCheckPoint ck) {
+        return ck.getT()
+                + PopAckConstants.SPLIT + ck.getQ()
+                + PopAckConstants.SPLIT + ck.getSo()
+                + PopAckConstants.SPLIT + ck.getC()
+                + PopAckConstants.SPLIT + ck.getPt()
+                + PopAckConstants.SPLIT + PopAckConstants.CK_TAG;
+    }
+
     @Override
     public RemotingCommand processRequest(final ChannelHandlerContext ctx, RemotingCommand request) throws RemotingCommandException {
         request.addExtField(BORN_TIME, String.valueOf(System.currentTimeMillis()));
@@ -568,7 +586,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
         msgInner.setBornHost(this.brokerController.getStoreHost());
         msgInner.setStoreHost(this.brokerController.getStoreHost());
         msgInner.putUserProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS, String.valueOf(ck.getRt() - PopAckConstants.ackTimeInterval));
-        msgInner.getProperties().put(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX, ck.getT() + PopAckConstants.SPLIT + ck.getQ() + PopAckConstants.SPLIT + ck.getSo() + PopAckConstants.SPLIT + ck.getC());
+        msgInner.getProperties().put(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX, genCkUniqueId(ck));
         msgInner.setPropertiesString(MessageDecoder.messageProperties2String(msgInner.getProperties()));
         PutMessageResult putMessageResult = this.brokerController.getMessageStore().putMessage(msgInner);
         if (putMessageResult.getAppendMessageResult().getStatus() == AppendMessageStatus.PUT_OK && getMessageTmpResult.getNextBeginOffset() > -1) {
@@ -1005,8 +1023,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
             msgInner.setStoreHost(brokerController.getStoreHost());
 
             msgInner.putUserProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS, String.valueOf(point.getRt()));
-            msgInner.getProperties().put(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX,
-                ackMsg.getT() + PopAckConstants.SPLIT + ackMsg.getQ() + PopAckConstants.SPLIT + ackMsg.getAo() + PopAckConstants.SPLIT + ackMsg.getC());
+            msgInner.getProperties().put(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX, genAckUniqueId(ackMsg));
 
             msgInner.setPropertiesString(MessageDecoder.messageProperties2String(msgInner.getProperties()));
             PutMessageResult putMessageResult = brokerController.getMessageStore().putMessage(msgInner);
@@ -1036,8 +1053,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
             msgInner.setStoreHost(brokerController.getStoreHost());
 
             msgInner.putUserProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS, String.valueOf(point.getRt() - PopAckConstants.ackTimeInterval));
-            msgInner.getProperties().put(MessageConst.PROPERTY_TIMER_DEL_UNIQKEY,
-                point.getT() + PopAckConstants.SPLIT + point.getQ() + PopAckConstants.SPLIT + point.getSo() + PopAckConstants.SPLIT + point.getC());
+            msgInner.getProperties().put(MessageConst.PROPERTY_TIMER_DEL_UNIQKEY, genCkUniqueId(point));
 
             msgInner.setPropertiesString(MessageDecoder.messageProperties2String(msgInner.getProperties()));
             PutMessageResult putMessageResult = brokerController.getMessageStore().putMessage(msgInner);
