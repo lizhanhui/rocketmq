@@ -153,7 +153,7 @@ public class ChangeInvisibleTimeProcessor implements NettyRequestProcessor {
         msgInner.setBornHost(this.brokerController.getStoreHost());
         msgInner.setStoreHost(this.brokerController.getStoreHost());
         msgInner.putUserProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS, String.valueOf(ExtraInfoUtil.getPopTime(extraInfo) + ExtraInfoUtil.getInvisibleTime(extraInfo)));
-        msgInner.getProperties().put(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX, ackMsg.getT() + PopAckConstants.SPLIT + ackMsg.getQ() + PopAckConstants.SPLIT + ackMsg.getAo() + PopAckConstants.SPLIT + ackMsg.getC());
+        msgInner.getProperties().put(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX, PopMessageProcessor.genAckUniqueId(ackMsg));
         msgInner.setPropertiesString(MessageDecoder.messageProperties2String(msgInner.getProperties()));
         PutMessageResult putMessageResult = this.brokerController.getMessageStore().putMessage(msgInner);
         if (putMessageResult.getPutMessageStatus() != PutMessageStatus.PUT_OK
@@ -189,7 +189,7 @@ public class ChangeInvisibleTimeProcessor implements NettyRequestProcessor {
         msgInner.setBornHost(this.brokerController.getStoreHost());
         msgInner.setStoreHost(this.brokerController.getStoreHost());
         msgInner.putUserProperty(MessageConst.PROPERTY_TIMER_DELIVER_MS, String.valueOf(ck.getRt() - PopAckConstants.ackTimeInterval));
-        msgInner.getProperties().put(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX, ck.getT() + PopAckConstants.SPLIT + ck.getQ() + PopAckConstants.SPLIT + ck.getSo() + PopAckConstants.SPLIT + ck.getC());
+        msgInner.getProperties().put(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX, PopMessageProcessor.genCkUniqueId(ck));
         msgInner.setPropertiesString(MessageDecoder.messageProperties2String(msgInner.getProperties()));
         PutMessageResult putMessageResult = this.brokerController.getMessageStore().putMessage(msgInner);
         POP_LOGGER.info("change Invisible , appendCheckPoint, topic {}, queueId {},reviveId {}, cid {}, startOffset {}, rt {}, result {}", topicWithNamespace, queueId, reviveQid, consumerGroupWithNamespace, offset,
