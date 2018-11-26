@@ -1628,7 +1628,7 @@ public class MQClientAPIImpl {
     public TopicRouteData getDefaultTopicRouteInfoFromNameServer(final String topic, final long timeoutMillis)
         throws RemotingException, MQClientException, InterruptedException {
 
-        return getTopicRouteInfoFromNameServer(topic, timeoutMillis, false);
+        return getTopicRouteInfoFromNameServer(topic, timeoutMillis, false, true);
     }
 
     public TopicRouteData getTopicRouteInfoFromNameServer(final String topic, final long timeoutMillis)
@@ -1676,11 +1676,19 @@ public class MQClientAPIImpl {
 
     }
 
+    public TopicRouteData getTopicRouteInfoFromNameServer(final String topic, final long timeoutMillis, boolean allowTopicNotExist)
+        throws MQClientException, InterruptedException, RemotingTimeoutException,
+        RemotingSendRequestException, RemotingConnectException {
+        return getTopicRouteInfoFromNameServer(topic, timeoutMillis, allowTopicNotExist, false);
+    }
+
     public TopicRouteData getTopicRouteInfoFromNameServer(final String topic, final long timeoutMillis,
-        boolean allowTopicNotExist) throws MQClientException, InterruptedException, RemotingTimeoutException, RemotingSendRequestException, RemotingConnectException {
+        boolean allowTopicNotExist, boolean isKeyTopic)
+        throws MQClientException, InterruptedException, RemotingTimeoutException,
+        RemotingSendRequestException, RemotingConnectException {
         GetRouteInfoRequestHeader requestHeader = new GetRouteInfoRequestHeader();
         requestHeader.setTopic(topic);
-        if (StringUtils.isNotEmpty(this.clientConfig.getNamespace())) {
+        if (!isKeyTopic && StringUtils.isNotEmpty(this.clientConfig.getNamespace())) {
             requestHeader.setNamespace(this.clientConfig.getNamespace());
         }
 
