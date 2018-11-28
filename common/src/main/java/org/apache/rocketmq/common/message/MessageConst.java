@@ -39,6 +39,7 @@ public class MessageConst {
     public static final String PROPERTY_MSG_REGION = "MSG_REGION";
     public static final String PROPERTY_TRACE_SWITCH = "TRACE_ON";
     public static final String PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX = "UNIQ_KEY";
+    public static final String PROPERTY_EXTEND_UNIQ_INFO = "EXTEND_UNIQ_INFO";
     public static final String PROPERTY_MAX_RECONSUME_TIMES = "MAX_RECONSUME_TIMES";
     public static final String PROPERTY_CONSUME_START_TIMESTAMP = "CONSUME_START_TIME";
 

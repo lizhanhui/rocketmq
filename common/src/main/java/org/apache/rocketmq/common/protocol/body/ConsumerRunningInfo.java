@@ -43,6 +43,8 @@ public class ConsumerRunningInfo extends RemotingSerializable {
 
     private TreeMap<String/* Topic */, ConsumeStatus> statusTable = new TreeMap<String, ConsumeStatus>();
 
+    private TreeMap<String, String> userConsumerInfo = new TreeMap<String, String>();
+
     private String jstack;
 
     public static boolean analyzeSubscription(final TreeMap<String/* clientId */, ConsumerRunningInfo> criTable) {
@@ -189,6 +191,10 @@ public class ConsumerRunningInfo extends RemotingSerializable {
 
     public void setStatusTable(TreeMap<String, ConsumeStatus> statusTable) {
         this.statusTable = statusTable;
+    }
+
+    public TreeMap<String, String> getUserConsumerInfo() {
+        return userConsumerInfo;
     }
 
     public String formatString() {

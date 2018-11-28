@@ -25,6 +25,7 @@ import org.apache.rocketmq.client.consumer.listener.MessageListener;
 import org.apache.rocketmq.client.consumer.listener.MessageListenerConcurrently;
 import org.apache.rocketmq.client.consumer.listener.MessageListenerOrderly;
 import org.apache.rocketmq.client.consumer.rebalance.AllocateMessageQueueAveragely;
+import org.apache.rocketmq.client.consumer.reporter.ConsumerStatusReporter;
 import org.apache.rocketmq.client.consumer.store.OffsetStore;
 import org.apache.rocketmq.client.exception.MQBrokerException;
 import org.apache.rocketmq.client.exception.MQClientException;
@@ -139,6 +140,11 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
      * Message listener
      */
     private MessageListener messageListener;
+
+    /**
+     * Consumer status reporter
+     */
+    private ConsumerStatusReporter consumerStatusReporter;
 
     /**
      * Offset Storage
@@ -425,6 +431,15 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
 
     public void setMessageListener(MessageListener messageListener) {
         this.messageListener = messageListener;
+    }
+
+    public ConsumerStatusReporter getConsumerStatusReporter() {
+        return consumerStatusReporter;
+    }
+
+    public void setConsumerStatusReporter(
+        ConsumerStatusReporter consumerStatusReporter) {
+        this.consumerStatusReporter = consumerStatusReporter;
     }
 
     public MessageModel getMessageModel() {
