@@ -330,6 +330,7 @@ public class PullMessageProcessor implements NettyRequestProcessor {
 
             if (this.hasConsumeMessageHook()) {
                 String owner = request.getExtFields().get(BrokerStatsManager.COMMERCIAL_OWNER);
+                String authType = request.getExtFields().get(BrokerStatsManager.ACCOUNT_AUTH_TYPE);
                 String ownerParent = request.getExtFields().get(BrokerStatsManager.ACCOUNT_OWNER_PARENT);
                 String ownerSelf = request.getExtFields().get(BrokerStatsManager.ACCOUNT_OWNER_SELF);
 
@@ -340,6 +341,8 @@ public class PullMessageProcessor implements NettyRequestProcessor {
                 context.setConsumerGroup(consumerGroupNoNamespace);
                 context.setConsumerGroupWithNamespace(consumerGroup);
                 context.setQueueId(requestHeader.getQueueId());
+                context.setTopicConfig(topicConfig);
+                context.setAccountAuthType(authType);
                 context.setAccountOwnerParent(ownerParent);
                 context.setAccountOwnerSelf(ownerSelf);
 
@@ -353,6 +356,10 @@ public class PullMessageProcessor implements NettyRequestProcessor {
                         context.setCommercialRcvSize(getMessageResult.getBufferTotalSize());
                         context.setCommercialOwner(owner);
 
+                        context.setRcvStat(BrokerStatsManager.StatsType.RCV_SUCCESS);
+                        context.setRcvTimes(1);
+                        context.setRcvSize(getMessageResult.getBufferTotalSize());
+
                         break;
                     case ResponseCode.PULL_NOT_FOUND:
                         if (!brokerAllowSuspend) {
@@ -361,6 +368,9 @@ public class PullMessageProcessor implements NettyRequestProcessor {
                             context.setCommercialRcvTimes(1);
                             context.setCommercialOwner(owner);
 
+                            context.setRcvStat(BrokerStatsManager.StatsType.RCV_EPOLLS);
+                            context.setRcvTimes(1);
+                            context.setRcvSize(0);
                         }
                         break;
                     case ResponseCode.PULL_RETRY_IMMEDIATELY:
@@ -368,6 +378,10 @@ public class PullMessageProcessor implements NettyRequestProcessor {
                         context.setCommercialRcvStats(BrokerStatsManager.StatsType.RCV_EPOLLS);
                         context.setCommercialRcvTimes(1);
                         context.setCommercialOwner(owner);
+
+                        context.setRcvStat(BrokerStatsManager.StatsType.RCV_EPOLLS);
+                        context.setRcvTimes(1);
+                        context.setRcvSize(0);
                         break;
                     default:
                         assert false;

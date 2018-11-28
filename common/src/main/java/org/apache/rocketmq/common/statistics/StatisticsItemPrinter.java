@@ -40,6 +40,6 @@ public class StatisticsItemPrinter {
 
     public void print(String prefix, StatisticsItem statItem) {
         log.info("{}{}", prefix, formatter.format(statItem));
-        System.out.printf("%s %s%s\n", new Date().toString(), prefix, formatter.format(statItem));
+        //System.out.printf("%s %s%s\n", new Date().toString(), prefix, formatter.format(statItem));
     }
 }

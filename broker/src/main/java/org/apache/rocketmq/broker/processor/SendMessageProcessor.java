@@ -121,8 +121,13 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
             context.setCommercialRcvStats(BrokerStatsManager.StatsType.SEND_BACK);
             context.setCommercialRcvTimes(1);
             context.setCommercialOwner(request.getExtFields().get(BrokerStatsManager.COMMERCIAL_OWNER));
+
+            context.setAccountAuthType(request.getExtFields().get(BrokerStatsManager.ACCOUNT_AUTH_TYPE));
             context.setAccountOwnerParent(request.getExtFields().get(BrokerStatsManager.ACCOUNT_OWNER_PARENT));
             context.setAccountOwnerSelf(request.getExtFields().get(BrokerStatsManager.ACCOUNT_OWNER_SELF));
+            context.setRcvStat(BrokerStatsManager.StatsType.SEND_BACK);
+            context.setRcvTimes(1);
+            context.setRcvSize(request.getBody().length);
 
             this.executeConsumeMessageHookAfter(context);
         }
@@ -238,8 +243,14 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
             MessageAccessor.setOriginMessageId(msgInner, originalMsgId);
         }
 
+        boolean succeeded = false;
         PutMessageResult putMessageResult = this.brokerController.getMessageStore().putMessage(msgInner);
         if (putMessageResult != null) {
+            String commercialOwner = request.getExtFields().get(BrokerStatsManager.COMMERCIAL_OWNER);
+            String authType = request.getExtFields().get(BrokerStatsManager.ACCOUNT_AUTH_TYPE);
+            String accountOwnerParent = request.getExtFields().get(BrokerStatsManager.ACCOUNT_OWNER_PARENT);
+            String accountOwnerSelf = request.getExtFields().get(BrokerStatsManager.ACCOUNT_OWNER_SELF);
+
             switch (putMessageResult.getPutMessageStatus()) {
                 case PUT_OK:
                     String backTopic = msgExt.getTopic();
@@ -251,20 +262,18 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
                     this.brokerController.getBrokerStatsManager().incSendBackNums(consumerGroup, backTopic);
 
                     if (isDLQ) {
-                        String owner = request.getExtFields().get(BrokerStatsManager.COMMERCIAL_OWNER);
-                        String uniqKey = msgInner.getProperties().get(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX);
-
                         this.brokerController.getBrokerStatsManager().incDLQStatValue(
                             BrokerStatsManager.SNDBCK2DLQ_TIMES,
-                            owner,
+                            commercialOwner,
                             consumerGroup,
                             originalTopic,
                             BrokerStatsManager.StatsType.SEND_BACK_TO_DLQ.name(),
                             1);
 
+                        String uniqKey = msgInner.getProperties().get(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX);
                         DLQ_LOG.info("send msg to DLQ {}, owner={}, originalTopic={}, consumerId={}, msgUniqKey={}, storeTimestamp={}",
                             newTopic,
-                            owner,
+                            commercialOwner,
                             originalTopic,
                             consumerGroup,
                             uniqKey,
@@ -274,13 +283,34 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
                     response.setCode(ResponseCode.SUCCESS);
                     response.setRemark(null);
 
-                    return response;
+                    succeeded = true;
+                    break;
                 default:
                     break;
             }
 
-            response.setCode(ResponseCode.SYSTEM_ERROR);
-            response.setRemark(putMessageResult.getPutMessageStatus().name());
+            // TODO message type
+            String topicType = topicConfig.isOrder() ? "Order" : "Other";
+            this.brokerController.getBrokerStatsManager().incAccountValue(
+                isDLQ ? BrokerStatsManager.ACCOUNT_SEND_BACK_TO_DLQ : BrokerStatsManager.ACCOUNT_SEND_BACK,
+                commercialOwner,
+                authType,
+                accountOwnerParent,
+                accountOwnerSelf,
+                requestHeader.getNamespace(),
+                originalTopicNoNamespace,
+                consumerGroupNoNamespace,
+                topicType,
+                "",
+                succeeded ? BrokerStatsManager.StatsType.SEND_SUCCESS.name() : BrokerStatsManager.StatsType.SEND_FAILURE.name(),
+                1,
+                putMessageResult.getAppendMessageResult().getWroteBytes());
+
+            if (!succeeded) {
+                response.setCode(ResponseCode.SYSTEM_ERROR);
+                response.setRemark(putMessageResult.getPutMessageStatus().name());
+            }
+
             return response;
         }
 
@@ -489,6 +519,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         }
 
         String owner = request.getExtFields().get(BrokerStatsManager.COMMERCIAL_OWNER);
+        String authType = request.getExtFields().get(BrokerStatsManager.ACCOUNT_AUTH_TYPE);
         String ownerParent = request.getExtFields().get(BrokerStatsManager.ACCOUNT_OWNER_PARENT);
         String ownerSelf = request.getExtFields().get(BrokerStatsManager.ACCOUNT_OWNER_SELF);
         if (sendOK) {
@@ -519,8 +550,12 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
                 sendMessageContext.setCommercialSendSize(wroteSize);
                 sendMessageContext.setCommercialOwner(owner);
 
+                sendMessageContext.setSendStat(BrokerStatsManager.StatsType.SEND_SUCCESS);
+                sendMessageContext.setAccountAuthType(authType);
                 sendMessageContext.setAccountOwnerParent(ownerParent);
                 sendMessageContext.setAccountOwnerSelf(ownerSelf);
+                sendMessageContext.setSendSize(wroteSize);
+                sendMessageContext.setSendTimes(1);
             }
             return null;
         } else {
@@ -532,8 +567,13 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
                 sendMessageContext.setCommercialSendTimes(incValue);
                 sendMessageContext.setCommercialSendSize(wroteSize);
                 sendMessageContext.setCommercialOwner(owner);
+
+                sendMessageContext.setSendStat(BrokerStatsManager.StatsType.SEND_FAILURE);
+                sendMessageContext.setAccountAuthType(authType);
                 sendMessageContext.setAccountOwnerParent(ownerParent);
                 sendMessageContext.setAccountOwnerSelf(ownerSelf);
+                sendMessageContext.setSendSize(wroteSize);
+                sendMessageContext.setSendTimes(1);
             }
         }
         return response;

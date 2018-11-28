@@ -29,8 +29,9 @@ public class StatisticsItemScheduledIncrementPrinter extends StatisticsItemSched
 
     public StatisticsItemScheduledIncrementPrinter(String name, StatisticsItemPrinter printer,
                                                    ScheduledExecutorService executor,
+                                                   InitialDelay initialDelay,
                                                    long interval) {
-        super(name, printer, executor, interval);
+        super(name, printer, executor, initialDelay, interval);
     }
 
     /**
@@ -46,7 +47,7 @@ public class StatisticsItemScheduledIncrementPrinter extends StatisticsItemSched
                 printer.print(name, snapshot.subtract(lastSnapshot));
                 setLastItemSnapshot(snapshot);
             }
-        }, 0, interval, TimeUnit.MILLISECONDS);
+        }, getInitialDelay(), interval, TimeUnit.MILLISECONDS);
     }
 
     private StatisticsItem getLastItemSnapshot(String kind, String key) {

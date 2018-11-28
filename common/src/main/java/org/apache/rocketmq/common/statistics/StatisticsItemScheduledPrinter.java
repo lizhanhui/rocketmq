@@ -25,13 +25,16 @@ public class StatisticsItemScheduledPrinter {
     protected StatisticsItemPrinter printer;
     protected ScheduledExecutorService executor;
     protected long interval;
+    protected InitialDelay initialDelay;
 
     public StatisticsItemScheduledPrinter(String name, StatisticsItemPrinter printer,
                                           ScheduledExecutorService executor,
+                                          InitialDelay initialDelay,
                                           long interval) {
         this.name = name;
         this.printer = printer;
         this.executor = executor;
+        this.initialDelay = initialDelay;
         this.interval = interval;
     }
 
@@ -44,6 +47,15 @@ public class StatisticsItemScheduledPrinter {
             public void run() {
                 printer.print(name, statisticsItem);
             }
-        }, 0, interval, TimeUnit.MILLISECONDS);
+        }, getInitialDelay(), interval, TimeUnit.MILLISECONDS);
+    }
+
+    public interface InitialDelay {
+        long get();
+    }
+
+    protected long getInitialDelay() {
+        long ret = initialDelay != null ? initialDelay.get() : 0;
+        return ret;
     }
 }

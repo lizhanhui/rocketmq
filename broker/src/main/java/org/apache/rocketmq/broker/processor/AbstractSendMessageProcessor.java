@@ -104,6 +104,8 @@ public abstract class AbstractSendMessageProcessor implements NettyRequestProces
 
         if (properties.containsKey(MessageConst.PROPERTY_SHARDING_KEY)) {
             traceContext.setMsgType(MessageType.Order_Msg);
+        } else {
+            traceContext.setMsgType(MessageType.Normal_Msg);
         }
         return traceContext;
     }

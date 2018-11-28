@@ -50,9 +50,13 @@ public class SendMessageContext {
 
     private boolean isSuccess = false;
 
-    // account info
+    // account statistics
+    private String accountAuthType;
     private String accountOwnerParent;
     private String accountOwnerSelf;
+    private int sendTimes;
+    private int sendSize;
+    private BrokerStatsManager.StatsType sendStat;
 
     //For Commercial
     private String commercialOwner;
@@ -249,6 +253,14 @@ public class SendMessageContext {
         this.commercialOwner = commercialOwner;
     }
 
+    public String getAccountAuthType() {
+        return accountAuthType;
+    }
+
+    public void setAccountAuthType(String accountAuthType) {
+        this.accountAuthType = accountAuthType;
+    }
+
     public String getAccountOwnerParent() {
         return accountOwnerParent;
     }
@@ -263,6 +275,30 @@ public class SendMessageContext {
 
     public void setAccountOwnerSelf(String accountOwnerSelf) {
         this.accountOwnerSelf = accountOwnerSelf;
+    }
+
+    public int getSendTimes() {
+        return sendTimes;
+    }
+
+    public void setSendTimes(int sendTimes) {
+        this.sendTimes = sendTimes;
+    }
+
+    public int getSendSize() {
+        return sendSize;
+    }
+
+    public void setSendSize(int sendSize) {
+        this.sendSize = sendSize;
+    }
+
+    public BrokerStatsManager.StatsType getSendStat() {
+        return sendStat;
+    }
+
+    public void setSendStat(BrokerStatsManager.StatsType sendStat) {
+        this.sendStat = sendStat;
     }
 
     public BrokerStatsManager.StatsType getCommercialSendStats() {
