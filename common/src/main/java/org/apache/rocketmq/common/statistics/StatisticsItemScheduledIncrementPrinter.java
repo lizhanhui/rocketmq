@@ -1,3 +1,19 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.rocketmq.common.statistics;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -5,14 +21,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class StatisticsItemScheduledIncrementPrinter extends StatisticsItemScheduledPrinter {
-    //private String name;
-    //
-    //private StatisticsItemPrinter printer;
-    //private ScheduledExecutorService executor;
-    //private long interval;
-
     /**
-     * 上一次的数据
+     * last snapshots of all scheduled items
      */
     private final ConcurrentHashMap<String, ConcurrentHashMap<String, StatisticsItem>> lastItemSnapshots
         = new ConcurrentHashMap<String, ConcurrentHashMap<String, StatisticsItem>>();
@@ -24,7 +34,7 @@ public class StatisticsItemScheduledIncrementPrinter extends StatisticsItemSched
     }
 
     /**
-     * 增加一个StatisticsItem的定时打印
+     * schedule a StatisticsItem to print the Increments periodically
      */
     @Override
     public void schedule(final StatisticsItem item) {
@@ -48,10 +58,10 @@ public class StatisticsItemScheduledIncrementPrinter extends StatisticsItemSched
         String kind = item.getStatKind();
         String key = item.getStatObject();
         ConcurrentHashMap<String, StatisticsItem> itemMap = lastItemSnapshots.get(kind);
-        if (itemMap==null){
+        if (itemMap == null) {
             itemMap = new ConcurrentHashMap<String, StatisticsItem>();
-            ConcurrentHashMap<String, StatisticsItem> oldItemMap = lastItemSnapshots.putIfAbsent(kind,  itemMap);
-            if (oldItemMap!=null){
+            ConcurrentHashMap<String, StatisticsItem> oldItemMap = lastItemSnapshots.putIfAbsent(kind, itemMap);
+            if (oldItemMap != null) {
                 itemMap = oldItemMap;
             }
         }

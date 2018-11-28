@@ -1,3 +1,19 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.rocketmq.common.statistics;
 
 import java.security.InvalidParameterException;
@@ -5,25 +21,19 @@ import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 统计项
- *
- * 包括统计类型、统计对象、统计字段/指标
+ * Statistics Item
  */
 public class StatisticsItem {
-    /** 统计类型 */
     private String statKind;
-    /** 统计对象 */
     private String statObject;
 
-    // 统计字段
-    /** 统计字段名 */
     private String[] itemNames;
-    /** 统计字段累计值 */
     private AtomicLong[] itemAccumulates;
-    /** 调用次数 */
     private AtomicLong invokeTimes;
 
-    /** 最近一次数据更新的时间戳 */
+    /**
+     * last timestamp when the item was updated
+     */
     private AtomicLong lastTimeStamp;
 
     public StatisticsItem(String statKind, String statObject, String... itemNames) {
@@ -36,7 +46,7 @@ public class StatisticsItem {
         this.itemNames = itemNames;
 
         AtomicLong[] accs = new AtomicLong[itemNames.length];
-        for (int i = 0; i< itemNames.length;i++){
+        for (int i = 0; i < itemNames.length; i++) {
             accs[i] = new AtomicLong(0);
         }
 
@@ -45,10 +55,6 @@ public class StatisticsItem {
         this.lastTimeStamp = new AtomicLong(System.currentTimeMillis());
     }
 
-    /**
-     * 累加
-     * @param itemIncs
-     */
     public void incItems(long... itemIncs) {
         int len = Math.min(itemIncs.length, itemAccumulates.length);
         for (int i = 0; i < len; i++) {
@@ -80,16 +86,18 @@ public class StatisticsItem {
     }
 
     /**
-     * 获取快照
-     * 快照的多个值的一致性不严格
+     * get snapshot
+     * <p>
+     * Warning: no guarantee of itemAccumulates consistency
+     *
      * @return
      */
     public StatisticsItem snapshot() {
         StatisticsItem ret = new StatisticsItem(statKind, statObject, itemNames);
 
         ret.itemAccumulates = new AtomicLong[itemAccumulates.length];
-        for (int i = 0;i < itemAccumulates.length; i++){
-            ret.itemAccumulates[i] =  new AtomicLong(itemAccumulates[i].get());
+        for (int i = 0; i < itemAccumulates.length; i++) {
+            ret.itemAccumulates[i] = new AtomicLong(itemAccumulates[i].get());
         }
 
         ret.invokeTimes = new AtomicLong(invokeTimes.longValue());
@@ -99,7 +107,8 @@ public class StatisticsItem {
     }
 
     /**
-     * 减法
+     * subtract another StatisticsItem
+     *
      * @param item
      * @return
      */
@@ -108,15 +117,16 @@ public class StatisticsItem {
             return snapshot();
         }
 
-        if (!statKind.equals(item.statKind) || !statObject.equals(item.statObject) || !Arrays.equals(itemNames, item.itemNames)) {
+        if (!statKind.equals(item.statKind) || !statObject.equals(item.statObject) || !Arrays.equals(itemNames,
+            item.itemNames)) {
             throw new IllegalArgumentException("StatisticsItem's kind, key and itemNames must be exactly the same");
         }
 
         StatisticsItem ret = new StatisticsItem(statKind, statObject, itemNames);
         ret.invokeTimes = new AtomicLong(invokeTimes.get() - item.invokeTimes.get());
         ret.itemAccumulates = new AtomicLong[itemAccumulates.length];
-        for (int i = 0;i < itemAccumulates.length; i++){
-            ret.itemAccumulates[i] =  new AtomicLong(itemAccumulates[i].get() - item.itemAccumulates[i].get());
+        for (int i = 0; i < itemAccumulates.length; i++) {
+            ret.itemAccumulates[i] = new AtomicLong(itemAccumulates[i].get() - item.itemAccumulates[i].get());
         }
         return ret;
     }
