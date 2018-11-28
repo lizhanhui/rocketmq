@@ -443,9 +443,10 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         final RegisterTopicRequestHeader requestHeader =
             (RegisterTopicRequestHeader) request.decodeCommandCustomHeader(RegisterTopicRequestHeader.class);
 
+        String topicWithNamespace = NamespaceUtil.withNamespace(request, requestHeader.getTopic());
         TopicRouteData topicRouteData = TopicRouteData.decode(request.getBody(), TopicRouteData.class);
         if (topicRouteData != null && topicRouteData.getQueueDatas() != null && !topicRouteData.getQueueDatas().isEmpty()) {
-            this.namesrvController.getRouteInfoManager().registerTopic(requestHeader.getTopic(), topicRouteData.getQueueDatas());
+            this.namesrvController.getRouteInfoManager().registerTopic(topicWithNamespace, topicRouteData.getQueueDatas());
         }
 
         response.setCode(ResponseCode.SUCCESS);

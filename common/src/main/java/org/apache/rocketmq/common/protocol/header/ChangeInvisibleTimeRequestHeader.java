@@ -18,6 +18,7 @@ package org.apache.rocketmq.common.protocol.header;
 
 import org.apache.rocketmq.remoting.CommandCustomHeader;
 import org.apache.rocketmq.remoting.annotation.CFNotNull;
+import org.apache.rocketmq.remoting.annotation.CFNullable;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 
 public class ChangeInvisibleTimeRequestHeader implements CommandCustomHeader {
@@ -38,6 +39,9 @@ public class ChangeInvisibleTimeRequestHeader implements CommandCustomHeader {
 
     @CFNotNull
     private Long invisibleTime;
+
+    @CFNullable
+    private String namespace;
 
     @Override
     public void checkFields() throws RemotingCommandException {
@@ -94,4 +98,11 @@ public class ChangeInvisibleTimeRequestHeader implements CommandCustomHeader {
         this.queueId = queueId;
     }
 
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
+    }
 }

@@ -16,6 +16,8 @@
  */
 package org.apache.rocketmq.broker.processor;
 
+import com.alibaba.fastjson.JSON;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.rocketmq.broker.BrokerController;
@@ -25,6 +27,7 @@ import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.common.help.FAQUrl;
 import org.apache.rocketmq.common.message.MessageConst;
 import org.apache.rocketmq.common.message.MessageDecoder;
+import org.apache.rocketmq.common.protocol.NamespaceUtil;
 import org.apache.rocketmq.common.protocol.ResponseCode;
 import org.apache.rocketmq.common.protocol.header.ChangeInvisibleTimeRequestHeader;
 import org.apache.rocketmq.common.protocol.header.ChangeInvisibleTimeResponseHeader;
@@ -41,8 +44,6 @@ import org.apache.rocketmq.store.PutMessageResult;
 import org.apache.rocketmq.store.PutMessageStatus;
 import org.apache.rocketmq.store.pop.AckMsg;
 import org.apache.rocketmq.store.pop.PopCheckPoint;
-
-import com.alibaba.fastjson.JSON;
 
 public class ChangeInvisibleTimeProcessor implements NettyRequestProcessor {
     private static final InternalLogger POP_LOGGER = InternalLoggerFactory.getLogger(LoggerName.ROCKETMQ_POP_LOGGER_NAME);
@@ -69,25 +70,26 @@ public class ChangeInvisibleTimeProcessor implements NettyRequestProcessor {
         final ChangeInvisibleTimeRequestHeader requestHeader = (ChangeInvisibleTimeRequestHeader) request.decodeCommandCustomHeader(ChangeInvisibleTimeRequestHeader.class);
         RemotingCommand response = RemotingCommand.createResponseCommand(ChangeInvisibleTimeResponseHeader.class);
         response.setCode(ResponseCode.SUCCESS);
+        String topicWithNamespace = NamespaceUtil.withNamespace(request, requestHeader.getTopic());
         final ChangeInvisibleTimeResponseHeader responseHeader = (ChangeInvisibleTimeResponseHeader) response.readCustomHeader();
-        TopicConfig topicConfig = this.brokerController.getTopicConfigManager().selectTopicConfig(requestHeader.getTopic());
+        TopicConfig topicConfig = this.brokerController.getTopicConfigManager().selectTopicConfig(topicWithNamespace);
         if (null == topicConfig) {
-            POP_LOGGER.error("The topic {} not exist, consumer: {} ", requestHeader.getTopic(), RemotingHelper.parseChannelRemoteAddr(channel));
+            POP_LOGGER.error("The topic {} not exist, consumer: {} ", topicWithNamespace, RemotingHelper.parseChannelRemoteAddr(channel));
             response.setCode(ResponseCode.TOPIC_NOT_EXIST);
-            response.setRemark(String.format("topic[%s] not exist, apply first please! %s", requestHeader.getTopic(), FAQUrl.suggestTodo(FAQUrl.APPLY_TOPIC_URL)));
+            response.setRemark(String.format("topic[%s] not exist, apply first please! %s", topicWithNamespace, FAQUrl.suggestTodo(FAQUrl.APPLY_TOPIC_URL)));
             return response;
         }
 
         if (requestHeader.getQueueId() >= topicConfig.getReadQueueNums() || requestHeader.getQueueId() < 0) {
             String errorInfo = String.format("queueId[%d] is illegal, topic:[%s] topicConfig.readQueueNums:[%d] consumer:[%s]",
-                requestHeader.getQueueId(), requestHeader.getTopic(), topicConfig.getReadQueueNums(), channel.remoteAddress());
+                requestHeader.getQueueId(), topicWithNamespace, topicConfig.getReadQueueNums(), channel.remoteAddress());
             POP_LOGGER.warn(errorInfo);
             response.setCode(ResponseCode.MESSAGE_ILLEGAL);
             response.setRemark(errorInfo);
             return response;
         }
-        long minOffset = this.brokerController.getMessageStore().getMinOffsetInQueue(requestHeader.getTopic(), requestHeader.getQueueId());
-        long maxOffset = this.brokerController.getMessageStore().getMaxOffsetInQueue(requestHeader.getTopic(), requestHeader.getQueueId());
+        long minOffset = this.brokerController.getMessageStore().getMinOffsetInQueue(topicWithNamespace, requestHeader.getQueueId());
+        long maxOffset = this.brokerController.getMessageStore().getMaxOffsetInQueue(topicWithNamespace, requestHeader.getQueueId());
         if (requestHeader.getOffset() < minOffset || requestHeader.getOffset() > maxOffset) {
             response.setCode(ResponseCode.NO_MESSAGE);
             return response;
@@ -97,7 +99,9 @@ public class ChangeInvisibleTimeProcessor implements NettyRequestProcessor {
 
         // add new ck
         long now = System.currentTimeMillis();
-        PutMessageResult ckResult = appendCheckPoint(requestHeader, ExtraInfoUtil.getReviveQid(extraInfo), requestHeader.getQueueId(), requestHeader.getOffset(), now);
+        PutMessageResult ckResult = appendCheckPoint(
+            requestHeader, ExtraInfoUtil.getReviveQid(extraInfo), requestHeader.getQueueId(), requestHeader.getOffset(),
+            now);
 
         if (ckResult.getPutMessageStatus() != PutMessageStatus.PUT_OK
             && ckResult.getPutMessageStatus() != PutMessageStatus.FLUSH_DISK_TIMEOUT
@@ -123,13 +127,15 @@ public class ChangeInvisibleTimeProcessor implements NettyRequestProcessor {
     }
 
     private void ackOrigin(final ChangeInvisibleTimeRequestHeader requestHeader, String[] extraInfo) {
+        String topicWithNamespace = NamespaceUtil.wrapNamespace(requestHeader.getNamespace(), requestHeader.getTopic());
+        String consumerGroupWithNamespace = NamespaceUtil.wrapNamespace(requestHeader.getNamespace(), requestHeader.getConsumerGroup());
         MessageExtBrokerInner msgInner = new MessageExtBrokerInner();
         AckMsg ackMsg = new AckMsg();
 
         ackMsg.setAo(requestHeader.getOffset());
         ackMsg.setSo(ExtraInfoUtil.getCkQueueOffset(extraInfo));
-        ackMsg.setC(requestHeader.getConsumerGroup());
-        ackMsg.setT(requestHeader.getTopic());
+        ackMsg.setC(consumerGroupWithNamespace);
+        ackMsg.setT(topicWithNamespace);
         ackMsg.setQ(requestHeader.getQueueId());
         ackMsg.setPt(ExtraInfoUtil.getPopTime(extraInfo));
 
@@ -160,6 +166,9 @@ public class ChangeInvisibleTimeProcessor implements NettyRequestProcessor {
 
     private PutMessageResult appendCheckPoint(final ChangeInvisibleTimeRequestHeader requestHeader, int reviveQid, int queueId, long offset, long popTime) {
         // add check point msg to revive log
+        String topicWithNamespace = NamespaceUtil.wrapNamespace(requestHeader.getNamespace(), requestHeader.getTopic());
+        String consumerGroupWithNamespace = NamespaceUtil.wrapNamespace(requestHeader.getNamespace(), requestHeader.getConsumerGroup());
+
         MessageExtBrokerInner msgInner = new MessageExtBrokerInner();
         msgInner.setTopic(reviveTopic);
         PopCheckPoint ck = new PopCheckPoint();
@@ -168,8 +177,8 @@ public class ChangeInvisibleTimeProcessor implements NettyRequestProcessor {
         ck.setPt(popTime);
         ck.setIt(requestHeader.getInvisibleTime());
         ck.setSo(offset);
-        ck.setC(requestHeader.getConsumerGroup());
-        ck.setT(requestHeader.getTopic());
+        ck.setC(consumerGroupWithNamespace);
+        ck.setT(topicWithNamespace);
         ck.setQ((byte) queueId);
         ck.addDiff(0);
 
@@ -183,7 +192,7 @@ public class ChangeInvisibleTimeProcessor implements NettyRequestProcessor {
         msgInner.getProperties().put(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX, ck.getT() + PopAckConstants.SPLIT + ck.getQ() + PopAckConstants.SPLIT + ck.getSo() + PopAckConstants.SPLIT + ck.getC());
         msgInner.setPropertiesString(MessageDecoder.messageProperties2String(msgInner.getProperties()));
         PutMessageResult putMessageResult = this.brokerController.getMessageStore().putMessage(msgInner);
-        POP_LOGGER.info("change Invisible , appendCheckPoint, topic {}, queueId {},reviveId {}, cid {}, startOffset {}, rt {}, result {}", requestHeader.getTopic(), queueId, reviveQid, requestHeader.getConsumerGroup(), offset,
+        POP_LOGGER.info("change Invisible , appendCheckPoint, topic {}, queueId {},reviveId {}, cid {}, startOffset {}, rt {}, result {}", topicWithNamespace, queueId, reviveQid, consumerGroupWithNamespace, offset,
             ck.getRt(), putMessageResult);
         return putMessageResult;
     }

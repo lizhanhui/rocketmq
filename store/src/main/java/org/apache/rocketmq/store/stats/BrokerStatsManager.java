@@ -21,6 +21,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
 import org.apache.rocketmq.common.constant.LoggerName;
+import org.apache.rocketmq.common.statistics.StatisticsItemFormatter;
+import org.apache.rocketmq.common.statistics.StatisticsItemPrinter;
+import org.apache.rocketmq.common.statistics.StatisticsItemScheduledIncrementPrinter;
+import org.apache.rocketmq.common.statistics.StatisticsKindMeta;
+import org.apache.rocketmq.common.statistics.StatisticsManager;
 import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.common.stats.MomentStatsItemSet;
@@ -64,6 +69,13 @@ public class BrokerStatsManager {
     public static final String ACCOUNT_OWNER_PARENT = "OWNER_PARENT";
     public static final String ACCOUNT_OWNER_SELF = "OWNER_SELF";
 
+    public static final long ACCOUNT_STAT_INVERTAL = 60 * 1000;
+    public static final String ACCOUNT_SEND = "ACCOUNT_SEND";
+    public static final String ACCOUNT_RCV = "ACCOUNT_RCV";
+    public static final String TIMES = "TIMES";
+    public static final String SIZE = "SIZE";
+    public static final String RT = "RT";
+
     // Message Size limit for one api-calling count.
     public static final double SIZE_PER_COUNT = 64 * 1024;
 
@@ -80,6 +92,7 @@ public class BrokerStatsManager {
     public static final String CHANNEL_ACTIVITY_IDLE = "IDLE";
     public static final String CHANNEL_ACTIVITY_EXCEPTION = "EXCEPTION";
     public static final String CHANNEL_ACTIVITY_CLOSE = "CLOSE";
+
 
     /**
      * read disk follow stats
@@ -98,6 +111,8 @@ public class BrokerStatsManager {
     private final String clusterName;
     private final MomentStatsItemSet momentStatsItemSetFallSize = new MomentStatsItemSet(GROUP_GET_FALL_SIZE, scheduledExecutorService, log);
     private final MomentStatsItemSet momentStatsItemSetFallTime = new MomentStatsItemSet(GROUP_GET_FALL_TIME, scheduledExecutorService, log);
+
+    private final StatisticsManager accountStatManager = new StatisticsManager();
 
     public BrokerStatsManager(String clusterName) {
         this.clusterName = clusterName;
@@ -138,6 +153,12 @@ public class BrokerStatsManager {
         this.statsTable.put(PRODUCER_REGISTER_TIME, new StatsItemSet(PRODUCER_REGISTER_TIME, this.scheduledExecutorService, log));
 
         this.statsTable.put(CHANNEL_ACTIVITY, new StatsItemSet(CHANNEL_ACTIVITY, this.scheduledExecutorService, log));
+
+        StatisticsItemFormatter formatter = new StatisticsItemFormatter();
+        this.accountStatManager.addStatisticsKindMeta(createStatisticsKindMeta(
+            ACCOUNT_SEND, new String[]{TIMES, SIZE, RT}, this.accountExecutor, formatter, ACCOUNT_LOG, ACCOUNT_STAT_INVERTAL));
+        this.accountStatManager.addStatisticsKindMeta(createStatisticsKindMeta(
+            ACCOUNT_RCV, new String[]{TIMES, SIZE, RT}, this.accountExecutor, formatter, ACCOUNT_LOG, ACCOUNT_STAT_INVERTAL));
     }
 
     public MomentStatsItemSet getMomentStatsItemSetFallSize() {
@@ -277,6 +298,15 @@ public class BrokerStatsManager {
         this.statsTable.get(key).addValue(statsKey, incValue, 1);
     }
 
+    public void incAccountValue(final String kind, final String commercialOwner, final String authType,
+                                final String accountOwnerParent, final String accountOwnerSelf,
+                                final String instanceId, final String topic, final String group,
+                                final String topicType, final String msgType, final String stat, final long... incValues) {
+        final String key = buildAccountStatKey(commercialOwner, authType, accountOwnerParent, accountOwnerSelf,
+            instanceId, topic, group, topicType, msgType, stat);
+        this.accountStatManager.inc(kind, key, incValues);
+    }
+
     public String buildCommercialStatsKey(String owner, String topic, String group, String type) {
         StringBuffer strBuilder = new StringBuffer();
         strBuilder.append(owner);
@@ -307,13 +337,41 @@ public class BrokerStatsManager {
         return strBuilder.toString();
     }
 
-    public enum SendSpecialType {
-        SEND_BACK,
-        SEND_BACK_TO_DLQ,
+    public String buildAccountStatKey(final String commercialOwner, final String authType,
+                                       final String accountOwnerParent, final String accountOwnerSelf,
+                                       final String instanceId, final String topic, final String group,
+                                       final String topicType, final String msgType, final String stat) {
+        final String sep = "|";
+        StringBuffer strBuilder = new StringBuffer();
+        strBuilder.append(commercialOwner).append(sep);
+        strBuilder.append(authType).append(sep);
+        strBuilder.append(accountOwnerParent).append(sep);
+        strBuilder.append(accountOwnerSelf).append(sep);
+        strBuilder.append(instanceId).append(sep);
+        strBuilder.append(topic).append(sep);
+        strBuilder.append(group).append(sep);
+        strBuilder.append(topicType).append(sep);
+        strBuilder.append(msgType).append(sep);
+        strBuilder.append(stat).append(sep);
+        return strBuilder.toString();
+    }
+
+    public static StatisticsKindMeta createStatisticsKindMeta(String name,
+                                            String[] itemNames,
+                                            ScheduledExecutorService executorService,
+                                            StatisticsItemFormatter formatter,
+                                            InternalLogger log,
+                                            long interval) {
+        StatisticsItemPrinter printer = new StatisticsItemPrinter(formatter, log);
+        StatisticsKindMeta kindMeta = new StatisticsKindMeta();
+        kindMeta.setName(name);
+        kindMeta.setItemNames(itemNames);
+        kindMeta.setScheduledPrinter(
+            new StatisticsItemScheduledIncrementPrinter("Stat In One Minute: ", printer, executorService, interval));
+        return kindMeta;
     }
 
     // msgTyp
-
     public enum StatsType {
         SEND_SUCCESS,
         SEND_FAILURE,

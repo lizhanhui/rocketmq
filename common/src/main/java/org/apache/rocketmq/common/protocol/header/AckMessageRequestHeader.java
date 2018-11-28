@@ -18,6 +18,7 @@ package org.apache.rocketmq.common.protocol.header;
 
 import org.apache.rocketmq.remoting.CommandCustomHeader;
 import org.apache.rocketmq.remoting.annotation.CFNotNull;
+import org.apache.rocketmq.remoting.annotation.CFNullable;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 
 public class AckMessageRequestHeader implements CommandCustomHeader {
@@ -32,6 +33,8 @@ public class AckMessageRequestHeader implements CommandCustomHeader {
 
     @CFNotNull
     private Long offset;
+    @CFNullable
+    private String namespace;
 
 
     @Override
@@ -78,8 +81,16 @@ public class AckMessageRequestHeader implements CommandCustomHeader {
         this.queueId = queueId;
     }
 
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
+    }
+
     @Override
     public String toString() {
-        return topic + "," + this.consumerGroup + "," + this.queueId + "," + this.offset + "," + this.extraInfo;
+        return topic + "," + this.consumerGroup + "," + this.queueId + "," + this.offset + "," + this.extraInfo + "," + namespace;
     }
 }

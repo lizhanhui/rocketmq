@@ -31,7 +31,6 @@ public class ConsumeMessageDirectlyResultRequestHeader implements CommandCustomH
     private String msgId;
     @CFNullable
     private String brokerName;
-    @CFNullable
 
     @Override
     public void checkFields() throws RemotingCommandException {
