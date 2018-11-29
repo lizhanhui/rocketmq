@@ -18,8 +18,6 @@ package org.apache.rocketmq.common.statistics;
 
 import org.apache.rocketmq.logging.InternalLogger;
 
-import java.util.Date;
-
 public class StatisticsItemPrinter {
     private InternalLogger log;
 

@@ -43,7 +43,7 @@ public class StatisticsManager {
 
     public void addStatisticsKindMeta(StatisticsKindMeta kindMeta) {
         kindMetaMap.put(kindMeta.getName(), kindMeta);
-        statsTable.putIfAbsent(kindMeta.getName(), new ConcurrentHashMap<String, StatisticsItem>());
+        statsTable.putIfAbsent(kindMeta.getName(), new ConcurrentHashMap<String, StatisticsItem>(16));
     }
 
     /**

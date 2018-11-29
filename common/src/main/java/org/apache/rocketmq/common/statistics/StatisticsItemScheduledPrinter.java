@@ -51,6 +51,10 @@ public class StatisticsItemScheduledPrinter {
     }
 
     public interface InitialDelay {
+        /**
+         * Get inital delay value
+         * @return
+         */
         long get();
     }
 

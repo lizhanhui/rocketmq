@@ -50,7 +50,9 @@ public class SendMessageContext {
 
     private boolean isSuccess = false;
 
-    // account statistics
+    /**
+     * Account Statistics
+     */
     private String accountAuthType;
     private String accountOwnerParent;
     private String accountOwnerSelf;
@@ -58,7 +60,9 @@ public class SendMessageContext {
     private int sendSize;
     private BrokerStatsManager.StatsType sendStat;
 
-    //For Commercial
+    /**
+     * For Commercial
+     */
     private String commercialOwner;
     private BrokerStatsManager.StatsType commercialSendStats;
     private int commercialSendSize;

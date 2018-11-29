@@ -17,10 +17,8 @@
 package org.apache.rocketmq.store.stats;
 
 import java.util.HashMap;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
-import org.apache.rocketmq.common.ThreadFactoryImpl;
 import org.apache.rocketmq.common.UtilAll;
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.common.statistics.StatisticsItemFormatter;
@@ -29,6 +27,7 @@ import org.apache.rocketmq.common.statistics.StatisticsItemScheduledIncrementPri
 import org.apache.rocketmq.common.statistics.StatisticsItemScheduledPrinter;
 import org.apache.rocketmq.common.statistics.StatisticsKindMeta;
 import org.apache.rocketmq.common.statistics.StatisticsManager;
+import org.apache.rocketmq.common.utils.ThreadUtils;
 import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.common.stats.MomentStatsItemSet;
@@ -110,15 +109,13 @@ public class BrokerStatsManager {
     private static final InternalLogger ACCOUNT_LOG = InternalLoggerFactory.getLogger(LoggerName.ACCOUNT_LOGGER_NAME);
     private static final InternalLogger DLQ_STAT_LOG = InternalLoggerFactory.getLogger(
         LoggerName.DLQ_STATS_LOGGER_NAME);
-    private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(
-        new ThreadFactoryImpl(
-            "BrokerStatsThread"));
-    private final ScheduledExecutorService commercialExecutor = Executors.newSingleThreadScheduledExecutor(
-        new ThreadFactoryImpl(
-            "CommercialStatsThread"));
-    private final ScheduledExecutorService accountExecutor = Executors.newSingleThreadScheduledExecutor(
-        new ThreadFactoryImpl(
-            "AccountStatsThread"));
+    private final ScheduledExecutorService scheduledExecutorService =
+        ThreadUtils.newSingleThreadScheduledExecutor("BrokerStatsThread", true);
+    private final ScheduledExecutorService commercialExecutor =
+        ThreadUtils.newSingleThreadScheduledExecutor("CommercialStatsThread", true);
+    private final ScheduledExecutorService accountExecutor =
+        ThreadUtils.newSingleThreadScheduledExecutor("AccountStatsThread", true);
+
     private final HashMap<String, StatsItemSet> statsTable = new HashMap<String, StatsItemSet>();
     private final String clusterName;
     private final MomentStatsItemSet momentStatsItemSetFallSize = new MomentStatsItemSet(GROUP_GET_FALL_SIZE,
