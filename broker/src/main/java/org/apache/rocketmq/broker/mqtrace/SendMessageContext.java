@@ -17,6 +17,8 @@
 package org.apache.rocketmq.broker.mqtrace;
 
 import java.util.Properties;
+
+import org.apache.rocketmq.common.TopicConfig;
 import org.apache.rocketmq.common.message.MessageType;
 import org.apache.rocketmq.store.stats.BrokerStatsManager;
 
@@ -44,14 +46,28 @@ public class SendMessageContext {
     private long bornTimeStamp;
     private long requestTimeStamp;
     private MessageType msgType = MessageType.Trans_msg_Commit;
+    private TopicConfig topicConfig;
+
     private boolean isSuccess = false;
-    //For Commercial
-    private String commercialOwner;
+
+    /**
+     * Account Statistics
+     */
+    private String accountAuthType;
     private String accountOwnerParent;
     private String accountOwnerSelf;
+    private int sendTimes;
+    private int sendSize;
+    private BrokerStatsManager.StatsType sendStat;
+
+    /**
+     * For Commercial
+     */
+    private String commercialOwner;
     private BrokerStatsManager.StatsType commercialSendStats;
     private int commercialSendSize;
     private int commercialSendTimes;
+
     /** topic with namespace. */
     private String topicWithNamespace;
     /** producer group with namespace. */
@@ -79,6 +95,14 @@ public class SendMessageContext {
 
     public void setMsgType(final MessageType msgType) {
         this.msgType = msgType;
+    }
+
+    public TopicConfig getTopicConfig() {
+        return topicConfig;
+    }
+
+    public void setTopicConfig(TopicConfig topicConfig) {
+        this.topicConfig = topicConfig;
     }
 
     public String getMsgUniqueKey() {
@@ -233,6 +257,14 @@ public class SendMessageContext {
         this.commercialOwner = commercialOwner;
     }
 
+    public String getAccountAuthType() {
+        return accountAuthType;
+    }
+
+    public void setAccountAuthType(String accountAuthType) {
+        this.accountAuthType = accountAuthType;
+    }
+
     public String getAccountOwnerParent() {
         return accountOwnerParent;
     }
@@ -247,6 +279,30 @@ public class SendMessageContext {
 
     public void setAccountOwnerSelf(String accountOwnerSelf) {
         this.accountOwnerSelf = accountOwnerSelf;
+    }
+
+    public int getSendTimes() {
+        return sendTimes;
+    }
+
+    public void setSendTimes(int sendTimes) {
+        this.sendTimes = sendTimes;
+    }
+
+    public int getSendSize() {
+        return sendSize;
+    }
+
+    public void setSendSize(int sendSize) {
+        this.sendSize = sendSize;
+    }
+
+    public BrokerStatsManager.StatsType getSendStat() {
+        return sendStat;
+    }
+
+    public void setSendStat(BrokerStatsManager.StatsType sendStat) {
+        this.sendStat = sendStat;
     }
 
     public BrokerStatsManager.StatsType getCommercialSendStats() {
