@@ -1492,7 +1492,7 @@ public class AdminBrokerProcessor implements NettyRequestProcessor {
 
         QueryConsumeQueueResponseBody body = new QueryConsumeQueueResponseBody();
         response.setCode(ResponseCode.SUCCESS);
-        response.setBody(body.encode());
+
 
         body.setMaxQueueIndex(consumeQueue.getMaxOffsetInQueue());
         body.setMinQueueIndex(consumeQueue.getMinOffsetInQueue());
@@ -1551,6 +1551,7 @@ public class AdminBrokerProcessor implements NettyRequestProcessor {
             result.release();
         }
 
+        response.setBody(body.encode());
         return response;
     }
 }
