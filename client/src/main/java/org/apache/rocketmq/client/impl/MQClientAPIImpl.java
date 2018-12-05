@@ -2271,6 +2271,9 @@ public class MQClientAPIImpl {
         requestHeader.setConsumerGroup(consumerGroup);
         requestHeader.setClientId(clientId);
         requestHeader.setJstackEnable(jstack);
+        if (null != this.clientConfig.getNamespace()) {
+            requestHeader.setNamespace(this.clientConfig.getNamespace());
+        }
 
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.GET_CONSUMER_RUNNING_INFO, requestHeader);
 
@@ -2301,6 +2304,9 @@ public class MQClientAPIImpl {
         requestHeader.setConsumerGroup(consumerGroup);
         requestHeader.setClientId(clientId);
         requestHeader.setMsgId(msgId);
+        if (null != this.clientConfig.getNamespace()) {
+            requestHeader.setNamespace(this.clientConfig.getNamespace());
+        }
 
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.CONSUME_MESSAGE_DIRECTLY, requestHeader);
 
