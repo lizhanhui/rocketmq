@@ -21,17 +21,28 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class StatisticsItemScheduledIncrementPrinter extends StatisticsItemScheduledPrinter {
+
+    private String[] tpsItemNames;
+
+    public static final int TPS_INITIAL_DELAY = 0;
+    public static final int TPS_INTREVAL = 1000;
+
     /**
      * last snapshots of all scheduled items
      */
     private final ConcurrentHashMap<String, ConcurrentHashMap<String, StatisticsItem>> lastItemSnapshots
         = new ConcurrentHashMap<String, ConcurrentHashMap<String, StatisticsItem>>();
 
+    private final ConcurrentHashMap<String, ConcurrentHashMap<String, StatisticsItemSampleBrief>> sampleBriefs
+        = new ConcurrentHashMap<String, ConcurrentHashMap<String, StatisticsItemSampleBrief>>();
+
     public StatisticsItemScheduledIncrementPrinter(String name, StatisticsItemPrinter printer,
                                                    ScheduledExecutorService executor,
                                                    InitialDelay initialDelay,
-                                                   long interval) {
+                                                   long interval,
+                                                   String[] tpsItemNames) {
         super(name, printer, executor, initialDelay, interval);
+        this.tpsItemNames = tpsItemNames;
     }
 
     /**
@@ -39,29 +50,52 @@ public class StatisticsItemScheduledIncrementPrinter extends StatisticsItemSched
      */
     @Override
     public void schedule(final StatisticsItem item) {
+        setItemSampleBrief(item.getStatKind(), item.getStatObject(), new StatisticsItemSampleBrief(item, tpsItemNames));
+
         executor.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
                 StatisticsItem snapshot = item.snapshot();
-                StatisticsItem lastSnapshot = getLastItemSnapshot(item.getStatKind(), item.getStatObject());
-                printer.print(name, snapshot.subtract(lastSnapshot));
-                setLastItemSnapshot(snapshot);
+                StatisticsItem lastSnapshot = getItemSnapshot(lastItemSnapshots, item.getStatKind(),
+                    item.getStatObject());
+                StatisticsItem increment = snapshot.subtract(lastSnapshot);
+                StatisticsItemSampleBrief brief = getSampleBrief(item.getStatKind(), item.getStatObject());
+                printer.print(name, increment, "|", brief.toString());
+                setItemSnapshot(lastItemSnapshots, snapshot);
+                brief.reset();
             }
         }, getInitialDelay(), interval, TimeUnit.MILLISECONDS);
+
+        executor.scheduleAtFixedRate(new Runnable() {
+            @Override
+            public void run() {
+                StatisticsItem snapshot = item.snapshot();
+                StatisticsItemSampleBrief brief = getSampleBrief(item.getStatKind(), item.getStatObject());
+                brief.sample(snapshot);
+            }
+        }, TPS_INTREVAL, TPS_INTREVAL, TimeUnit.MILLISECONDS);
     }
 
-    private StatisticsItem getLastItemSnapshot(String kind, String key) {
-        ConcurrentHashMap<String, StatisticsItem> itemMap = lastItemSnapshots.get(kind);
+    private StatisticsItem getItemSnapshot(
+        ConcurrentHashMap<String, ConcurrentHashMap<String, StatisticsItem>> snapshots,
+        String kind, String key) {
+        ConcurrentHashMap<String, StatisticsItem> itemMap = snapshots.get(kind);
         return (itemMap != null) ? itemMap.get(key) : null;
     }
 
-    private void setLastItemSnapshot(StatisticsItem item) {
+    private StatisticsItemSampleBrief getSampleBrief(String kind, String key) {
+        ConcurrentHashMap<String, StatisticsItemSampleBrief> itemMap = sampleBriefs.get(kind);
+        return (itemMap != null) ? itemMap.get(key) : null;
+    }
+
+    private void setItemSnapshot(ConcurrentHashMap<String, ConcurrentHashMap<String, StatisticsItem>> snapshots,
+                                 StatisticsItem item) {
         String kind = item.getStatKind();
         String key = item.getStatObject();
-        ConcurrentHashMap<String, StatisticsItem> itemMap = lastItemSnapshots.get(kind);
+        ConcurrentHashMap<String, StatisticsItem> itemMap = snapshots.get(kind);
         if (itemMap == null) {
             itemMap = new ConcurrentHashMap<String, StatisticsItem>();
-            ConcurrentHashMap<String, StatisticsItem> oldItemMap = lastItemSnapshots.putIfAbsent(kind, itemMap);
+            ConcurrentHashMap<String, StatisticsItem> oldItemMap = snapshots.putIfAbsent(kind, itemMap);
             if (oldItemMap != null) {
                 itemMap = oldItemMap;
             }
@@ -69,4 +103,126 @@ public class StatisticsItemScheduledIncrementPrinter extends StatisticsItemSched
 
         itemMap.put(key, item);
     }
+
+    private void setItemSampleBrief(String kind, String key,
+                                    StatisticsItemSampleBrief brief) {
+        ConcurrentHashMap<String, StatisticsItemSampleBrief> itemMap = sampleBriefs.get(kind);
+        if (itemMap == null) {
+            itemMap = new ConcurrentHashMap<String, StatisticsItemSampleBrief>();
+            ConcurrentHashMap<String, StatisticsItemSampleBrief> oldItemMap = sampleBriefs.putIfAbsent(kind, itemMap);
+            if (oldItemMap != null) {
+                itemMap = oldItemMap;
+            }
+        }
+
+        itemMap.put(key, brief);
+    }
+
+    public static class StatisticsItemSampleBrief {
+        private StatisticsItem lastSnapshot;
+
+        public String[] itemNames;
+        public ItemSampleBrief[] briefs;
+
+        public StatisticsItemSampleBrief(StatisticsItem statItem, String[] itemNames) {
+            this.lastSnapshot = statItem.snapshot();
+            this.itemNames = itemNames;
+            this.briefs = new ItemSampleBrief[itemNames.length];
+            for (int i = 0; i < itemNames.length; i++) {
+                this.briefs[i] = new ItemSampleBrief();
+            }
+        }
+
+        public synchronized void reset() {
+            for (ItemSampleBrief brief : briefs) {
+                brief.reset();
+            }
+        }
+
+        public synchronized void sample(StatisticsItem snapshot) {
+            if (snapshot == null) {
+                return;
+            }
+
+            for (int i = 0; i < itemNames.length; i++) {
+                String name = itemNames[i];
+
+                long lastValue = lastSnapshot != null ? lastSnapshot.getItemAccumulate(name).get() : 0;
+                long increment = snapshot.getItemAccumulate(name).get() - lastValue;
+                briefs[i].sample(increment);
+            }
+            lastSnapshot = snapshot;
+        }
+
+        @Override
+        public String toString() {
+            StringBuilder sb = new StringBuilder();
+            final String sep = "|";
+            for (int i = 0; i < briefs.length; i++) {
+                ItemSampleBrief brief = briefs[i];
+                sb.append(brief.getMax()).append(sep);
+                sb.append(brief.getMin()).append(sep);
+                sb.append(String.format("%.2f", brief.getAvg()));
+
+                if (i < briefs.length - 1) {
+                    sb.append(sep);
+                }
+            }
+            return sb.toString();
+        }
+    }
+
+    /**
+     * sample brief of a item for a period of time
+     */
+    public static class ItemSampleBrief {
+        private long max;
+        private long min;
+        private long total;
+        private long cnt;
+
+        public ItemSampleBrief() {
+            reset();
+        }
+
+        public void sample(long value) {
+            max = Math.max(max, value);
+            min = Math.min(min, value);
+            total += value;
+            cnt++;
+        }
+
+        public void reset() {
+            max = 0;
+            min = Long.MAX_VALUE;
+            total = 0;
+            cnt = 0;
+        }
+
+        /**
+         * Getters
+         *
+         * @return
+         */
+        public long getMax() {
+            return max;
+        }
+
+        public long getMin() {
+            return cnt > 0 ? min : 0;
+        }
+
+        public long getTotal() {
+            return total;
+        }
+
+        public long getCnt() {
+            return cnt;
+        }
+
+        public double getAvg() {
+            return cnt != 0 ? ((double)total) / cnt : 0;
+        }
+    }
+
 }

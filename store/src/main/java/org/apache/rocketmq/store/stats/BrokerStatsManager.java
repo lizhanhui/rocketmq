@@ -82,6 +82,7 @@ public class BrokerStatsManager {
     public static final String TIMES = "TIMES";
     public static final String SIZE = "SIZE";
     public static final String RT = "RT";
+    public static final String INNER_RT = "INNER_RT";
 
     // Message Size limit for one api-calling count.
     public static final double SIZE_PER_COUNT = 64 * 1024;
@@ -184,16 +185,17 @@ public class BrokerStatsManager {
 
         StatisticsItemFormatter formatter = new StatisticsItemFormatter();
         this.accountStatManager.addStatisticsKindMeta(createStatisticsKindMeta(
-            ACCOUNT_SEND, new String[] {TIMES, SIZE, RT}, this.accountExecutor, formatter, ACCOUNT_LOG,
+            ACCOUNT_SEND, new String[] {TIMES, SIZE, RT, INNER_RT}, this.accountExecutor, formatter, ACCOUNT_LOG,
             ACCOUNT_STAT_INVERTAL));
         this.accountStatManager.addStatisticsKindMeta(createStatisticsKindMeta(
-            ACCOUNT_RCV, new String[] {TIMES, SIZE, RT}, this.accountExecutor, formatter, ACCOUNT_LOG,
+            ACCOUNT_RCV, new String[] {TIMES, SIZE, RT, INNER_RT}, this.accountExecutor, formatter, ACCOUNT_LOG,
             ACCOUNT_STAT_INVERTAL));
         this.accountStatManager.addStatisticsKindMeta(createStatisticsKindMeta(
-            ACCOUNT_SEND_BACK, new String[] {TIMES, SIZE, RT}, this.accountExecutor, formatter, ACCOUNT_LOG,
+            ACCOUNT_SEND_BACK, new String[] {TIMES, SIZE, RT, INNER_RT}, this.accountExecutor, formatter, ACCOUNT_LOG,
             ACCOUNT_STAT_INVERTAL));
         this.accountStatManager.addStatisticsKindMeta(createStatisticsKindMeta(
-            ACCOUNT_SEND_BACK_TO_DLQ, new String[] {TIMES, SIZE, RT}, this.accountExecutor, formatter, ACCOUNT_LOG,
+            ACCOUNT_SEND_BACK_TO_DLQ, new String[] {TIMES, SIZE, RT, INNER_RT}, this.accountExecutor, formatter,
+            ACCOUNT_LOG,
             ACCOUNT_STAT_INVERTAL));
     }
 
@@ -414,7 +416,8 @@ public class BrokerStatsManager {
                         return Math.abs(UtilAll.computNextMinutesTimeMillis() - System.currentTimeMillis());
                     }
                 },
-                interval
+                interval,
+                new String[] {TIMES}
             )
         );
         return kindMeta;

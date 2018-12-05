@@ -36,8 +36,13 @@ public class StatisticsItemPrinter {
         this.formatter = formatter;
     }
 
-    public void print(String prefix, StatisticsItem statItem) {
-        log.info("{}{}", prefix, formatter.format(statItem));
-        //System.out.printf("%s %s%s\n", new Date().toString(), prefix, formatter.format(statItem));
+    public void print(String prefix, StatisticsItem statItem, String... suffixs) {
+        StringBuilder suffix = new StringBuilder();
+        for (String str : suffixs) {
+            suffix.append(str);
+        }
+
+        log.info("{}{}{}", prefix, formatter.format(statItem), suffix.toString());
+        // System.out.printf("%s %s%s%s\n", new Date().toString(), prefix, formatter.format(statItem), suffix.toString());
     }
 }

@@ -16,6 +16,8 @@
  */
 package org.apache.rocketmq.common.statistics;
 
+import org.apache.commons.lang3.ArrayUtils;
+
 import java.security.InvalidParameterException;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
@@ -83,6 +85,14 @@ public class StatisticsItem {
 
     public AtomicLong getInvokeTimes() {
         return invokeTimes;
+    }
+
+    public AtomicLong getItemAccumulate(String itemName) {
+        int index = ArrayUtils.indexOf(itemNames, itemName);
+        if (index < 0) {
+            return new AtomicLong(0);
+        }
+        return itemAccumulates[index];
     }
 
     /**
