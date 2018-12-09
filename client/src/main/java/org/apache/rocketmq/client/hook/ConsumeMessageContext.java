@@ -27,6 +27,7 @@ public class ConsumeMessageContext {
     private MessageQueue mq;
     private boolean success;
     private String status;
+    private String exactlyOnceStatus;
     private Object mqTraceContext;
     private Map<String, String> props;
 
@@ -84,5 +85,13 @@ public class ConsumeMessageContext {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getExactlyOnceStatus() {
+        return exactlyOnceStatus;
+    }
+
+    public void setExactlyOnceStatus(String exactlyOnceStatus) {
+        this.exactlyOnceStatus = exactlyOnceStatus;
     }
 }
