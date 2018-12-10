@@ -33,7 +33,7 @@ public class ConsumeConcurrentlyContext {
     private int delayLevelWhenNextConsume = 0;
     private int ackIndex = Integer.MAX_VALUE;
     private CheckSendBackHook checkSendBackHook;
-    private String exactlyOnceStatus;
+    private ConsumeExactlyOnceStatus exactlyOnceStatus;
 
     public ConsumeConcurrentlyContext(MessageQueue messageQueue) {
         this.messageQueue = messageQueue;
@@ -67,11 +67,11 @@ public class ConsumeConcurrentlyContext {
         this.checkSendBackHook = checkSendBackHook;
     }
 
-    public String getExactlyOnceStatus() {
+    public ConsumeExactlyOnceStatus getExactlyOnceStatus() {
         return exactlyOnceStatus;
     }
 
-    public void setExactlyOnceStatus(String exactlyOnceStatus) {
+    public void setExactlyOnceStatus(ConsumeExactlyOnceStatus exactlyOnceStatus) {
         this.exactlyOnceStatus = exactlyOnceStatus;
     }
 }

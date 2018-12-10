@@ -88,6 +88,7 @@ public class MixAll {
     public static final String UNIQUE_MSG_QUERY_FLAG = "_UNIQUE_KEY_QUERY";
     public static final String DEFAULT_TRACE_REGION_ID = "DefaultRegion";
     public static final String CONSUME_CONTEXT_TYPE = "ConsumeContextType";
+    public static final String CONSUME_EXACTLYONCE_STATUS = "ConsumeExactlyOnceStatus";
 
     /**
      *  This method accepts two methods to specify name server lookup domain: system environment variables and Java option.

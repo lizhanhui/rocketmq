@@ -444,6 +444,7 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
 
             if (ConsumeMessageConcurrentlyService.this.defaultMQPushConsumerImpl.hasHook()) {
                 consumeMessageContext.getProps().put(MixAll.CONSUME_CONTEXT_TYPE, returnType.name());
+                consumeMessageContext.getProps().put(MixAll.CONSUME_EXACTLYONCE_STATUS, context.getExactlyOnceStatus().name());
             }
 
             if (null == status) {
@@ -457,7 +458,6 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
             if (ConsumeMessageConcurrentlyService.this.defaultMQPushConsumerImpl.hasHook()) {
                 consumeMessageContext.setStatus(status.toString());
                 consumeMessageContext.setSuccess(ConsumeConcurrentlyStatus.CONSUME_SUCCESS == status);
-                consumeMessageContext.setExactlyOnceStatus(context.getExactlyOnceStatus());
                 ConsumeMessageConcurrentlyService.this.defaultMQPushConsumerImpl.executeHookAfter(consumeMessageContext);
             }
 
