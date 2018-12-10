@@ -446,13 +446,13 @@ public class PopMessageProcessor implements NettyRequestProcessor {
     private long popMsgFromQueue(boolean isRetry, GetMessageResult getMessageResult, PopMessageRequestHeader requestHeader, int queueId, long restNum, int reviveQid, Channel channel, long popTime,
                                  ExpressionMessageFilter messageFilter, StringBuilder startOffsetInfo, StringBuilder msgOffsetInfo) {
         String topic = isRetry ? KeyBuilder.buildPopRetryTopic(requestHeader.getTopic(), requestHeader.getConsumerGroup()) : requestHeader.getTopic();
-        long offset = getPopOffset(topic, requestHeader, queueId);
+        long offset = getPopOffset(topic, requestHeader, queueId, false);
         String lockKey = topic + PopAckConstants.SPLIT + requestHeader.getConsumerGroup() + PopAckConstants.SPLIT + queueId;
         if (!queueLockManager.tryLock(lockKey)) {
             restNum = this.brokerController.getMessageStore().getMaxOffsetInQueue(topic, queueId) - offset + restNum;
             return restNum;
         }
-        offset = getPopOffset(topic, requestHeader, queueId);
+        offset = getPopOffset(topic, requestHeader, queueId, true);
         GetMessageResult getMessageTmpResult;
         try {
             if (getMessageResult.getMessageMapedList().size() >= requestHeader.getMaxMsgNums()) {
@@ -490,7 +490,7 @@ public class PopMessageProcessor implements NettyRequestProcessor {
         return restNum;
     }
 
-    private long getPopOffset(String topic, PopMessageRequestHeader requestHeader, int queueId) {
+    private long getPopOffset(String topic, PopMessageRequestHeader requestHeader, int queueId, boolean init) {
         long offset = this.brokerController.getConsumerOffsetManager().queryOffset(requestHeader.getConsumerGroup(), topic, queueId);
         if (offset < 0) {
             if (ConsumeInitMode.MIN == requestHeader.getInitMode()) {
@@ -498,6 +498,14 @@ public class PopMessageProcessor implements NettyRequestProcessor {
             } else {
                 // pop last one,then commit offset.
                 offset = this.brokerController.getMessageStore().getMaxOffsetInQueue(topic, queueId) - 1;
+                // max & no consumer offset
+                if (offset < 0) {
+                    offset = 0;
+                }
+                if (init) {
+                    this.brokerController.getConsumerOffsetManager().commitOffset("getPopOffset", requestHeader.getConsumerGroup(), topic,
+                            queueId, offset);
+                }
             }
         }
         return offset;

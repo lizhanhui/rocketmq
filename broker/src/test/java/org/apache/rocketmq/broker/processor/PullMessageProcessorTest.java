@@ -81,6 +81,7 @@ public class PullMessageProcessorTest {
         Channel mockChannel = mock(Channel.class);
         when(mockChannel.remoteAddress()).thenReturn(new InetSocketAddress(1024));
         when(handlerContext.channel()).thenReturn(mockChannel);
+        when(mockChannel.isWritable()).thenReturn(true);
         brokerController.getTopicConfigManager().getTopicConfigTable().put(topic, new TopicConfig());
         clientChannelInfo = new ClientChannelInfo(mockChannel);
         ConsumerData consumerData = createConsumerData(group, topic);
