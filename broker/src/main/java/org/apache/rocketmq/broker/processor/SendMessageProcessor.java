@@ -127,7 +127,8 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
             context.setAccountOwnerSelf(request.getExtFields().get(BrokerStatsManager.ACCOUNT_OWNER_SELF));
             context.setRcvStat(BrokerStatsManager.StatsType.SEND_BACK);
             context.setRcvTimes(1);
-            context.setRcvSize(request.getBody().length);
+            //Set msg body size 0 when sent back by consumer.
+            context.setRcvSize(0);
 
             this.executeConsumeMessageHookAfter(context);
         }
