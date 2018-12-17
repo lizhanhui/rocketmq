@@ -149,7 +149,7 @@ public class BrokerOuterAPITest {
         when(nettyRemotingClient.invokeSync(anyString(), any(RemotingCommand.class), anyLong())).thenReturn(response);
         List<RegisterBrokerResult> registerBrokerResultList = brokerOuterAPI.registerBrokerAll(clusterName, brokerAddr, brokerName, brokerId, "hasServerAddr", topicConfigSerializeWrapper, Lists.<String>newArrayList(), false, timeOut, true);
 
-        assertTrue(registerBrokerResultList.size() > 0);
+        assertTrue( registerBrokerResultList.size() > 0 );
     }
 
     @Test
@@ -180,7 +180,7 @@ public class BrokerOuterAPITest {
         });
         List<RegisterBrokerResult> registerBrokerResultList = brokerOuterAPI.registerBrokerAll(clusterName, brokerAddr, brokerName, brokerId, "hasServerAddr", topicConfigSerializeWrapper, Lists.<String>newArrayList(), false, timeOut, true);
 
-        assertTrue(registerBrokerResultList.size() > 0);
+        assertTrue(registerBrokerResultList.size() > 0 );
     }
 
     private RemotingCommand buildResponse(Boolean changed) {
