@@ -93,6 +93,10 @@ public class ClientRemotingProcessor implements NettyRequestProcessor {
             (CheckTransactionStateRequestHeader) request.decodeCommandCustomHeader(CheckTransactionStateRequestHeader.class);
         final ByteBuffer byteBuffer = ByteBuffer.wrap(request.getBody());
         final MessageExt messageExt = MessageDecoder.decode(byteBuffer);
+        if (StringUtils.isNotEmpty(this.mqClientFactory.getClientConfig().getNamespace())) {
+            messageExt.setTopic(
+                NamespaceUtil.withoutNamespace(messageExt.getTopic(), this.mqClientFactory.getClientConfig().getNamespace()));
+        }
         if (messageExt != null) {
             final String group = messageExt.getProperty(MessageConst.PROPERTY_PRODUCER_GROUP);
             if (group != null) {
