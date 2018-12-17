@@ -390,7 +390,7 @@ public class MQClientInstance {
         if (StringUtils.isNotEmpty(namespace)) {
             for (Entry<MessageQueue, Long> entry : offsetTable.entrySet()) {
                 MessageQueue queue = entry.getKey();
-                queue.setTopic(NamespaceUtil.getResource(queue.getTopic(), namespace));
+                queue.setTopic(NamespaceUtil.withoutNamespace(queue.getTopic(), namespace));
                 newOffsetTable.put(queue, entry.getValue());
             }
         } else {

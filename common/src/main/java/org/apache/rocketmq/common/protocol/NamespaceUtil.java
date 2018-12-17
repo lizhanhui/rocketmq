@@ -30,7 +30,7 @@ public class NamespaceUtil {
     public static final int DLQ_PREFIX_LENGTH = MixAll.DLQ_GROUP_TOPIC_PREFIX.length();
 
     public static String withNamespace(RemotingCommand request, String resource) {
-        return wrapNamespace(getNamespace(request), resource);
+        return wrapNamespace(getNamespaceFromRequest(request), resource);
     }
 
     public static String withoutNamespace(String resource) {
@@ -61,6 +61,15 @@ public class NamespaceUtil {
         return resource;
     }
 
+    public static String withoutNamespace(String resource, String namespace) {
+        if (StringUtils.isEmpty(resource) || StringUtils.isEmpty(namespace) ||
+            !resource.contains(namespace)) {
+            return resource;
+        }
+
+        return withoutNamespace(resource);
+    }
+
     public static String wrapNamespace(String namespace, String resource) {
         if (StringUtils.isEmpty(namespace) || StringUtils.isEmpty(resource) || isSystemResource(resource)) {
             return resource;
@@ -83,7 +92,7 @@ public class NamespaceUtil {
     }
 
     public static String withNamespaceAndRetry(RemotingCommand request, String consumerGroup) {
-        return wrapNamespaceAndRetry(getNamespace(request), consumerGroup);
+        return wrapNamespaceAndRetry(getNamespaceFromRequest(request), consumerGroup);
     }
 
     public static String wrapNamespaceAndRetry(String namespace, String consumerGroup) {
@@ -97,25 +106,12 @@ public class NamespaceUtil {
             .toString();
     }
 
-    public static String getResource(String resourceWithNamespace, String namespace) {
-        if (StringUtils.isEmpty(resourceWithNamespace) || StringUtils.isEmpty(namespace) ||
-            !resourceWithNamespace.contains(namespace)) {
-            return resourceWithNamespace;
+    public static String getNamespaceFromRequest(RemotingCommand request) {
+        if (null == request || null == request.getExtFields()) {
+            return null;
         }
 
-        if (isRetryTopic(resourceWithNamespace)) {
-            return resourceWithNamespace.substring(RETRY_PREFIX_LENGTH).substring(namespace.length() + 1);
-        }
-
-        if (isDLQTopic(resourceWithNamespace)) {
-            return resourceWithNamespace.substring(DLQ_PREFIX_LENGTH).substring(namespace.length() + 1);
-        }
-
-        return resourceWithNamespace.substring(namespace.length() + 1);
-    }
-
-    public static String getNamespace(RemotingCommand request) {
-        String namespace ;
+        String namespace;
 
         switch (request.getCode()) {
             case RequestCode.SEND_MESSAGE_V2:
@@ -127,10 +123,9 @@ public class NamespaceUtil {
         }
 
         return namespace;
-
     }
 
-    public static String getNamespace(String resource) {
+    public static String getNamespaceFromResource(String resource) {
         if (StringUtils.isEmpty(resource) || isSystemResource(resource)) {
             return "";
         }

@@ -308,7 +308,7 @@ public class TimerMessageStoreTest {
         first.load();
         first.start();
         long curr = (System.currentTimeMillis() / 1000) * 1000;
-        long delaySec = storeConfig.getTimerMaxDelaySec() + 2;
+        long delaySec = storeConfig.getTimerMaxDelaySec() + 20;
         MessageExtBrokerInner absolute = buildMessage(curr + delaySec  * 1000, topic, false);
         assertEquals(PutMessageStatus.WHEEL_TIMER_MSG_ILLEGAL, messageStore.putMessage(absolute).getPutMessageStatus());
         MessageExtBrokerInner relative = buildMessage(delaySec  * 1000, topic, true);

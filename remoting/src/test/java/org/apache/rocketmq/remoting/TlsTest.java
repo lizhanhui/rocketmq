@@ -198,7 +198,7 @@ public class TlsTest {
     @Test
     public void serverRejectsSSLClient() throws Exception {
         try {
-            RemotingCommand response = remotingClient.invokeSync("localhost:8888", createRequest(), 1000 * 5);
+            RemotingCommand response = remotingClient.invokeSync("localhost:8888", createRequest(), 1000 * 10);
             failBecauseExceptionWasNotThrown(RemotingSendRequestException.class);
         } catch (RemotingSendRequestException ignore) {
         }

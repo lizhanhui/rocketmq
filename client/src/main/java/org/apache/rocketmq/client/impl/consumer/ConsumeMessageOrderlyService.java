@@ -388,7 +388,7 @@ public class ConsumeMessageOrderlyService implements ConsumeMessageService {
     public void resetNamespace(final List<MessageExt> msgs) {
         for (MessageExt msg : msgs) {
             if (StringUtils.isNotEmpty(this.defaultMQPushConsumer.getNamespace())) {
-                msg.setTopic(NamespaceUtil.getResource(msg.getTopic(), this.defaultMQPushConsumer.getNamespace()));
+                msg.setTopic(NamespaceUtil.withoutNamespace(msg.getTopic(), this.defaultMQPushConsumer.getNamespace()));
             }
         }
     }

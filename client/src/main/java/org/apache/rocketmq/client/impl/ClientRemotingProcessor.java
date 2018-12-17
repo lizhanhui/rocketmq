@@ -122,7 +122,7 @@ public class ClientRemotingProcessor implements NettyRequestProcessor {
             String namespace = this.mqClientFactory.getClientConfig().getNamespace();
             String consumerGroup = requestHeader.getConsumerGroup();
             if (StringUtils.isNotEmpty(namespace)) {
-                consumerGroup = NamespaceUtil.getResource(consumerGroup, namespace);
+                consumerGroup = NamespaceUtil.withoutNamespace(consumerGroup, namespace);
             }
 
             log.info("receive broker's notification[{}], the consumer namespace={}, group={} changed, rebalance immediately",
@@ -143,8 +143,8 @@ public class ClientRemotingProcessor implements NettyRequestProcessor {
         String topic = requestHeader.getTopic();
         String consumerGroup = requestHeader.getGroup();
         if (StringUtils.isNotEmpty(namespace)) {
-            topic = NamespaceUtil.getResource(topic, namespace);
-            consumerGroup = NamespaceUtil.getResource(consumerGroup, namespace);
+            topic = NamespaceUtil.withoutNamespace(topic, namespace);
+            consumerGroup = NamespaceUtil.withoutNamespace(consumerGroup, namespace);
         }
 
         log.info("invoke reset offset operation from broker. brokerAddr={}, namespace={}, topic={}, group={}, timestamp={}",
@@ -171,8 +171,8 @@ public class ClientRemotingProcessor implements NettyRequestProcessor {
         String topic = requestHeader.getTopic();
         String consumerGroup = requestHeader.getGroup();
         if (StringUtils.isNotEmpty(namespace)) {
-            topic = NamespaceUtil.getResource(topic, namespace);
-            consumerGroup = NamespaceUtil.getResource(consumerGroup, namespace);
+            topic = NamespaceUtil.withoutNamespace(topic, namespace);
+            consumerGroup = NamespaceUtil.withoutNamespace(consumerGroup, namespace);
         }
 
         Map<MessageQueue, Long> offsetTable = this.mqClientFactory.getConsumerStatus(topic, consumerGroup);
@@ -192,7 +192,7 @@ public class ClientRemotingProcessor implements NettyRequestProcessor {
         String namespace = this.mqClientFactory.getClientConfig().getNamespace();
         String consumerGroup = requestHeader.getConsumerGroup();
         if (StringUtils.isNotEmpty(namespace)) {
-            consumerGroup = NamespaceUtil.getResource(consumerGroup, namespace);
+            consumerGroup = NamespaceUtil.withoutNamespace(consumerGroup, namespace);
         }
         ConsumerRunningInfo consumerRunningInfo = this.mqClientFactory.consumerRunningInfo(consumerGroup);
         if (null != consumerRunningInfo) {
@@ -224,7 +224,7 @@ public class ClientRemotingProcessor implements NettyRequestProcessor {
         String namespace = this.mqClientFactory.getClientConfig().getNamespace();
         String consumerGroup = requestHeader.getConsumerGroup();
         if (StringUtils.isNotEmpty(namespace)) {
-            consumerGroup = NamespaceUtil.getResource(consumerGroup, namespace);
+            consumerGroup = NamespaceUtil.withoutNamespace(consumerGroup, namespace);
         }
         ConsumeMessageDirectlyResult result =
             this.mqClientFactory.consumeMessageDirectly(msg, consumerGroup, requestHeader.getBrokerName());

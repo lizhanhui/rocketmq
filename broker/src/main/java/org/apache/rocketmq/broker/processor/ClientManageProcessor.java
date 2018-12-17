@@ -112,7 +112,7 @@ public class ClientManageProcessor implements NettyRequestProcessor {
                     PermName.PERM_WRITE | PermName.PERM_READ, topicSysFlag);
             }
 
-            parseSubscriptionWithNamespace(data.getSubscriptionDataSet(),namespace);
+            parseSubscriptionWithNamespace(data.getSubscriptionDataSet(), namespace);
             boolean changed = this.brokerController.getConsumerManager().registerConsumer(
                 consumerGroup,
                 clientChannelInfo,
