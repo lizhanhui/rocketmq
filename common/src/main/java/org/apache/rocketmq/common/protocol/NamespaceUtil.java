@@ -29,10 +29,24 @@ public class NamespaceUtil {
     public static final int RETRY_PREFIX_LENGTH = MixAll.RETRY_GROUP_TOPIC_PREFIX.length();
     public static final int DLQ_PREFIX_LENGTH = MixAll.DLQ_GROUP_TOPIC_PREFIX.length();
 
+    /**
+     * Parse namespace from request @see {@link RemotingCommand}, just like:
+     * (Topic_XXX, MQ_INST_XX) --> MQ_INST_XX%Topic_XXX
+     * @param request
+     * @param resource resource without namespace.
+     * @return resource with namespace.
+     */
     public static String withNamespace(RemotingCommand request, String resource) {
         return wrapNamespace(getNamespaceFromRequest(request), resource);
     }
 
+    /**
+     * Unpack namespace from resource, just like:
+     * (1) MQ_INST_XX%Topic_XXX --> Topic_XXX
+     * (2) %RETRY%MQ_INST_XX%GID_XXX --> %RETRY%GID_XXX
+     * @param resource
+     * @return
+     */
     public static String withoutNamespace(String resource) {
         if (StringUtils.isEmpty(resource) || isSystemResource(resource)) {
             return resource;
@@ -61,6 +75,16 @@ public class NamespaceUtil {
         return resource;
     }
 
+    /**
+     * If resource contains the namespace, unpack namespace from resource, just like:
+     * (1) (MQ_INST_XX1%Topic_XXX1, MQ_INST_XX1) --> Topic_XXX1
+     * (2) (MQ_INST_XX2%Topic_XXX2, NULL) --> MQ_INST_XX2%Topic_XXX2
+     * (3) (%RETRY%MQ_INST_XX1%GID_XXX1, MQ_INST_XX1) --> %RETRY%GID_XXX1
+     * (4) (%RETRY%MQ_INST_XX2%GID_XXX2, MQ_INST_XX3) --> %RETRY%MQ_INST_XX2%GID_XXX2
+     * @param resource
+     * @param namespace
+     * @return
+     */
     public static String withoutNamespace(String resource, String namespace) {
         if (StringUtils.isEmpty(resource) || StringUtils.isEmpty(namespace) ||
             !resource.contains(namespace)) {
@@ -94,6 +118,7 @@ public class NamespaceUtil {
     public static String withNamespaceAndRetry(RemotingCommand request, String consumerGroup) {
         return wrapNamespaceAndRetry(getNamespaceFromRequest(request), consumerGroup);
     }
+
 
     public static String wrapNamespaceAndRetry(String namespace, String consumerGroup) {
         if (StringUtils.isEmpty(consumerGroup)) {
