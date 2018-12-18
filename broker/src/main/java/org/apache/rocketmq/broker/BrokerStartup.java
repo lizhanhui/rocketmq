@@ -182,6 +182,9 @@ public class BrokerStartup {
             JoranConfigurator configurator = new JoranConfigurator();
             configurator.setContext(lc);
             lc.reset();
+            //https://logback.qos.ch/manual/configuration.html
+            lc.setPackagingDataEnabled(false);
+
             configurator.doConfigure(brokerConfig.getRocketmqHome() + "/conf/logback_broker.xml");
 
             if (commandLine.hasOption('p')) {
