@@ -179,7 +179,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
      */
     @Override
     public void start() throws MQClientException {
-        this.producerGroup = NamespaceUtil.wrapNamespace(this.getNamespace(), this.producerGroup);
+        this.setProducerGroup(NamespaceUtil.wrapNamespace(this.getNamespace(), this.producerGroup));
         this.defaultMQProducerImpl.start();
     }
 

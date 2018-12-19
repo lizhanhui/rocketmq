@@ -39,6 +39,7 @@ import org.apache.rocketmq.common.consumer.ConsumeFromWhere;
 import org.apache.rocketmq.common.message.MessageDecoder;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.message.MessageQueue;
+import org.apache.rocketmq.common.protocol.NamespaceUtil;
 import org.apache.rocketmq.common.protocol.heartbeat.MessageModel;
 import org.apache.rocketmq.remoting.RPCHook;
 import org.apache.rocketmq.remoting.exception.RemotingException;
@@ -291,31 +292,37 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
 
     @Override
     public void createTopic(String key, String newTopic, int queueNum) throws MQClientException {
-        createTopic(key, newTopic, queueNum, 0);
+        String realTopic = NamespaceUtil.wrapNamespace(this.getNamespace(), newTopic);
+        createTopic(key, realTopic, queueNum, 0);
     }
 
     @Override
     public void createTopic(String key, String newTopic, int queueNum, int topicSysFlag) throws MQClientException {
-        this.defaultMQPushConsumerImpl.createTopic(key, newTopic, queueNum, topicSysFlag);
+        String realTopic = NamespaceUtil.wrapNamespace(this.getNamespace(), newTopic);
+        this.defaultMQPushConsumerImpl.createTopic(key, realTopic, queueNum, topicSysFlag);
     }
 
     @Override
     public long searchOffset(MessageQueue mq, long timestamp) throws MQClientException {
+        mq.setTopic(NamespaceUtil.wrapNamespace(this.getNamespace(), mq.getTopic()));
         return this.defaultMQPushConsumerImpl.searchOffset(mq, timestamp);
     }
 
     @Override
     public long maxOffset(MessageQueue mq) throws MQClientException {
+        mq.setTopic(NamespaceUtil.wrapNamespace(this.getNamespace(), mq.getTopic()));
         return this.defaultMQPushConsumerImpl.maxOffset(mq);
     }
 
     @Override
     public long minOffset(MessageQueue mq) throws MQClientException {
+        mq.setTopic(NamespaceUtil.wrapNamespace(this.getNamespace(), mq.getTopic()));
         return this.defaultMQPushConsumerImpl.minOffset(mq);
     }
 
     @Override
     public long earliestMsgStoreTime(MessageQueue mq) throws MQClientException {
+        mq.setTopic(NamespaceUtil.wrapNamespace(this.getNamespace(), mq.getTopic()));
         return this.defaultMQPushConsumerImpl.earliestMsgStoreTime(mq);
     }
 
@@ -328,7 +335,8 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
     @Override
     public QueryResult queryMessage(String topic, String key, int maxNum, long begin, long end)
         throws MQClientException, InterruptedException {
-        return this.defaultMQPushConsumerImpl.queryMessage(topic, key, maxNum, begin, end);
+        String realTopic = NamespaceUtil.wrapNamespace(this.getNamespace(), topic);
+        return this.defaultMQPushConsumerImpl.queryMessage(realTopic, key, maxNum, begin, end);
     }
 
     @Override
@@ -340,7 +348,8 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
         } catch (Exception e) {
             // Ignore
         }
-        return this.defaultMQPushConsumerImpl.queryMessageByUniqKey(topic, msgId);
+        String realTopic = NamespaceUtil.wrapNamespace(this.getNamespace(), topic);
+        return this.defaultMQPushConsumerImpl.queryMessageByUniqKey(realTopic, msgId);
     }
 
     public AllocateMessageQueueStrategy getAllocateMessageQueueStrategy() {
@@ -508,6 +517,7 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
     @Override
     public void sendMessageBack(MessageExt msg, int delayLevel)
         throws RemotingException, MQBrokerException, InterruptedException, MQClientException {
+        msg.setTopic(NamespaceUtil.wrapNamespace(this.getNamespace(), msg.getTopic()));
         this.defaultMQPushConsumerImpl.sendMessageBack(msg, delayLevel, null);
     }
 
@@ -526,12 +536,14 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
     @Override
     public void sendMessageBack(MessageExt msg, int delayLevel, String brokerName)
         throws RemotingException, MQBrokerException, InterruptedException, MQClientException {
+        msg.setTopic(NamespaceUtil.wrapNamespace(this.getNamespace(), msg.getTopic()));
         this.defaultMQPushConsumerImpl.sendMessageBack(msg, delayLevel, brokerName);
     }
 
     @Override
     public Set<MessageQueue> fetchSubscribeMessageQueues(String topic) throws MQClientException {
-        return this.defaultMQPushConsumerImpl.fetchSubscribeMessageQueues(topic);
+        String realTopic = NamespaceUtil.wrapNamespace(this.getNamespace(), topic);
+        return this.defaultMQPushConsumerImpl.fetchSubscribeMessageQueues(realTopic);
     }
 
     /**
@@ -541,6 +553,7 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
      */
     @Override
     public void start() throws MQClientException {
+        setConsumerGroup(NamespaceUtil.wrapNamespace(this.getNamespace(), this.consumerGroup));
         this.defaultMQPushConsumerImpl.start();
     }
 
@@ -591,7 +604,8 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
      */
     @Override
     public void subscribe(String topic, String subExpression) throws MQClientException {
-        this.defaultMQPushConsumerImpl.subscribe(topic, subExpression);
+        String realTopic = NamespaceUtil.wrapNamespace(this.getNamespace(), topic);
+        this.defaultMQPushConsumerImpl.subscribe(realTopic, subExpression);
     }
 
     /**
@@ -603,7 +617,8 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
      */
     @Override
     public void subscribe(String topic, String fullClassName, String filterClassSource) throws MQClientException {
-        this.defaultMQPushConsumerImpl.subscribe(topic, fullClassName, filterClassSource);
+        String realTopic = NamespaceUtil.wrapNamespace(this.getNamespace(), topic);
+        this.defaultMQPushConsumerImpl.subscribe(realTopic, fullClassName, filterClassSource);
     }
 
     /**
@@ -616,7 +631,8 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
      */
     @Override
     public void subscribe(final String topic, final MessageSelector messageSelector) throws MQClientException {
-        this.defaultMQPushConsumerImpl.subscribe(topic, messageSelector);
+        String realTopic = NamespaceUtil.wrapNamespace(this.getNamespace(), topic);
+        this.defaultMQPushConsumerImpl.subscribe(realTopic, messageSelector);
     }
 
     /**
@@ -626,7 +642,8 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
      */
     @Override
     public void unsubscribe(String topic) {
-        this.defaultMQPushConsumerImpl.unsubscribe(topic);
+        String realTopic = NamespaceUtil.wrapNamespace(this.getNamespace(), topic);
+        this.defaultMQPushConsumerImpl.unsubscribe(realTopic);
     }
 
     /**
