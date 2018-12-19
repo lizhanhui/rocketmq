@@ -113,6 +113,7 @@ public class ClientConfig {
         this.decodeDecompressBody = cc.decodeDecompressBody;
         this.useTLS = cc.useTLS;
         this.language = cc.language;
+        this.namespace = cc.namespace;
         this.autoCleanTopicRouteNotFound = cc.autoCleanTopicRouteNotFound;
     }
 
@@ -132,6 +133,7 @@ public class ClientConfig {
         cc.decodeDecompressBody = decodeDecompressBody;
         cc.useTLS = useTLS;
         cc.language = language;
+        cc.namespace = namespace;
         cc.autoCleanTopicRouteNotFound = autoCleanTopicRouteNotFound;
         return cc;
     }
@@ -255,7 +257,7 @@ public class ClientConfig {
             + ", heartbeatBrokerInterval=" + heartbeatBrokerInterval + ", persistConsumerOffsetInterval="
             + persistConsumerOffsetInterval + ", unitMode=" + unitMode + ", unitName=" + unitName + ", vipChannelEnabled="
             + vipChannelEnabled + ", decodeReadBody=" + decodeReadBody + ", decodeDecompressBody=" + decodeDecompressBody
-            + ", useTLS=" + useTLS + ", language=" + language.name()
+            + ", useTLS=" + useTLS + ", language=" + language.name() + ", namespace=" + namespace
             + ", autoCleanNoRouteTopic=" + autoCleanTopicRouteNotFound + "]";
     }
 }
