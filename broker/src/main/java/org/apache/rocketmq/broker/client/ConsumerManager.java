@@ -69,6 +69,10 @@ public class ConsumerManager {
         return null;
     }
 
+    public ConcurrentMap<String, ConsumerGroupInfo> getConsumerTable() {
+        return this.consumerTable;
+    }
+
     public ConsumerGroupInfo getConsumerGroupInfo(final String group) {
         return this.consumerTable.get(group);
     }

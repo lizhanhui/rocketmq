@@ -17,11 +17,17 @@
 package org.apache.rocketmq.broker.mqtrace;
 
 import java.util.Properties;
+
+import org.apache.rocketmq.common.TopicConfig;
 import org.apache.rocketmq.common.message.MessageType;
 import org.apache.rocketmq.store.stats.BrokerStatsManager;
 
 public class SendMessageContext {
+    /** namespace */
+    private String namespace;
+    /** producer group without namespace. */
     private String producerGroup;
+    /** topic without namespace. */
     private String topic;
     private String msgId;
     private String originMsgId;
@@ -38,13 +44,42 @@ public class SendMessageContext {
     private String brokerRegionId;
     private String msgUniqueKey;
     private long bornTimeStamp;
+    private long requestTimeStamp;
     private MessageType msgType = MessageType.Trans_msg_Commit;
+    private TopicConfig topicConfig;
+
     private boolean isSuccess = false;
-    //For Commercial
+
+    /**
+     * Account Statistics
+     */
+    private String accountAuthType;
+    private String accountOwnerParent;
+    private String accountOwnerSelf;
+    private int sendTimes;
+    private int sendSize;
+    private BrokerStatsManager.StatsType sendStat;
+
+    /**
+     * For Commercial
+     */
     private String commercialOwner;
     private BrokerStatsManager.StatsType commercialSendStats;
     private int commercialSendSize;
     private int commercialSendTimes;
+
+    /** topic with namespace. */
+    private String topicWithNamespace;
+    /** producer group with namespace. */
+    private String producerGroupWithNamespace;
+
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
+    }
 
     public boolean isSuccess() {
         return isSuccess;
@@ -62,6 +97,14 @@ public class SendMessageContext {
         this.msgType = msgType;
     }
 
+    public TopicConfig getTopicConfig() {
+        return topicConfig;
+    }
+
+    public void setTopicConfig(TopicConfig topicConfig) {
+        this.topicConfig = topicConfig;
+    }
+
     public String getMsgUniqueKey() {
         return msgUniqueKey;
     }
@@ -76,6 +119,14 @@ public class SendMessageContext {
 
     public void setBornTimeStamp(final long bornTimeStamp) {
         this.bornTimeStamp = bornTimeStamp;
+    }
+
+    public long getRequestTimeStamp() {
+        return requestTimeStamp;
+    }
+
+    public void setRequestTimeStamp(long requestTimeStamp) {
+        this.requestTimeStamp = requestTimeStamp;
     }
 
     public String getBrokerRegionId() {
@@ -206,6 +257,54 @@ public class SendMessageContext {
         this.commercialOwner = commercialOwner;
     }
 
+    public String getAccountAuthType() {
+        return accountAuthType;
+    }
+
+    public void setAccountAuthType(String accountAuthType) {
+        this.accountAuthType = accountAuthType;
+    }
+
+    public String getAccountOwnerParent() {
+        return accountOwnerParent;
+    }
+
+    public void setAccountOwnerParent(String accountOwnerParent) {
+        this.accountOwnerParent = accountOwnerParent;
+    }
+
+    public String getAccountOwnerSelf() {
+        return accountOwnerSelf;
+    }
+
+    public void setAccountOwnerSelf(String accountOwnerSelf) {
+        this.accountOwnerSelf = accountOwnerSelf;
+    }
+
+    public int getSendTimes() {
+        return sendTimes;
+    }
+
+    public void setSendTimes(int sendTimes) {
+        this.sendTimes = sendTimes;
+    }
+
+    public int getSendSize() {
+        return sendSize;
+    }
+
+    public void setSendSize(int sendSize) {
+        this.sendSize = sendSize;
+    }
+
+    public BrokerStatsManager.StatsType getSendStat() {
+        return sendStat;
+    }
+
+    public void setSendStat(BrokerStatsManager.StatsType sendStat) {
+        this.sendStat = sendStat;
+    }
+
     public BrokerStatsManager.StatsType getCommercialSendStats() {
         return commercialSendStats;
     }
@@ -228,5 +327,21 @@ public class SendMessageContext {
 
     public void setCommercialSendTimes(final int commercialSendTimes) {
         this.commercialSendTimes = commercialSendTimes;
+    }
+
+    public String getTopicWithNamespace() {
+        return topicWithNamespace;
+    }
+
+    public void setTopicWithNamespace(String topicWithNamespace) {
+        this.topicWithNamespace = topicWithNamespace;
+    }
+
+    public String getProducerGroupWithNamespace() {
+        return producerGroupWithNamespace;
+    }
+
+    public void setProducerGroupWithNamespace(String producerGroupWithNamespace) {
+        this.producerGroupWithNamespace = producerGroupWithNamespace;
     }
 }

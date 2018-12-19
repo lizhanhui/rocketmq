@@ -36,6 +36,8 @@ import org.apache.rocketmq.common.help.FAQUrl;
 import org.apache.rocketmq.common.message.MessageAccessor;
 import org.apache.rocketmq.common.message.MessageConst;
 import org.apache.rocketmq.common.message.MessageDecoder;
+import org.apache.rocketmq.common.message.MessageType;
+import org.apache.rocketmq.common.protocol.NamespaceUtil;
 import org.apache.rocketmq.common.protocol.RequestCode;
 import org.apache.rocketmq.common.protocol.ResponseCode;
 import org.apache.rocketmq.common.protocol.header.SendMessageRequestHeader;
@@ -70,15 +72,26 @@ public abstract class AbstractSendMessageProcessor implements NettyRequestProces
 
     protected SendMessageContext buildMsgContext(ChannelHandlerContext ctx,
         SendMessageRequestHeader requestHeader) {
+        String namespace = NamespaceUtil.getNamespaceFromResource(requestHeader.getTopic());
+        String topic = NamespaceUtil.withoutNamespace(requestHeader.getTopic());
+        String producerGroup = NamespaceUtil.withoutNamespace(requestHeader.getProducerGroup());
+        String topicWithNamespace = requestHeader.getTopic();
+        String producerGroupWithNamespace = requestHeader.getProducerGroup();
+
         SendMessageContext traceContext;
         traceContext = new SendMessageContext();
-        traceContext.setProducerGroup(requestHeader.getProducerGroup());
-        traceContext.setTopic(requestHeader.getTopic());
+        traceContext.setNamespace(namespace);
+        traceContext.setProducerGroup(producerGroup);
+        traceContext.setProducerGroupWithNamespace(producerGroupWithNamespace);
+        traceContext.setTopic(topic);
+        traceContext.setTopicWithNamespace(topicWithNamespace);
         traceContext.setMsgProps(requestHeader.getProperties());
         traceContext.setBornHost(RemotingHelper.parseChannelRemoteAddr(ctx.channel()));
         traceContext.setBrokerAddr(this.brokerController.getBrokerAddr());
         traceContext.setBrokerRegionId(this.brokerController.getBrokerConfig().getRegionId());
         traceContext.setBornTimeStamp(requestHeader.getBornTimestamp());
+        traceContext.setRequestTimeStamp(System.currentTimeMillis());
+        traceContext.setTopicConfig(brokerController.getTopicConfigManager().getTopicConfigTable().get(topicWithNamespace));
 
         Map<String, String> properties = MessageDecoder.string2messageProperties(requestHeader.getProperties());
         String uniqueKey = properties.get(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX);
@@ -90,6 +103,12 @@ public abstract class AbstractSendMessageProcessor implements NettyRequestProces
             uniqueKey = "";
         }
         traceContext.setMsgUniqueKey(uniqueKey);
+
+        if (properties.containsKey(MessageConst.PROPERTY_SHARDING_KEY)) {
+            traceContext.setMsgType(MessageType.Order_Msg);
+        } else {
+            traceContext.setMsgType(MessageType.Normal_Msg);
+        }
         return traceContext;
     }
 
@@ -99,8 +118,9 @@ public abstract class AbstractSendMessageProcessor implements NettyRequestProces
 
     protected MessageExtBrokerInner buildInnerMsg(final ChannelHandlerContext ctx,
         final SendMessageRequestHeader requestHeader, final byte[] body, TopicConfig topicConfig) {
+        String topic = requestHeader.getTopic();
         int queueIdInt = requestHeader.getQueueId();
-        if (queueIdInt < 0) {
+        if (requestHeader.getQueueId() < 0) {
             queueIdInt = Math.abs(this.random.nextInt() % 99999999) % topicConfig.getWriteQueueNums();
         }
         int sysFlag = requestHeader.getSysFlag();
@@ -110,7 +130,7 @@ public abstract class AbstractSendMessageProcessor implements NettyRequestProces
         }
 
         MessageExtBrokerInner msgInner = new MessageExtBrokerInner();
-        msgInner.setTopic(requestHeader.getTopic());
+        msgInner.setTopic(topic);
         msgInner.setBody(body);
         msgInner.setFlag(requestHeader.getFlag());
         MessageAccessor.setProperties(msgInner,
@@ -136,8 +156,9 @@ public abstract class AbstractSendMessageProcessor implements NettyRequestProces
     protected RemotingCommand msgContentCheck(final ChannelHandlerContext ctx,
         final SendMessageRequestHeader requestHeader, RemotingCommand request,
         final RemotingCommand response) {
-        if (requestHeader.getTopic().length() > Byte.MAX_VALUE) {
-            log.warn("putMessage message topic length too long {}", requestHeader.getTopic().length());
+        String topic = NamespaceUtil.withNamespace(request, requestHeader.getTopic());
+        if (topic.length() > Byte.MAX_VALUE) {
+            log.warn("putMessage message topic length too long {}", topic.length());
             response.setCode(ResponseCode.MESSAGE_ILLEGAL);
             return response;
         }
@@ -147,8 +168,7 @@ public abstract class AbstractSendMessageProcessor implements NettyRequestProces
             return response;
         }
         if (request.getBody().length > DBMsgConstants.MAX_BODY_SIZE) {
-            log.warn(" topic {}  msg body size {}  from {}", requestHeader.getTopic(),
-                request.getBody().length, ChannelUtil.getRemoteIp(ctx.channel()));
+            log.warn(" topic {}  msg body size {}  from {}", topic, request.getBody().length, ChannelUtil.getRemoteIp(ctx.channel()));
             response.setRemark("msg body must be less 64KB");
             response.setCode(ResponseCode.MESSAGE_ILLEGAL);
             return response;
@@ -158,52 +178,50 @@ public abstract class AbstractSendMessageProcessor implements NettyRequestProces
 
     protected RemotingCommand msgCheck(final ChannelHandlerContext ctx,
         final SendMessageRequestHeader requestHeader, final RemotingCommand response) {
+        String topic = requestHeader.getTopic();
         if (!PermName.isWriteable(this.brokerController.getBrokerConfig().getBrokerPermission())
-            && this.brokerController.getTopicConfigManager().isOrderTopic(requestHeader.getTopic())) {
+            && this.brokerController.getTopicConfigManager().isOrderTopic(topic)) {
             response.setCode(ResponseCode.NO_PERMISSION);
             response.setRemark("the broker[" + this.brokerController.getBrokerConfig().getBrokerIP1()
                 + "] sending message is forbidden");
             return response;
         }
-        if (!this.brokerController.getTopicConfigManager().isTopicCanSendMessage(requestHeader.getTopic())) {
-            String errorMsg = "the topic[" + requestHeader.getTopic() + "] is conflict with system reserved words.";
+        if (!this.brokerController.getTopicConfigManager().isTopicCanSendMessage(topic)) {
+            String errorMsg = "the topic[" + topic + "] is conflict with system reserved words.";
             log.warn(errorMsg);
             response.setCode(ResponseCode.SYSTEM_ERROR);
             response.setRemark(errorMsg);
             return response;
         }
 
-        TopicConfig topicConfig =
-            this.brokerController.getTopicConfigManager().selectTopicConfig(requestHeader.getTopic());
+        TopicConfig topicConfig = this.brokerController.getTopicConfigManager().selectTopicConfig(topic);
         if (null == topicConfig) {
             int topicSysFlag = 0;
             if (requestHeader.isUnitMode()) {
-                if (requestHeader.getTopic().startsWith(MixAll.RETRY_GROUP_TOPIC_PREFIX)) {
+                if (topic.startsWith(MixAll.RETRY_GROUP_TOPIC_PREFIX)) {
                     topicSysFlag = TopicSysFlag.buildSysFlag(false, true);
                 } else {
                     topicSysFlag = TopicSysFlag.buildSysFlag(true, false);
                 }
             }
 
-            log.warn("the topic {} not exist, producer: {}", requestHeader.getTopic(), ctx.channel().remoteAddress());
+            log.warn("the topic {} not exist, producer: {}", topic, ctx.channel().remoteAddress());
             topicConfig = this.brokerController.getTopicConfigManager().createTopicInSendMessageMethod(
-                requestHeader.getTopic(),
-                requestHeader.getDefaultTopic(),
+                topic, requestHeader.getDefaultTopic(),
                 RemotingHelper.parseChannelRemoteAddr(ctx.channel()),
                 requestHeader.getDefaultTopicQueueNums(), topicSysFlag);
 
             if (null == topicConfig) {
-                if (requestHeader.getTopic().startsWith(MixAll.RETRY_GROUP_TOPIC_PREFIX)) {
-                    topicConfig =
-                        this.brokerController.getTopicConfigManager().createTopicInSendMessageBackMethod(
-                            requestHeader.getTopic(), 1, PermName.PERM_WRITE | PermName.PERM_READ,
+                if (topic.startsWith(MixAll.RETRY_GROUP_TOPIC_PREFIX)) {
+                    topicConfig = this.brokerController.getTopicConfigManager().createTopicInSendMessageBackMethod(
+                            topic, 1, PermName.PERM_WRITE | PermName.PERM_READ,
                             topicSysFlag);
                 }
             }
 
             if (null == topicConfig) {
                 response.setCode(ResponseCode.TOPIC_NOT_EXIST);
-                response.setRemark("topic[" + requestHeader.getTopic() + "] not exist, apply first please!"
+                response.setRemark("topic[" + topic + "] not exist, apply first please!"
                     + FAQUrl.suggestTodo(FAQUrl.APPLY_TOPIC_URL));
                 return response;
             }
@@ -250,9 +268,17 @@ public abstract class AbstractSendMessageProcessor implements NettyRequestProces
                 try {
                     final SendMessageRequestHeader requestHeader = parseRequestHeader(request);
 
+                    String namespace = NamespaceUtil.getNamespaceFromResource(requestHeader.getTopic());
+                    String topic = NamespaceUtil.withoutNamespace(requestHeader.getTopic());
+                    String producerGroup = NamespaceUtil.withoutNamespace(requestHeader.getProducerGroup());
+                    String topicWithNamespace = requestHeader.getTopic();
+                    String producerGroupWithNamespace = requestHeader.getProducerGroup();
                     if (null != requestHeader) {
-                        context.setProducerGroup(requestHeader.getProducerGroup());
-                        context.setTopic(requestHeader.getTopic());
+                        context.setNamespace(namespace);
+                        context.setProducerGroup(producerGroup);
+                        context.setProducerGroupWithNamespace(producerGroupWithNamespace);
+                        context.setTopic(topic);
+                        context.setTopicWithNamespace(topicWithNamespace);
                         context.setBodyLength(request.getBody().length);
                         context.setMsgProps(requestHeader.getProperties());
                         context.setBornHost(RemotingHelper.parseChannelRemoteAddr(ctx.channel()));
