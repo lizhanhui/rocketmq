@@ -16,13 +16,15 @@
  */
 package org.apache.rocketmq.broker.processor;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
 import java.util.HashMap;
 import java.util.UUID;
+
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
 import org.apache.rocketmq.broker.BrokerController;
 import org.apache.rocketmq.broker.client.ClientChannelInfo;
 import org.apache.rocketmq.broker.client.ConsumerGroupInfo;
+import org.apache.rocketmq.broker.subscription.SubscriptionGroupManager;
 import org.apache.rocketmq.common.BrokerConfig;
 import org.apache.rocketmq.common.protocol.RequestCode;
 import org.apache.rocketmq.common.protocol.ResponseCode;
@@ -33,6 +35,7 @@ import org.apache.rocketmq.remoting.netty.NettyClientConfig;
 import org.apache.rocketmq.remoting.netty.NettyServerConfig;
 import org.apache.rocketmq.remoting.protocol.LanguageCode;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
+import org.apache.rocketmq.store.MessageStore;
 import org.apache.rocketmq.store.config.MessageStoreConfig;
 import org.junit.Before;
 import org.junit.Test;
@@ -54,6 +57,8 @@ public class ClientManageProcessorTest {
     private ChannelHandlerContext handlerContext;
     @Mock
     private Channel channel;
+    @Mock
+    private MessageStore messageStore;
 
     private ClientChannelInfo clientChannelInfo;
     private String clientId = UUID.randomUUID().toString();
@@ -62,7 +67,10 @@ public class ClientManageProcessorTest {
 
     @Before
     public void init() {
+        brokerController.setMessageStore(messageStore);
         when(handlerContext.channel()).thenReturn(channel);
+        SubscriptionGroupManager subscriptionGroupManager = new SubscriptionGroupManager(brokerController);
+        when(brokerController.getSubscriptionGroupManager()).thenReturn(subscriptionGroupManager);
         clientManageProcessor = new ClientManageProcessor(brokerController);
         clientChannelInfo = new ClientChannelInfo(channel, clientId, LanguageCode.JAVA, 100);
         brokerController.getProducerManager().registerProducer(group, clientChannelInfo);

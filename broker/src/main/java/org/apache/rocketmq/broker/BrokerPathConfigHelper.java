@@ -46,4 +46,10 @@ public class BrokerPathConfigHelper {
     public static String getConsumerFilterPath(final String rootDir) {
         return rootDir + File.separator + "config" + File.separator + "consumerFilter.json";
     }
+    public static String getTimerCheckPath(final String rootDir) {
+        return rootDir + File.separator + "config" + File.separator + "timercheck";
+    }
+    public static String getTimerMetricsPath(final String rootDir) {
+        return rootDir + File.separator + "config" + File.separator + "timermetrics";
+    }
 }

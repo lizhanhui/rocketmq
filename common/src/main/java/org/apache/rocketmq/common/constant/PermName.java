@@ -50,4 +50,8 @@ public class PermName {
     public static boolean isInherited(final int perm) {
         return (perm & PERM_INHERIT) == PERM_INHERIT;
     }
+
+    public static boolean isPriority(final int perm) {
+        return (perm & PERM_PRIORITY) == PERM_PRIORITY;
+    }
 }

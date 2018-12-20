@@ -36,7 +36,7 @@
     <inceptionYear>2012</inceptionYear>
     <groupId>org.apache.rocketmq</groupId>
     <artifactId>rocketmq-all</artifactId>
-    <version>4.3.0-exactlyonce-SNAPSHOT</version>
+    <version>4.3.2-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>Apache RocketMQ ${project.version}</name>
     <url>http://rocketmq.apache.org/</url>
@@ -261,7 +261,14 @@
                         <exclude>CONTRIBUTING.md</exclude>
                         <exclude>bin/README.md</exclude>
                         <exclude>.github/*</exclude>
+                        <exclude>pom.xml</exclude>
+                        <exclude>style/**</exclude>
+                        <exclude>README.md</exclude>
+                        <exclude>dev/merge_rocketmq_pr.py</exclude>
                         <exclude>src/test/resources/certs/*</exclude>
+                        <exclude>BUILDING</exclude>
+                        <exclude>LICENSE</exclude>
+                        <exclude>NOTICE</exclude>
                     </excludes>
                 </configuration>
             </plugin>
@@ -595,6 +602,11 @@
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
                 <version>19.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.googlecode.concurrentlinkedhashmap</groupId>
+                <artifactId>concurrentlinkedhashmap-lru</artifactId>
+                <version>1.4.2</version>
             </dependency>
             <dependency>
                 <groupId>io.openmessaging</groupId>

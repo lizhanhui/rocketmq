@@ -37,21 +37,21 @@ import org.apache.rocketmq.common.protocol.heartbeat.SubscriptionData;
 import org.apache.rocketmq.common.protocol.topic.OffsetMovedEvent;
 import org.apache.rocketmq.common.subscription.SubscriptionGroupConfig;
 import org.apache.rocketmq.common.sysflag.PullSysFlag;
+import org.apache.rocketmq.logging.InternalLogger;
+import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.remoting.common.RemotingUtil;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 import org.apache.rocketmq.store.GetMessageResult;
 import org.apache.rocketmq.store.MessageExtBrokerInner;
 import org.apache.rocketmq.store.MessageFilter;
 import org.apache.rocketmq.store.config.BrokerRole;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.util.List;
 
 public class DefaultPullMessageResultHandler implements PullMessageResultHandler {
 
-    protected static final Logger log = LoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
+    protected static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
     protected final BrokerController brokerController;
 
     public DefaultPullMessageResultHandler(final BrokerController brokerController) {
@@ -82,6 +82,12 @@ public class DefaultPullMessageResultHandler implements PullMessageResultHandler
                 this.brokerController.getBrokerStatsManager().incBrokerGetNums(getMessageResult.getMessageCount());
 
                 if (this.brokerController.getBrokerConfig().isTransferMsgByHeap()) {
+
+                    if (!channelIsWritable(channel, requestHeader)) {
+                        //ignore pull request
+                        return null;
+                    }
+
                     final long beginTimeMills = this.brokerController.getMessageStore().now();
                     final byte[] r = this.readGetMessageResult(getMessageResult, requestHeader.getConsumerGroup(), requestHeader.getTopic(), requestHeader.getQueueId());
                     this.brokerController.getBrokerStatsManager().incGroupGetLatency(requestHeader.getConsumerGroup(),
@@ -91,6 +97,11 @@ public class DefaultPullMessageResultHandler implements PullMessageResultHandler
                     return response;
                 } else {
                     try {
+                        if (!channelIsWritable(channel, requestHeader)) {
+                            //ignore pull request
+                            return null;
+                        }
+
                         FileRegion fileRegion =
                                 new ManyMessageTransfer(response.encodeHeader(getMessageResult.getBufferTotalSize()), getMessageResult);
                         channel.writeAndFlush(fileRegion).addListener(new ChannelFutureListener() {
@@ -161,6 +172,17 @@ public class DefaultPullMessageResultHandler implements PullMessageResultHandler
         }
 
         return response;
+    }
+
+    private boolean channelIsWritable(Channel channel, PullMessageRequestHeader requestHeader) {
+        if (this.brokerController.getBrokerConfig().isNetWorkFlowController()) {
+            if (!channel.isWritable()) {
+                log.warn("channel {} not writable ,cid {}", channel.remoteAddress(), requestHeader.getConsumerGroup());
+                return false;
+            }
+
+        }
+        return true;
     }
 
     protected byte[] readGetMessageResult(final GetMessageResult getMessageResult, final String group, final String topic, final int queueId) {

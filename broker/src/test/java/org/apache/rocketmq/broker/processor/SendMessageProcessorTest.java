@@ -16,14 +16,17 @@
  */
 package org.apache.rocketmq.broker.processor;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
+
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
 import org.apache.rocketmq.broker.BrokerController;
 import org.apache.rocketmq.broker.mqtrace.SendMessageContext;
 import org.apache.rocketmq.broker.mqtrace.SendMessageHook;
+import org.apache.rocketmq.broker.subscription.SubscriptionGroupManager;
+import org.apache.rocketmq.broker.topic.TopicConfigManager;
 import org.apache.rocketmq.common.BrokerConfig;
 import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.common.message.MessageExt;
@@ -74,6 +77,10 @@ public class SendMessageProcessorTest {
     @Before
     public void init() {
         brokerController.setMessageStore(messageStore);
+        TopicConfigManager topicConfigManager = new TopicConfigManager(brokerController);
+        SubscriptionGroupManager subscriptionGroupManager = new SubscriptionGroupManager(brokerController);
+        when(brokerController.getSubscriptionGroupManager()).thenReturn(subscriptionGroupManager);
+        when(brokerController.getTopicConfigManager()).thenReturn(topicConfigManager);
         when(messageStore.now()).thenReturn(System.currentTimeMillis());
         Channel mockChannel = mock(Channel.class);
         when(mockChannel.remoteAddress()).thenReturn(new InetSocketAddress(1024));

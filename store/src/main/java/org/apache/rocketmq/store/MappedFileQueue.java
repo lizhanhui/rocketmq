@@ -28,6 +28,8 @@ import org.apache.rocketmq.common.UtilAll;
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.logging.InternalLoggerFactory;
+import org.apache.rocketmq.store.timer.TimerLog;
+import org.apache.rocketmq.store.timer.TimerMessageStore;
 
 public class MappedFileQueue {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
@@ -65,7 +67,7 @@ public class MappedFileQueue {
 
                 if (pre != null) {
                     if (cur.getFileFromOffset() - pre.getFileFromOffset() != this.mappedFileSize) {
-                        LOG_ERROR.error("[BUG]The mappedFile queue's data is damaged, the adjacent mappedFile's offset don't match. pre file {}, cur file {}",
+                        log.error("[BUG]The mappedFile queue's data is damaged, the adjacent mappedFile's offset don't match. pre file {}, cur file {}",
                             pre.getFileName(), cur.getFileName());
                     }
                 }
@@ -345,11 +347,17 @@ public class MappedFileQueue {
         int mfsLength = mfs.length - 1;
         int deleteCount = 0;
         List<MappedFile> files = new ArrayList<MappedFile>();
+        int skipFileNum = 0;
         if (null != mfs) {
+            //do check before deleting
+            checkSelf();
             for (int i = 0; i < mfsLength; i++) {
                 MappedFile mappedFile = (MappedFile) mfs[i];
                 long liveMaxTimestamp = mappedFile.getLastModifiedTimestamp() + expiredTime;
                 if (System.currentTimeMillis() >= liveMaxTimestamp || cleanImmediately) {
+                    if (skipFileNum > 0) {
+                        log.info("Delete CommitLog {} but skip {} files", mappedFile.getFileName(), skipFileNum);
+                    }
                     if (mappedFile.destroy(intervalForcibly)) {
                         files.add(mappedFile);
                         deleteCount++;
@@ -368,6 +376,7 @@ public class MappedFileQueue {
                         break;
                     }
                 } else {
+                    skipFileNum++;
                     //avoid deleting files in the middle
                     break;
                 }
@@ -406,6 +415,64 @@ public class MappedFileQueue {
                 } else {
                     log.warn("this being not executed forever.");
                     break;
+                }
+
+                if (destroy && mappedFile.destroy(1000 * 60)) {
+                    files.add(mappedFile);
+                    deleteCount++;
+                } else {
+                    break;
+                }
+            }
+        }
+
+        deleteExpiredFile(files);
+
+        return deleteCount;
+    }
+
+    public int deleteExpiredFileByOffsetForTimerLog(long offset, int checkOffset, int unitSize) {
+        Object[] mfs = this.copyMappedFiles(0);
+
+        List<MappedFile> files = new ArrayList<MappedFile>();
+        int deleteCount = 0;
+        if (null != mfs) {
+
+            int mfsLength = mfs.length - 1;
+
+            for (int i = 0; i < mfsLength; i++) {
+                boolean destroy = false;
+                MappedFile mappedFile = (MappedFile) mfs[i];
+                SelectMappedBufferResult result = mappedFile.selectMappedBuffer(checkOffset);
+                try {
+                    if (result != null) {
+                        int position = result.getByteBuffer().position();
+                        int size = result.getByteBuffer().getInt();//size
+                        result.getByteBuffer().getLong(); //prev pos
+                        int magic = result.getByteBuffer().getInt();
+                        if (size == unitSize && TimerMessageStore.isMagicOK(magic)) {
+                            result.getByteBuffer().position(position + TimerLog.UNIT_PRE_SIZE_FOR_MSG);
+                            long maxOffsetPy = result.getByteBuffer().getLong();
+                            destroy = maxOffsetPy < offset;
+                            if (destroy) {
+                                log.info("physic min commitlog offset " + offset + ", current mappedFile's max offset "
+                                    + maxOffsetPy + ", delete it");
+                            }
+                        } else {
+                            log.warn("Found error data in [{}] checkOffset:{} unitSize:{}", mappedFile.getFileName(),
+                                checkOffset, unitSize);
+                        }
+                    } else if (!mappedFile.isAvailable()) { // Handle hanged file.
+                        log.warn("Found a hanged consume queue file, attempting to delete it.");
+                        destroy = true;
+                    } else {
+                        log.warn("this being not executed forever.");
+                        break;
+                    }
+                } finally {
+                    if (null != result) {
+                        result.release();
+                    }
                 }
 
                 if (destroy && mappedFile.destroy(1000 * 60)) {

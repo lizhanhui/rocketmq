@@ -401,6 +401,39 @@ public class MappedFile extends ReferenceResource {
         return null;
     }
 
+    public boolean getData(int pos, int size, ByteBuffer byteBuffer) {
+        if (byteBuffer.remaining() < size) {
+            return false;
+        }
+
+        int readPosition = getReadPosition();
+        if ((pos + size) <= readPosition) {
+
+            if (this.hold()) {
+                try {
+                    int readNum = fileChannel.read(byteBuffer, pos);
+                    return size == readNum;
+                } catch (Throwable t) {
+                    log.warn("Get data failed pos:{} size:{} fileFromOffset:{}", pos, size, this.fileFromOffset);
+                    return false;
+                } finally {
+                    this.release();
+                }
+            } else {
+                log.debug("matched, but hold failed, request pos: " + pos + ", fileFromOffset: "
+                    + this.fileFromOffset);
+            }
+        } else {
+            log.warn("selectMappedBuffer request pos invalid, request pos: " + pos + ", size: " + size
+                + ", fileFromOffset: " + this.fileFromOffset);
+        }
+
+        return false;
+    }
+
+    /**
+
+     */
     public SelectMappedBufferResult selectMappedBuffer(int pos) {
         int readPosition = getReadPosition();
         if (pos < readPosition && pos >= 0) {
@@ -443,6 +476,7 @@ public class MappedFile extends ReferenceResource {
 
         if (this.isCleanupOver()) {
             try {
+                long lastModified = getLastModifiedTimestamp();
                 this.fileChannel.close();
                 log.info("close file channel " + this.fileName + " OK");
 
@@ -451,7 +485,8 @@ public class MappedFile extends ReferenceResource {
                 log.info("delete file[REF:" + this.getRefCount() + "] " + this.fileName
                     + (result ? " OK, " : " Failed, ") + "W:" + this.getWrotePosition() + " M:"
                     + this.getFlushedPosition() + ", "
-                    + UtilAll.computeEclipseTimeMilliseconds(beginTime));
+                    + UtilAll.computeEclipseTimeMilliseconds(beginTime)
+                    + "," + (System.currentTimeMillis() - lastModified));
             } catch (Exception e) {
                 log.warn("close file channel " + this.fileName + " Failed. ", e);
             }

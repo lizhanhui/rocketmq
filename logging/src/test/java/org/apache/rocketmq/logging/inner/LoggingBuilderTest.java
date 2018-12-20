@@ -17,14 +17,14 @@
 
 package org.apache.rocketmq.logging.inner;
 
-import org.apache.rocketmq.logging.BasicLoggerTest;
-import org.junit.Assert;
-import org.junit.Test;
-
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.PrintStream;
+
+import org.apache.rocketmq.logging.BasicLoggerTest;
+import org.junit.Assert;
+import org.junit.Test;
 
 public class LoggingBuilderTest extends BasicLoggerTest {
 
@@ -92,7 +92,7 @@ public class LoggingBuilderTest extends BasicLoggerTest {
     public void testDailyRollingFileAppender() throws InterruptedException {
         String rollingFile = loggingDir + "/daily-rolling--222.log";
         Appender rollingFileAppender = LoggingBuilder.newAppenderBuilder().withAsync(false, 1024)
-            .withDailyFileRollingAppender(rollingFile, "'.'yyyy-MM-dd_HH-mm-ss-SSS")
+            .withDailyFileRollingAppender(rollingFile, "'.'yyyy-MM-dd")
             .withLayout(LoggingBuilder.newLayoutBuilder().withDefaultLayout().build()).build();
 
         for (int i = 0; i < 100; i++) {
