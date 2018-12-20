@@ -22,9 +22,6 @@ import java.util.Date;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.rocketmq.common.UtilAll;
 
-import static org.apache.rocketmq.common.message.MessageConst.PROPERTY_EXTEND_UNIQ_INFO;
-import static org.apache.rocketmq.common.message.MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX;
-
 public class MessageClientIDSetter {
     private static final String TOPIC_KEY_SPLITTER = "#";
     private static final int LEN;
@@ -112,7 +109,7 @@ public class MessageClientIDSetter {
 
     public static String createExtendUniqInfo(final Message msg, int extendUniqInfo) {
         StringBuilder sb = new StringBuilder(EXTEND_UNIQINFO_LEN);
-        sb.append(msg.getProperty(PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX));
+        sb.append(msg.getProperty(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX));
         ByteBuffer buffer = ByteBuffer.allocate(4);
         buffer.putInt(extendUniqInfo);
         sb.append(UtilAll.bytes2string(buffer.array()));
@@ -132,19 +129,19 @@ public class MessageClientIDSetter {
     }
 
     public static void setUniqID(final Message msg) {
-        if (msg.getProperty(PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX) == null) {
-            msg.putProperty(PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX, createUniqID());
+        if (msg.getProperty(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX) == null) {
+            msg.putProperty(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX, createUniqID());
         }
     }
 
     public static void setExtendUniqInfo(final Message msg, int extendUniqInfo) {
-        if (msg.getProperty(PROPERTY_EXTEND_UNIQ_INFO) == null) {
-            msg.putProperty(PROPERTY_EXTEND_UNIQ_INFO, createExtendUniqInfo(msg, extendUniqInfo));
+        if (msg.getProperty(MessageConst.PROPERTY_EXTEND_UNIQ_INFO) == null) {
+            msg.putProperty(MessageConst.PROPERTY_EXTEND_UNIQ_INFO, createExtendUniqInfo(msg, extendUniqInfo));
         }
     }
 
     public static String getUniqID(final Message msg) {
-        return msg.getProperty(PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX);
+        return msg.getProperty(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX);
     }
 
     public static byte[] createFakeIP() {
