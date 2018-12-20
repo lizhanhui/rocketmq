@@ -94,7 +94,15 @@ public class NamespaceUtil {
     }
 
     public static String wrapNamespace(String namespace, String resource) {
-        if (StringUtils.isEmpty(namespace) || StringUtils.isEmpty(resource) || isSystemResource(resource)) {
+        if (StringUtils.isEmpty(namespace) || StringUtils.isEmpty(resource)) {
+            return resource;
+        }
+
+        if (isSystemResource(resource)) {
+            return resource;
+        }
+
+        if (isAlreadyWithNamespace(resource, namespace)) {
             return resource;
         }
 
@@ -112,6 +120,22 @@ public class NamespaceUtil {
 
         return strBuffer.append(resource).toString();
 
+    }
+
+    public static boolean isAlreadyWithNamespace(String resource, String namespace) {
+        if (StringUtils.isEmpty(namespace) || StringUtils.isEmpty(resource) || isSystemResource(resource)) {
+            return false;
+        }
+
+        if (isRetryTopic(resource)) {
+            resource = resource.substring(RETRY_PREFIX_LENGTH);
+        }
+
+        if (isDLQTopic(resource)) {
+            resource = resource.substring(DLQ_PREFIX_LENGTH);
+        }
+
+        return resource.startsWith(namespace + NAMESPACE_SEPARATOR);
     }
 
     public static String withNamespaceAndRetry(RemotingCommand request, String consumerGroup) {
@@ -181,8 +205,15 @@ public class NamespaceUtil {
             return false;
         }
 
-        return MixAll.isSystemTopic(resource) || MixAll.isSysConsumerGroup(resource) || MixAll.DEFAULT_TOPIC.equals(
-            resource);
+        if (MixAll.isSystemTopic(resource)) {
+            return true;
+        }
+
+        if (MixAll.isSysConsumerGroup(resource)) {
+            return true;
+        }
+
+        return MixAll.DEFAULT_TOPIC.equals(resource);
     }
 
     public static boolean isRetryTopic(String resource) {

@@ -16,8 +16,11 @@
  */
 package org.apache.rocketmq.client;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.common.UtilAll;
+import org.apache.rocketmq.common.message.MessageQueue;
+import org.apache.rocketmq.common.protocol.NamespaceUtil;
 import org.apache.rocketmq.remoting.common.RemotingUtil;
 import org.apache.rocketmq.remoting.netty.TlsSystemConfig;
 import org.apache.rocketmq.remoting.protocol.LanguageCode;
@@ -96,6 +99,18 @@ public class ClientConfig {
         if (this.instanceName.equals("DEFAULT")) {
             this.instanceName = String.valueOf(UtilAll.getPid());
         }
+    }
+
+    public String withNamespace(String resource) {
+        return NamespaceUtil.wrapNamespace(this.getNamespace(), resource);
+    }
+
+    public MessageQueue queueWithNamespace(MessageQueue queue) {
+        if (StringUtils.isEmpty(this.getNamespace())) {
+            return queue;
+        }
+
+        return new MessageQueue(withNamespace(queue.getTopic()), queue.getBrokerName(), queue.getQueueId());
     }
 
     public void resetClientConfig(final ClientConfig cc) {

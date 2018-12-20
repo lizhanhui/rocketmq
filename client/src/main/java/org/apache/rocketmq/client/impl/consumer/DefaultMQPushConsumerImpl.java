@@ -182,9 +182,8 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
     public Set<MessageQueue> parseSubscribeMessageQueues(Set<MessageQueue> messageQueueList) {
         Set<MessageQueue> resultQueues = new HashSet<MessageQueue>();
         for (MessageQueue queue : messageQueueList) {
-            queue.setTopic(NamespaceUtil
-                .withoutNamespace(queue.getTopic(), this.mQClientFactory.getClientConfig().getNamespace()));
-            resultQueues.add(queue);
+            String userTopic = NamespaceUtil.withoutNamespace(queue.getTopic(), this.defaultMQPushConsumer.getNamespace());
+            resultQueues.add(new MessageQueue(userTopic, queue.getBrokerName(), queue.getQueueId()));
         }
 
         return resultQueues;
@@ -537,6 +536,8 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
             newMsg.setDelayTimeLevel(3 + msg.getReconsumeTimes());
 
             this.mQClientFactory.getDefaultMQProducer().send(newMsg);
+        } finally {
+            msg.setTopic(NamespaceUtil.withoutNamespace(msg.getTopic(), this.defaultMQPushConsumer.getNamespace()));
         }
     }
 

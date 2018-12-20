@@ -65,6 +65,7 @@ import org.apache.rocketmq.common.message.MessageAccessor;
 import org.apache.rocketmq.common.message.MessageConst;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.message.MessageQueue;
+import org.apache.rocketmq.common.protocol.NamespaceUtil;
 import org.apache.rocketmq.common.protocol.body.ConsumerRunningInfo;
 import org.apache.rocketmq.common.protocol.header.AckMessageRequestHeader;
 import org.apache.rocketmq.common.protocol.header.ChangeInvisibleTimeRequestHeader;
@@ -145,7 +146,7 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner, MQPopConsumer
             }
         }
 
-        return mqResult;
+        return parseSubscribeMessageQueues(mqResult);
     }
 
     public List<MessageQueue> fetchPublishMessageQueues(String topic) throws MQClientException {
@@ -157,11 +158,21 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner, MQPopConsumer
         this.makeSureStateOK();
         // check if has info in memory, otherwise invoke api.
         Set<MessageQueue> result = this.rebalanceImpl.getTopicSubscribeInfoTable().get(topic);
-        if (null != result) {
-            return result;
+        if (null == result) {
+            result = this.mQClientFactory.getMQAdminImpl().fetchSubscribeMessageQueues(topic);
         }
 
-        return this.mQClientFactory.getMQAdminImpl().fetchSubscribeMessageQueues(topic);
+        return parseSubscribeMessageQueues(result);
+    }
+
+    public Set<MessageQueue> parseSubscribeMessageQueues(Set<MessageQueue> queueSet) {
+        Set<MessageQueue> resultQueues = new HashSet<MessageQueue>();
+        for (MessageQueue messageQueue : queueSet) {
+            String userTopic = NamespaceUtil.withoutNamespace(messageQueue.getTopic(),
+                this.defaultMQPullConsumer.getNamespace());
+            resultQueues.add(new MessageQueue(userTopic, messageQueue.getBrokerName(), messageQueue.getQueueId()));
+        }
+        return resultQueues;
     }
 
     public long earliestMsgStoreTime(MessageQueue mq) throws MQClientException {
@@ -589,6 +600,8 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner, MQPopConsumer
             MessageAccessor.setMaxReconsumeTimes(newMsg, String.valueOf(this.defaultMQPullConsumer.getMaxReconsumeTimes()));
             newMsg.setDelayTimeLevel(3 + msg.getReconsumeTimes());
             this.mQClientFactory.getDefaultMQProducer().send(newMsg);
+        } finally {
+            msg.setTopic(NamespaceUtil.withoutNamespace(msg.getTopic(), this.defaultMQPullConsumer.getNamespace()));
         }
     }
 

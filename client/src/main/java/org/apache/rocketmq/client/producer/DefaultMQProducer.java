@@ -37,7 +37,6 @@ import org.apache.rocketmq.common.message.MessageDecoder;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.message.MessageId;
 import org.apache.rocketmq.common.message.MessageQueue;
-import org.apache.rocketmq.common.protocol.NamespaceUtil;
 import org.apache.rocketmq.remoting.RPCHook;
 import org.apache.rocketmq.remoting.exception.RemotingException;
 import org.apache.rocketmq.remoting.netty.NettyRemotingClient;
@@ -179,7 +178,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
      */
     @Override
     public void start() throws MQClientException {
-        this.setProducerGroup(NamespaceUtil.wrapNamespace(this.getNamespace(), this.producerGroup));
+        this.setProducerGroup(withNamespace(this.producerGroup));
         this.defaultMQProducerImpl.start();
     }
 
@@ -200,8 +199,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
      */
     @Override
     public List<MessageQueue> fetchPublishMessageQueues(String topic) throws MQClientException {
-        return this.defaultMQProducerImpl.fetchPublishMessageQueues(
-            NamespaceUtil.wrapNamespace(this.getNamespace(), topic));
+        return this.defaultMQProducerImpl.fetchPublishMessageQueues(withNamespace(topic));
     }
 
     /**
@@ -223,7 +221,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     @Override
     public SendResult send(
         Message msg) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
-        msg.setTopic(NamespaceUtil.wrapNamespace(this.getNamespace(), msg.getTopic()));
+        msg.setTopic(withNamespace(msg.getTopic()));
         return this.defaultMQProducerImpl.send(msg);
     }
 
@@ -242,7 +240,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     @Override
     public SendResult send(Message msg,
         long timeout) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
-        msg.setTopic(NamespaceUtil.wrapNamespace(this.getNamespace(), msg.getTopic()));
+        msg.setTopic(withNamespace(msg.getTopic()));
         return this.defaultMQProducerImpl.send(msg, timeout);
     }
 
@@ -266,7 +264,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     @Override
     public void send(Message msg,
         SendCallback sendCallback) throws MQClientException, RemotingException, InterruptedException {
-        msg.setTopic(NamespaceUtil.wrapNamespace(this.getNamespace(), msg.getTopic()));
+        msg.setTopic(withNamespace(msg.getTopic()));
         this.defaultMQProducerImpl.send(msg, sendCallback);
     }
 
@@ -283,7 +281,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     @Override
     public void send(Message msg, SendCallback sendCallback, long timeout)
         throws MQClientException, RemotingException, InterruptedException {
-        msg.setTopic(NamespaceUtil.wrapNamespace(this.getNamespace(), msg.getTopic()));
+        msg.setTopic(withNamespace(msg.getTopic()));
         this.defaultMQProducerImpl.send(msg, sendCallback, timeout);
     }
 
@@ -298,7 +296,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
      */
     @Override
     public void sendOneway(Message msg) throws MQClientException, RemotingException, InterruptedException {
-        msg.setTopic(NamespaceUtil.wrapNamespace(this.getNamespace(), msg.getTopic()));
+        msg.setTopic(withNamespace(msg.getTopic()));
         this.defaultMQProducerImpl.sendOneway(msg);
     }
 
@@ -317,9 +315,8 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     @Override
     public SendResult send(Message msg, MessageQueue mq)
         throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
-        msg.setTopic(NamespaceUtil.wrapNamespace(this.getNamespace(), msg.getTopic()));
-        mq.setTopic(NamespaceUtil.wrapNamespace(this.getNamespace(), mq.getTopic()));
-        return this.defaultMQProducerImpl.send(msg, mq);
+        msg.setTopic(withNamespace(msg.getTopic()));
+        return this.defaultMQProducerImpl.send(msg, queueWithNamespace(mq));
     }
 
     /**
@@ -338,9 +335,8 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     @Override
     public SendResult send(Message msg, MessageQueue mq, long timeout)
         throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
-        msg.setTopic(NamespaceUtil.wrapNamespace(this.getNamespace(), msg.getTopic()));
-        mq.setTopic(NamespaceUtil.wrapNamespace(this.getNamespace(), mq.getTopic()));
-        return this.defaultMQProducerImpl.send(msg, mq, timeout);
+        msg.setTopic(withNamespace(msg.getTopic()));
+        return this.defaultMQProducerImpl.send(msg, queueWithNamespace(mq), timeout);
     }
 
     /**
@@ -356,9 +352,8 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     @Override
     public void send(Message msg, MessageQueue mq, SendCallback sendCallback)
         throws MQClientException, RemotingException, InterruptedException {
-        msg.setTopic(NamespaceUtil.wrapNamespace(this.getNamespace(), msg.getTopic()));
-        mq.setTopic(NamespaceUtil.wrapNamespace(this.getNamespace(), mq.getTopic()));
-        this.defaultMQProducerImpl.send(msg, mq, sendCallback);
+        msg.setTopic(withNamespace(msg.getTopic()));
+        this.defaultMQProducerImpl.send(msg, queueWithNamespace(mq), sendCallback);
     }
 
     /**
@@ -375,9 +370,8 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     @Override
     public void send(Message msg, MessageQueue mq, SendCallback sendCallback, long timeout)
         throws MQClientException, RemotingException, InterruptedException {
-        msg.setTopic(NamespaceUtil.wrapNamespace(this.getNamespace(), msg.getTopic()));
-        mq.setTopic(NamespaceUtil.wrapNamespace(this.getNamespace(), mq.getTopic()));
-        this.defaultMQProducerImpl.send(msg, mq, sendCallback, timeout);
+        msg.setTopic(withNamespace(msg.getTopic()));
+        this.defaultMQProducerImpl.send(msg, queueWithNamespace(mq), sendCallback, timeout);
     }
 
     /**
@@ -392,9 +386,8 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     @Override
     public void sendOneway(Message msg,
         MessageQueue mq) throws MQClientException, RemotingException, InterruptedException {
-        msg.setTopic(NamespaceUtil.wrapNamespace(this.getNamespace(), msg.getTopic()));
-        mq.setTopic(NamespaceUtil.wrapNamespace(this.getNamespace(), mq.getTopic()));
-        this.defaultMQProducerImpl.sendOneway(msg, mq);
+        msg.setTopic(withNamespace(msg.getTopic()));
+        this.defaultMQProducerImpl.sendOneway(msg, queueWithNamespace(mq));
     }
 
     /**
@@ -413,7 +406,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     @Override
     public SendResult send(Message msg, MessageQueueSelector selector, Object arg)
         throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
-        msg.setTopic(NamespaceUtil.wrapNamespace(this.getNamespace(), msg.getTopic()));
+        msg.setTopic(withNamespace(msg.getTopic()));
         return this.defaultMQProducerImpl.send(msg, selector, arg);
     }
 
@@ -434,7 +427,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     @Override
     public SendResult send(Message msg, MessageQueueSelector selector, Object arg, long timeout)
         throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
-        msg.setTopic(NamespaceUtil.wrapNamespace(this.getNamespace(), msg.getTopic()));
+        msg.setTopic(withNamespace(msg.getTopic()));
         return this.defaultMQProducerImpl.send(msg, selector, arg, timeout);
     }
 
@@ -452,7 +445,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     @Override
     public void send(Message msg, MessageQueueSelector selector, Object arg, SendCallback sendCallback)
         throws MQClientException, RemotingException, InterruptedException {
-        msg.setTopic(NamespaceUtil.wrapNamespace(this.getNamespace(), msg.getTopic()));
+        msg.setTopic(withNamespace(msg.getTopic()));
         this.defaultMQProducerImpl.send(msg, selector, arg, sendCallback);
     }
 
@@ -471,7 +464,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     @Override
     public void send(Message msg, MessageQueueSelector selector, Object arg, SendCallback sendCallback, long timeout)
         throws MQClientException, RemotingException, InterruptedException {
-        msg.setTopic(NamespaceUtil.wrapNamespace(this.getNamespace(), msg.getTopic()));
+        msg.setTopic(withNamespace(msg.getTopic()));
         this.defaultMQProducerImpl.send(msg, selector, arg, sendCallback, timeout);
     }
 
@@ -488,7 +481,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     @Override
     public void sendOneway(Message msg, MessageQueueSelector selector, Object arg)
         throws MQClientException, RemotingException, InterruptedException {
-        msg.setTopic(NamespaceUtil.wrapNamespace(this.getNamespace(), msg.getTopic()));
+        msg.setTopic(withNamespace(msg.getTopic()));
         this.defaultMQProducerImpl.sendOneway(msg, selector, arg);
     }
 
@@ -518,8 +511,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
      */
     @Override
     public void createTopic(String key, String newTopic, int queueNum) throws MQClientException {
-        String realTopic = NamespaceUtil.wrapNamespace(this.getNamespace(), newTopic);
-        createTopic(key, realTopic, queueNum, 0);
+        createTopic(key, withNamespace(newTopic), queueNum, 0);
     }
 
     /**
@@ -533,8 +525,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
      */
     @Override
     public void createTopic(String key, String newTopic, int queueNum, int topicSysFlag) throws MQClientException {
-        String realTopic = NamespaceUtil.wrapNamespace(this.getNamespace(), newTopic);
-        this.defaultMQProducerImpl.createTopic(key, realTopic, queueNum, topicSysFlag);
+        this.defaultMQProducerImpl.createTopic(key, withNamespace(newTopic), queueNum, topicSysFlag);
     }
 
     /**
@@ -547,8 +538,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
      */
     @Override
     public long searchOffset(MessageQueue mq, long timestamp) throws MQClientException {
-        mq.setTopic(NamespaceUtil.wrapNamespace(this.getNamespace(), mq.getTopic()));
-        return this.defaultMQProducerImpl.searchOffset(mq, timestamp);
+        return this.defaultMQProducerImpl.searchOffset(queueWithNamespace(mq), timestamp);
     }
 
     /**
@@ -560,8 +550,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
      */
     @Override
     public long maxOffset(MessageQueue mq) throws MQClientException {
-        mq.setTopic(NamespaceUtil.wrapNamespace(this.getNamespace(), mq.getTopic()));
-        return this.defaultMQProducerImpl.maxOffset(mq);
+        return this.defaultMQProducerImpl.maxOffset(queueWithNamespace(mq));
     }
 
     /**
@@ -573,8 +562,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
      */
     @Override
     public long minOffset(MessageQueue mq) throws MQClientException {
-        mq.setTopic(NamespaceUtil.wrapNamespace(this.getNamespace(), mq.getTopic()));
-        return this.defaultMQProducerImpl.minOffset(mq);
+        return this.defaultMQProducerImpl.minOffset(queueWithNamespace(mq));
     }
 
     /**
@@ -586,8 +574,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
      */
     @Override
     public long earliestMsgStoreTime(MessageQueue mq) throws MQClientException {
-        mq.setTopic(NamespaceUtil.wrapNamespace(this.getNamespace(), mq.getTopic()));
-        return this.defaultMQProducerImpl.earliestMsgStoreTime(mq);
+        return this.defaultMQProducerImpl.earliestMsgStoreTime(queueWithNamespace(mq));
     }
 
     /**
@@ -621,8 +608,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     @Override
     public QueryResult queryMessage(String topic, String key, int maxNum, long begin, long end)
         throws MQClientException, InterruptedException {
-        String realTopic = NamespaceUtil.wrapNamespace(this.getNamespace(), topic);
-        return this.defaultMQProducerImpl.queryMessage(realTopic, key, maxNum, begin, end);
+        return this.defaultMQProducerImpl.queryMessage(withNamespace(topic), key, maxNum, begin, end);
     }
 
     /**
@@ -637,15 +623,13 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
      * @throws InterruptedException if the sending thread is interrupted.
      */
     @Override
-    public MessageExt viewMessage(String topic,
-        String msgId) throws RemotingException, MQBrokerException, InterruptedException, MQClientException {
+    public MessageExt viewMessage(String topic, String msgId) throws InterruptedException, MQClientException {
         try {
             MessageId oldMsgId = MessageDecoder.decodeMessageId(msgId);
             return this.viewMessage(msgId);
         } catch (Exception e) {
         }
-        String realTopic = NamespaceUtil.wrapNamespace(this.getNamespace(), topic);
-        return this.defaultMQProducerImpl.queryMessageByUniqKey(realTopic, msgId);
+        return this.defaultMQProducerImpl.queryMessageByUniqKey(withNamespace(topic), msgId);
     }
 
     @Override
@@ -699,12 +683,13 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
                 Validators.checkMessage(message, this);
                 MessageClientIDSetter.setUniqID(message);
                 //Wrap topic with namespace.
-                message.setTopic(NamespaceUtil.wrapNamespace(this.getNamespace(), message.getTopic()));
+                message.setTopic(withNamespace(message.getTopic()));
             }
             msgBatch.setBody(msgBatch.encode());
         } catch (Exception e) {
             throw new MQClientException("Failed to initiate the MessageBatch", e);
         }
+        msgBatch.setTopic(withNamespace(msgBatch.getTopic()));
         return msgBatch;
     }
 
