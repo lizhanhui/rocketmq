@@ -300,6 +300,16 @@ public class ConsumerRunningInfo extends RemotingSerializable {
             }
         }
 
+        if (this.userConsumerInfo != null) {
+            sb.append("\n\n#User Consume Info#\n");
+            Iterator<Entry<String, String>> it = this.userConsumerInfo.entrySet().iterator();
+            while (it.hasNext()) {
+                Entry<String, String> next = it.next();
+                String item = String.format("%-40s: %s%n", next.getKey(), next.getValue());
+                sb.append(item);
+            }
+        }
+
         if (this.jstack != null) {
             sb.append("\n\n#Consumer jstack#\n");
             sb.append(this.jstack);
