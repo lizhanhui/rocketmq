@@ -25,6 +25,7 @@ import org.apache.rocketmq.common.UtilAll;
 public class MessageClientIDSetter {
     private static final String TOPIC_KEY_SPLITTER = "#";
     private static final int LEN;
+    private static final int EXTEND_UNIQINFO_LEN = 40;
     private static final String FIX_STRING;
     private static final AtomicInteger COUNTER;
     private static long startTime;
@@ -106,6 +107,15 @@ public class MessageClientIDSetter {
         return sb.toString();
     }
 
+    public static String createExtendUniqInfo(final Message msg, int extendUniqInfo) {
+        StringBuilder sb = new StringBuilder(EXTEND_UNIQINFO_LEN);
+        sb.append(msg.getProperty(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX));
+        ByteBuffer buffer = ByteBuffer.allocate(4);
+        buffer.putInt(extendUniqInfo);
+        sb.append(UtilAll.bytes2string(buffer.array()));
+        return sb.toString();
+    }
+
     private static byte[] createUniqIDBuffer() {
         ByteBuffer buffer = ByteBuffer.allocate(4 + 2);
         long current = System.currentTimeMillis();
@@ -121,6 +131,12 @@ public class MessageClientIDSetter {
     public static void setUniqID(final Message msg) {
         if (msg.getProperty(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX) == null) {
             msg.putProperty(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX, createUniqID());
+        }
+    }
+
+    public static void setExtendUniqInfo(final Message msg, int extendUniqInfo) {
+        if (msg.getProperty(MessageConst.PROPERTY_EXTEND_UNIQ_INFO) == null) {
+            msg.putProperty(MessageConst.PROPERTY_EXTEND_UNIQ_INFO, createExtendUniqInfo(msg, extendUniqInfo));
         }
     }
 

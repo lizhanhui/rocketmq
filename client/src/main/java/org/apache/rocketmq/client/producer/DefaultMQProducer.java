@@ -22,6 +22,7 @@ import java.util.concurrent.ExecutorService;
 
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.rocketmq.client.ClientConfig;
 import org.apache.rocketmq.client.QueryResult;
 import org.apache.rocketmq.client.Validators;
@@ -122,6 +123,16 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
      * Maximum allowed message size in bytes.
      */
     private int maxMessageSize = 1024 * 1024 * 4; // 4M
+
+    /**
+     * random sign for indentify echo prodcer
+     */
+    private int randomSign = RandomUtils.nextInt(0, 2147483647);
+
+    /**
+     * Indicate whether add extend unique info for producer
+     */
+    private boolean addExtendUniqInfo = false;
 
     /**
      * If topic route not found when sending message, whether use the default topic route.
@@ -667,6 +678,9 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
             for (Message message : msgBatch) {
                 Validators.checkMessage(message, this);
                 MessageClientIDSetter.setUniqID(message);
+                if (isAddExtendUniqInfo()) {
+                    MessageClientIDSetter.setExtendUniqInfo(message, getRandomSign());
+                }
             }
             msgBatch.setBody(msgBatch.encode());
         } catch (Exception e) {
@@ -725,6 +739,22 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
 
     public void setMaxMessageSize(int maxMessageSize) {
         this.maxMessageSize = maxMessageSize;
+    }
+
+    public int getRandomSign() {
+        return randomSign;
+    }
+
+    public void setRandomSign(int randomSign) {
+        this.randomSign = randomSign;
+    }
+
+    public boolean isAddExtendUniqInfo() {
+        return addExtendUniqInfo;
+    }
+
+    public void setAddExtendUniqInfo(boolean addExtendUniqInfo) {
+        this.addExtendUniqInfo = addExtendUniqInfo;
     }
 
     public int getDefaultTopicQueueNums() {

@@ -16,6 +16,7 @@
  */
 package org.apache.rocketmq.client.consumer.listener;
 
+import org.apache.rocketmq.client.hook.CheckSendBackHook;
 import org.apache.rocketmq.common.message.MessageQueue;
 
 /**
@@ -31,6 +32,8 @@ public class ConsumeConcurrentlyContext {
      */
     private int delayLevelWhenNextConsume = 0;
     private int ackIndex = Integer.MAX_VALUE;
+    private CheckSendBackHook checkSendBackHook;
+    private ConsumeExactlyOnceStatus exactlyOnceStatus;
 
     public ConsumeConcurrentlyContext(MessageQueue messageQueue) {
         this.messageQueue = messageQueue;
@@ -54,5 +57,21 @@ public class ConsumeConcurrentlyContext {
 
     public void setAckIndex(int ackIndex) {
         this.ackIndex = ackIndex;
+    }
+
+    public CheckSendBackHook getCheckSendBackHook() {
+        return checkSendBackHook;
+    }
+
+    public void setCheckSendBackHook(CheckSendBackHook checkSendBackHook) {
+        this.checkSendBackHook = checkSendBackHook;
+    }
+
+    public ConsumeExactlyOnceStatus getExactlyOnceStatus() {
+        return exactlyOnceStatus;
+    }
+
+    public void setExactlyOnceStatus(ConsumeExactlyOnceStatus exactlyOnceStatus) {
+        this.exactlyOnceStatus = exactlyOnceStatus;
     }
 }
