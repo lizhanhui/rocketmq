@@ -90,6 +90,6 @@ public class MessageConst {
         STRING_HASH_SET.add(PROPERTY_POP_CK);
         STRING_HASH_SET.add(PROPERTY_POP_CK_OFFSET);
         STRING_HASH_SET.add(PROPERTY_FIRST_POP_TIME);
-
+        STRING_HASH_SET.add(PROPERTY_EXTEND_UNIQ_INFO);
     }
 }
