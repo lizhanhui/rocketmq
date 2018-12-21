@@ -132,18 +132,29 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
      * Default constructor.
      */
     public DefaultMQProducer() {
-        this(MixAll.DEFAULT_PRODUCER_GROUP, null);
+        this(null, MixAll.DEFAULT_PRODUCER_GROUP, null);
     }
 
     /**
      * Constructor specifying both producer group and RPC hook.
      *
+     * @param namespace Namespace for this MQ Producer instance.
      * @param producerGroup Producer group, see the name-sake field.
      * @param rpcHook RPC hook to execute per each remoting command execution.
      */
-    public DefaultMQProducer(final String producerGroup, RPCHook rpcHook) {
+    public DefaultMQProducer(String namespace, final String producerGroup, RPCHook rpcHook) {
+        this.namespace = namespace;
         this.producerGroup = producerGroup;
         defaultMQProducerImpl = new DefaultMQProducerImpl(this, rpcHook);
+    }
+
+    /**
+     *
+     * @param producerGroup
+     * @param rpcHook
+     */
+    public DefaultMQProducer(final String producerGroup, RPCHook rpcHook) {
+        this(null, producerGroup, rpcHook);
     }
 
     /**
@@ -152,7 +163,17 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
      * @param producerGroup Producer group, see the name-sake field.
      */
     public DefaultMQProducer(final String producerGroup) {
-        this(producerGroup, null);
+        this(null, producerGroup, null);
+    }
+
+    /**
+     * Constructor specifying namespace and producer group.
+     *
+     * @param namespace Namespace for this MQ Producer instance.
+     * @param producerGroup Producer group, see the name-sake field.
+     */
+    public DefaultMQProducer(final String namespace, final String producerGroup) {
+        this(namespace, producerGroup, null);
     }
 
     /**
@@ -161,7 +182,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
      * @param rpcHook RPC hook to execute per each remoting command execution.
      */
     public DefaultMQProducer(RPCHook rpcHook) {
-        this(MixAll.DEFAULT_PRODUCER_GROUP, rpcHook);
+        this(null, MixAll.DEFAULT_PRODUCER_GROUP, rpcHook);
     }
 
     /**
