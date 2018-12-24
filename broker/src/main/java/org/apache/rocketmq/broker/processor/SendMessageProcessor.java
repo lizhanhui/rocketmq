@@ -16,6 +16,9 @@
  */
 package org.apache.rocketmq.broker.processor;
 
+import java.net.SocketAddress;
+import java.util.List;
+
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.rocketmq.broker.BrokerController;
 import org.apache.rocketmq.broker.mqtrace.ConsumeMessageContext;
@@ -52,9 +55,6 @@ import org.apache.rocketmq.store.MessageExtBrokerInner;
 import org.apache.rocketmq.store.PutMessageResult;
 import org.apache.rocketmq.store.config.StorePathConfigHelper;
 import org.apache.rocketmq.store.stats.BrokerStatsManager;
-
-import java.net.SocketAddress;
-import java.util.List;
 
 public class SendMessageProcessor extends AbstractSendMessageProcessor implements NettyRequestProcessor {
     private static final InternalLogger DLQ_LOG = InternalLoggerFactory.getLogger(LoggerName.DLQ_LOGGER_NAME);
@@ -106,19 +106,13 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
             (ConsumerSendMsgBackRequestHeader) request.decodeCommandCustomHeader(ConsumerSendMsgBackRequestHeader.class);
 
         String namespace = NamespaceUtil.getNamespaceFromResource(requestHeader.getGroup());
-        String consumerGroup = requestHeader.getGroup();
-        String originalTopic = requestHeader.getOriginTopic();
-        String consumerGroupNoNamespace = NamespaceUtil.withoutNamespace(requestHeader.getGroup());
-        String originalTopicNoNamespace = NamespaceUtil.withoutNamespace(requestHeader.getOriginTopic());
 
         if (this.hasConsumeMessageHook() && !UtilAll.isBlank(requestHeader.getOriginMsgId())) {
 
             ConsumeMessageContext context = new ConsumeMessageContext();
             context.setNamespace(namespace);
-            context.setTopic(originalTopicNoNamespace);
-            context.setTopicWithNamespace(originalTopic);
-            context.setConsumerGroup(consumerGroupNoNamespace);
-            context.setConsumerGroupWithNamespace(consumerGroup);
+            context.setTopic(requestHeader.getOriginTopic());
+            context.setConsumerGroup(requestHeader.getGroup());
             context.setCommercialRcvStats(BrokerStatsManager.StatsType.SEND_BACK);
             context.setCommercialRcvTimes(1);
             context.setCommercialOwner(request.getExtFields().get(BrokerStatsManager.COMMERCIAL_OWNER));
@@ -135,10 +129,10 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         }
 
         SubscriptionGroupConfig subscriptionGroupConfig =
-            this.brokerController.getSubscriptionGroupManager().findSubscriptionGroupConfig(consumerGroup);
+            this.brokerController.getSubscriptionGroupManager().findSubscriptionGroupConfig(requestHeader.getGroup());
         if (null == subscriptionGroupConfig) {
             response.setCode(ResponseCode.SUBSCRIPTION_GROUP_NOT_EXIST);
-            response.setRemark("subscription group not exist, " + consumerGroup + " "
+            response.setRemark("subscription group not exist, " + requestHeader.getGroup() + " "
                 + FAQUrl.suggestTodo(FAQUrl.SUBSCRIPTION_GROUP_NOT_EXIST));
             return response;
         }
@@ -155,7 +149,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
             return response;
         }
 
-        String newTopic = MixAll.getRetryTopic(consumerGroup);
+        String newTopic = MixAll.getRetryTopic(requestHeader.getGroup());
         int queueIdInt = Math.abs(this.random.nextInt() % 99999999) % subscriptionGroupConfig.getRetryQueueNums();
 
         int topicSysFlag = 0;
@@ -204,7 +198,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
             || delayLevel < 0) {
 
             isDLQ = true;
-            newTopic = MixAll.getDLQTopic(consumerGroup);
+            newTopic = MixAll.getDLQTopic(requestHeader.getGroup());
             queueIdInt = Math.abs(this.random.nextInt() % 99999999) % DLQ_NUMS_PER_GROUP;
 
             topicConfig = this.brokerController.getTopicConfigManager().createTopicInSendMessageBackMethod(newTopic,
@@ -261,14 +255,14 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
                         backTopic = correctTopic;
                     }
 
-                    this.brokerController.getBrokerStatsManager().incSendBackNums(consumerGroup, backTopic);
+                    this.brokerController.getBrokerStatsManager().incSendBackNums(requestHeader.getGroup(), backTopic);
 
                     if (isDLQ) {
                         this.brokerController.getBrokerStatsManager().incDLQStatValue(
                             BrokerStatsManager.SNDBCK2DLQ_TIMES,
                             commercialOwner,
-                            consumerGroup,
-                            originalTopic,
+                            requestHeader.getGroup(),
+                            requestHeader.getOriginTopic(),
                             BrokerStatsManager.StatsType.SEND_BACK_TO_DLQ.name(),
                             1);
 
@@ -276,8 +270,8 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
                         DLQ_LOG.info("send msg to DLQ {}, owner={}, originalTopic={}, consumerId={}, msgUniqKey={}, storeTimestamp={}",
                             newTopic,
                             commercialOwner,
-                            originalTopic,
-                            consumerGroup,
+                            requestHeader.getOriginTopic(),
+                            requestHeader.getGroup(),
                             uniqKey,
                             putMessageResult.getAppendMessageResult().getStoreTimestamp());
                     }
@@ -300,8 +294,8 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
                 accountOwnerParent,
                 accountOwnerSelf,
                 namespace,
-                originalTopicNoNamespace,
-                consumerGroupNoNamespace,
+                NamespaceUtil.withoutNamespace(requestHeader.getOriginTopic()),
+                NamespaceUtil.withoutNamespace(requestHeader.getGroup()),
                 topicType,
                 "",
                 succeeded ? BrokerStatsManager.StatsType.SEND_SUCCESS.name() : BrokerStatsManager.StatsType.SEND_FAILURE.name(),
@@ -322,7 +316,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
             DLQ_LOG.info("failed to send msg to DLQ {}, owner={}, originalTopic={}, consumerId={}, msgUniqKey={}, result={}",
                 newTopic,
                 owner,
-                originalTopic,
+                requestHeader.getOriginTopic(),
                 requestHeader.getGroup(),
                 uniqKey,
                 putMessageResult == null ? "null" : putMessageResult.getPutMessageStatus().toString());
