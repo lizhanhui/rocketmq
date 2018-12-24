@@ -68,11 +68,6 @@ public class SendMessageContext {
     private int commercialSendSize;
     private int commercialSendTimes;
 
-    /** topic with namespace. */
-    private String topicWithNamespace;
-    /** producer group with namespace. */
-    private String producerGroupWithNamespace;
-
     public String getNamespace() {
         return namespace;
     }
@@ -327,21 +322,5 @@ public class SendMessageContext {
 
     public void setCommercialSendTimes(final int commercialSendTimes) {
         this.commercialSendTimes = commercialSendTimes;
-    }
-
-    public String getTopicWithNamespace() {
-        return topicWithNamespace;
-    }
-
-    public void setTopicWithNamespace(String topicWithNamespace) {
-        this.topicWithNamespace = topicWithNamespace;
-    }
-
-    public String getProducerGroupWithNamespace() {
-        return producerGroupWithNamespace;
-    }
-
-    public void setProducerGroupWithNamespace(String producerGroupWithNamespace) {
-        this.producerGroupWithNamespace = producerGroupWithNamespace;
     }
 }
