@@ -112,9 +112,8 @@ public abstract class AbstractSendMessageProcessor implements NettyRequestProces
 
     protected MessageExtBrokerInner buildInnerMsg(final ChannelHandlerContext ctx,
         final SendMessageRequestHeader requestHeader, final byte[] body, TopicConfig topicConfig) {
-        String topic = requestHeader.getTopic();
         int queueIdInt = requestHeader.getQueueId();
-        if (requestHeader.getQueueId() < 0) {
+        if (queueIdInt < 0) {
             queueIdInt = Math.abs(this.random.nextInt() % 99999999) % topicConfig.getWriteQueueNums();
         }
         int sysFlag = requestHeader.getSysFlag();
@@ -124,7 +123,7 @@ public abstract class AbstractSendMessageProcessor implements NettyRequestProces
         }
 
         MessageExtBrokerInner msgInner = new MessageExtBrokerInner();
-        msgInner.setTopic(topic);
+        msgInner.setTopic(requestHeader.getTopic());
         msgInner.setBody(body);
         msgInner.setFlag(requestHeader.getFlag());
         MessageAccessor.setProperties(msgInner,
@@ -150,9 +149,8 @@ public abstract class AbstractSendMessageProcessor implements NettyRequestProces
     protected RemotingCommand msgContentCheck(final ChannelHandlerContext ctx,
         final SendMessageRequestHeader requestHeader, RemotingCommand request,
         final RemotingCommand response) {
-        String topic = NamespaceUtil.withNamespace(request, requestHeader.getTopic());
-        if (topic.length() > Byte.MAX_VALUE) {
-            log.warn("putMessage message topic length too long {}", topic.length());
+        if (requestHeader.getTopic().length() > Byte.MAX_VALUE) {
+            log.warn("putMessage message topic length too long {}", requestHeader.getTopic().length());
             response.setCode(ResponseCode.MESSAGE_ILLEGAL);
             return response;
         }
@@ -162,7 +160,8 @@ public abstract class AbstractSendMessageProcessor implements NettyRequestProces
             return response;
         }
         if (request.getBody().length > DBMsgConstants.MAX_BODY_SIZE) {
-            log.warn(" topic {}  msg body size {}  from {}", topic, request.getBody().length, ChannelUtil.getRemoteIp(ctx.channel()));
+            log.warn(" topic {}  msg body size {}  from {}", requestHeader.getTopic(),
+                request.getBody().length, ChannelUtil.getRemoteIp(ctx.channel()));
             response.setRemark("msg body must be less 64KB");
             response.setCode(ResponseCode.MESSAGE_ILLEGAL);
             return response;
@@ -172,50 +171,52 @@ public abstract class AbstractSendMessageProcessor implements NettyRequestProces
 
     protected RemotingCommand msgCheck(final ChannelHandlerContext ctx,
         final SendMessageRequestHeader requestHeader, final RemotingCommand response) {
-        String topic = requestHeader.getTopic();
         if (!PermName.isWriteable(this.brokerController.getBrokerConfig().getBrokerPermission())
-            && this.brokerController.getTopicConfigManager().isOrderTopic(topic)) {
+            && this.brokerController.getTopicConfigManager().isOrderTopic(requestHeader.getTopic())) {
             response.setCode(ResponseCode.NO_PERMISSION);
             response.setRemark("the broker[" + this.brokerController.getBrokerConfig().getBrokerIP1()
                 + "] sending message is forbidden");
             return response;
         }
-        if (!this.brokerController.getTopicConfigManager().isTopicCanSendMessage(topic)) {
-            String errorMsg = "the topic[" + topic + "] is conflict with system reserved words.";
+        if (!this.brokerController.getTopicConfigManager().isTopicCanSendMessage(requestHeader.getTopic())) {
+            String errorMsg = "the topic[" + requestHeader.getTopic() + "] is conflict with system reserved words.";
             log.warn(errorMsg);
             response.setCode(ResponseCode.SYSTEM_ERROR);
             response.setRemark(errorMsg);
             return response;
         }
 
-        TopicConfig topicConfig = this.brokerController.getTopicConfigManager().selectTopicConfig(topic);
+        TopicConfig topicConfig =
+            this.brokerController.getTopicConfigManager().selectTopicConfig(requestHeader.getTopic());
         if (null == topicConfig) {
             int topicSysFlag = 0;
             if (requestHeader.isUnitMode()) {
-                if (topic.startsWith(MixAll.RETRY_GROUP_TOPIC_PREFIX)) {
+                if (requestHeader.getTopic().startsWith(MixAll.RETRY_GROUP_TOPIC_PREFIX)) {
                     topicSysFlag = TopicSysFlag.buildSysFlag(false, true);
                 } else {
                     topicSysFlag = TopicSysFlag.buildSysFlag(true, false);
                 }
             }
 
-            log.warn("the topic {} not exist, producer: {}", topic, ctx.channel().remoteAddress());
+            log.warn("the topic {} not exist, producer: {}", requestHeader.getTopic(), ctx.channel().remoteAddress());
             topicConfig = this.brokerController.getTopicConfigManager().createTopicInSendMessageMethod(
-                topic, requestHeader.getDefaultTopic(),
+                requestHeader.getTopic(),
+                requestHeader.getDefaultTopic(),
                 RemotingHelper.parseChannelRemoteAddr(ctx.channel()),
                 requestHeader.getDefaultTopicQueueNums(), topicSysFlag);
 
             if (null == topicConfig) {
-                if (topic.startsWith(MixAll.RETRY_GROUP_TOPIC_PREFIX)) {
-                    topicConfig = this.brokerController.getTopicConfigManager().createTopicInSendMessageBackMethod(
-                            topic, 1, PermName.PERM_WRITE | PermName.PERM_READ,
+                if (requestHeader.getTopic().startsWith(MixAll.RETRY_GROUP_TOPIC_PREFIX)) {
+                    topicConfig =
+                        this.brokerController.getTopicConfigManager().createTopicInSendMessageBackMethod(
+                            requestHeader.getTopic(), 1, PermName.PERM_WRITE | PermName.PERM_READ,
                             topicSysFlag);
                 }
             }
 
             if (null == topicConfig) {
                 response.setCode(ResponseCode.TOPIC_NOT_EXIST);
-                response.setRemark("topic[" + topic + "] not exist, apply first please!"
+                response.setRemark("topic[" + requestHeader.getTopic() + "] not exist, apply first please!"
                     + FAQUrl.suggestTodo(FAQUrl.APPLY_TOPIC_URL));
                 return response;
             }

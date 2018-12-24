@@ -384,7 +384,6 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         response.addExtField(MessageConst.PROPERTY_TRACE_SWITCH, String.valueOf(this.brokerController.getBrokerConfig().isTraceOn()));
 
         log.debug("receive SendMessage request command, {}", request);
-        String topic = NamespaceUtil.withNamespace(request, requestHeader.getTopic());
 
         final long startTimestamp = this.brokerController.getBrokerConfig().getStartAcceptSendRequestTimeStamp();
         if (this.brokerController.getMessageStore().now() < startTimestamp) {
@@ -402,14 +401,14 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         final byte[] body = request.getBody();
 
         int queueIdInt = requestHeader.getQueueId();
-        TopicConfig topicConfig = this.brokerController.getTopicConfigManager().selectTopicConfig(topic);
+        TopicConfig topicConfig = this.brokerController.getTopicConfigManager().selectTopicConfig(requestHeader.getTopic());
 
         if (queueIdInt < 0) {
             queueIdInt = Math.abs(this.random.nextInt() % 99999999) % topicConfig.getWriteQueueNums();
         }
 
         MessageExtBrokerInner msgInner = new MessageExtBrokerInner();
-        msgInner.setTopic(topic);
+        msgInner.setTopic(requestHeader.getTopic());
         msgInner.setQueueId(queueIdInt);
 
         if (!handleRetryAndDLQ(requestHeader, response, request, msgInner, topicConfig)) {
@@ -445,7 +444,6 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         RemotingCommand request, MessageExt msg,
         SendMessageResponseHeader responseHeader, SendMessageContext sendMessageContext, ChannelHandlerContext ctx,
         int queueIdInt) {
-        String topic = NamespaceUtil.withNamespace(request, msg.getTopic());
         if (putMessageResult == null) {
             response.setCode(ResponseCode.SYSTEM_ERROR);
             response.setRemark("store putMessage return null");
@@ -520,8 +518,9 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         String ownerSelf = request.getExtFields().get(BrokerStatsManager.ACCOUNT_OWNER_SELF);
         if (sendOK) {
 
-            this.brokerController.getBrokerStatsManager().incTopicPutNums(topic, putMessageResult.getAppendMessageResult().getMsgNum(), 1);
-            this.brokerController.getBrokerStatsManager().incTopicPutSize(topic, putMessageResult.getAppendMessageResult().getWroteBytes());
+            this.brokerController.getBrokerStatsManager().incTopicPutNums(msg.getTopic(), putMessageResult.getAppendMessageResult().getMsgNum(), 1);
+            this.brokerController.getBrokerStatsManager().incTopicPutSize(msg.getTopic(),
+                putMessageResult.getAppendMessageResult().getWroteBytes());
             this.brokerController.getBrokerStatsManager().incBrokerPutNums(putMessageResult.getAppendMessageResult().getMsgNum());
 
             response.setRemark(null);
@@ -589,7 +588,6 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         response.addExtField(MessageConst.PROPERTY_TRACE_SWITCH, String.valueOf(this.brokerController.getBrokerConfig().isTraceOn()));
 
         log.debug("Receive SendMessage request command {}", request);
-        String topic = NamespaceUtil.withNamespace(request, requestHeader.getTopic());
 
         final long startTimestamp = this.brokerController.getBrokerConfig().getStartAcceptSendRequestTimeStamp();
         if (this.brokerController.getMessageStore().now() < startTimestamp) {
@@ -605,25 +603,25 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         }
 
         int queueIdInt = requestHeader.getQueueId();
-        TopicConfig topicConfig = this.brokerController.getTopicConfigManager().selectTopicConfig(topic);
+        TopicConfig topicConfig = this.brokerController.getTopicConfigManager().selectTopicConfig(requestHeader.getTopic());
 
         if (queueIdInt < 0) {
             queueIdInt = Math.abs(this.random.nextInt() % 99999999) % topicConfig.getWriteQueueNums();
         }
 
-        if (topic.length() > Byte.MAX_VALUE) {
+        if (requestHeader.getTopic().length() > Byte.MAX_VALUE) {
             response.setCode(ResponseCode.MESSAGE_ILLEGAL);
-            response.setRemark("message topic length too long " + topic.length());
+            response.setRemark("message topic length too long " + requestHeader.getTopic().length());
             return response;
         }
 
-        if (topic != null && topic.startsWith(MixAll.RETRY_GROUP_TOPIC_PREFIX)) {
+        if (requestHeader.getTopic() != null && requestHeader.getTopic().startsWith(MixAll.RETRY_GROUP_TOPIC_PREFIX)) {
             response.setCode(ResponseCode.MESSAGE_ILLEGAL);
-            response.setRemark("batch request does not support retry group " + topic);
+            response.setRemark("batch request does not support retry group " + requestHeader.getTopic());
             return response;
         }
         MessageExtBatch messageExtBatch = new MessageExtBatch();
-        messageExtBatch.setTopic(topic);
+        messageExtBatch.setTopic(requestHeader.getTopic());
         messageExtBatch.setQueueId(queueIdInt);
 
         int sysFlag = requestHeader.getSysFlag();
