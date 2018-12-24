@@ -1094,6 +1094,10 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
             info.getStatusTable().put(sd.getTopic(), consumeStatus);
         }
 
+        if (defaultMQPushConsumer.getConsumerStatusReporter() != null) {
+            info.getUserConsumerInfo().putAll(defaultMQPushConsumer.getConsumerStatusReporter().reportStatus());
+        }
+
         return info;
     }
 

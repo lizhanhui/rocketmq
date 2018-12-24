@@ -287,6 +287,10 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
                 List<MessageExt> msgBackFailed = new ArrayList<MessageExt>(consumeRequest.getMsgs().size());
                 for (int i = ackIndex + 1; i < consumeRequest.getMsgs().size(); i++) {
                     MessageExt msg = consumeRequest.getMsgs().get(i);
+                    if (context.getCheckSendBackHook() != null &&
+                        !context.getCheckSendBackHook().needSendBack(msg, context)) {
+                        continue;
+                    }
                     boolean result = this.sendMessageBack(msg, context);
                     if (!result) {
                         msg.setReconsumeTimes(msg.getReconsumeTimes() + 1);
@@ -432,6 +436,7 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
 
             if (ConsumeMessageConcurrentlyService.this.defaultMQPushConsumerImpl.hasHook()) {
                 consumeMessageContext.getProps().put(MixAll.CONSUME_CONTEXT_TYPE, returnType.name());
+                consumeMessageContext.getProps().put(MixAll.CONSUME_EXACTLYONCE_STATUS, context.getExactlyOnceStatus().name());
             }
 
             if (null == status) {

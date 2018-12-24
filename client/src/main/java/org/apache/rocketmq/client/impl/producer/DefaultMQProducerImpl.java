@@ -623,6 +623,9 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                 //for MessageBatch,ID has been set in the generating process
                 if (!(msg instanceof MessageBatch)) {
                     MessageClientIDSetter.setUniqID(msg);
+                    if (this.defaultMQProducer.isAddExtendUniqInfo()) {
+                        MessageClientIDSetter.setExtendUniqInfo(msg, this.defaultMQProducer.getRandomSign());
+                    }
                 }
 
                 if (null != this.mQClientFactory.getClientConfig().getNamespace()) {
