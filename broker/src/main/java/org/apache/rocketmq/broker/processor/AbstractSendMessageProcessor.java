@@ -73,22 +73,19 @@ public abstract class AbstractSendMessageProcessor implements NettyRequestProces
     protected SendMessageContext buildMsgContext(ChannelHandlerContext ctx,
         SendMessageRequestHeader requestHeader) {
         String namespace = NamespaceUtil.getNamespaceFromResource(requestHeader.getTopic());
-        String topic = NamespaceUtil.withoutNamespace(requestHeader.getTopic());
-        String producerGroup = NamespaceUtil.withoutNamespace(requestHeader.getProducerGroup());
-        String topicWithNamespace = requestHeader.getTopic();
 
         SendMessageContext traceContext;
         traceContext = new SendMessageContext();
         traceContext.setNamespace(namespace);
-        traceContext.setProducerGroup(producerGroup);
-        traceContext.setTopic(topic);
+        traceContext.setProducerGroup(requestHeader.getProducerGroup());
+        traceContext.setTopic(requestHeader.getTopic());
         traceContext.setMsgProps(requestHeader.getProperties());
         traceContext.setBornHost(RemotingHelper.parseChannelRemoteAddr(ctx.channel()));
         traceContext.setBrokerAddr(this.brokerController.getBrokerAddr());
         traceContext.setBrokerRegionId(this.brokerController.getBrokerConfig().getRegionId());
         traceContext.setBornTimeStamp(requestHeader.getBornTimestamp());
         traceContext.setRequestTimeStamp(System.currentTimeMillis());
-        traceContext.setTopicConfig(brokerController.getTopicConfigManager().getTopicConfigTable().get(topicWithNamespace));
+        traceContext.setTopicConfig(brokerController.getTopicConfigManager().getTopicConfigTable().get(requestHeader.getTopic()));
 
         Map<String, String> properties = MessageDecoder.string2messageProperties(requestHeader.getProperties());
         String uniqueKey = properties.get(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX);
