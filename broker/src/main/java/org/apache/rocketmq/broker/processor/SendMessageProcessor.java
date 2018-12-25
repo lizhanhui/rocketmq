@@ -328,8 +328,9 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
     }
 
     private boolean handleRetryAndDLQ(SendMessageRequestHeader requestHeader, RemotingCommand response,
-        RemotingCommand request, MessageExt msg, TopicConfig topicConfig) {
-        String newTopic = NamespaceUtil.withNamespace(request, requestHeader.getTopic());
+        RemotingCommand request,
+        MessageExt msg, TopicConfig topicConfig) {
+        String newTopic = requestHeader.getTopic();
         if (null != newTopic && newTopic.startsWith(MixAll.RETRY_GROUP_TOPIC_PREFIX)) {
             String groupName = newTopic.substring(MixAll.RETRY_GROUP_TOPIC_PREFIX.length());
             SubscriptionGroupConfig subscriptionGroupConfig =
