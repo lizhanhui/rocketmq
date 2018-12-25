@@ -265,6 +265,7 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner, MQPopConsumer
             subProperties
         );
         this.pullAPIWrapper.processPullResult(mq, pullResult, subscriptionData);
+        this.resetTopic(pullResult.getMsgFoundList());
         if (!this.consumeMessageHookList.isEmpty()) {
             ConsumeMessageContext consumeMessageContext = null;
             consumeMessageContext = new ConsumeMessageContext();
@@ -279,6 +280,15 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner, MQPopConsumer
             this.executeHookAfter(consumeMessageContext);
         }
         return pullResult;
+    }
+
+    public void resetTopic(List<MessageExt> msgList) {
+        for (MessageExt messageExt : msgList) {
+            if (null != this.getDefaultMQPullConsumer().getNamespace()) {
+                messageExt.setTopic(NamespaceUtil.withoutNamespace(messageExt.getTopic(), this.defaultMQPullConsumer.getNamespace()));
+            }
+        }
+
     }
 
     public void subscriptionAutomatically(final String topic) {
