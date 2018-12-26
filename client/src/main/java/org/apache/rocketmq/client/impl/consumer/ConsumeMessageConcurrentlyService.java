@@ -436,11 +436,6 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
                 returnType = ConsumeReturnType.SUCCESS;
             }
 
-            if (ConsumeMessageConcurrentlyService.this.defaultMQPushConsumerImpl.hasHook()) {
-                consumeMessageContext.getProps().put(MixAll.CONSUME_CONTEXT_TYPE, returnType.name());
-                consumeMessageContext.getProps().put(MixAll.CONSUME_EXACTLYONCE_STATUS, context.getExactlyOnceStatus().name());
-            }
-
             if (null == status) {
                 log.warn("consumeMessage return null, Group: {} Msgs: {} MQ: {}",
                     ConsumeMessageConcurrentlyService.this.consumerGroup,
@@ -450,6 +445,8 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
             }
 
             if (ConsumeMessageConcurrentlyService.this.defaultMQPushConsumerImpl.hasHook()) {
+                consumeMessageContext.getProps().put(MixAll.CONSUME_CONTEXT_TYPE, returnType.name());
+                consumeMessageContext.getProps().put(MixAll.CONSUME_EXACTLYONCE_STATUS, context.getExactlyOnceStatus().name());
                 consumeMessageContext.setStatus(status.toString());
                 consumeMessageContext.setSuccess(ConsumeConcurrentlyStatus.CONSUME_SUCCESS == status);
                 ConsumeMessageConcurrentlyService.this.defaultMQPushConsumerImpl.executeHookAfter(consumeMessageContext);
