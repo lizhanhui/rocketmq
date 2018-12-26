@@ -584,7 +584,7 @@ public class MQClientAPIImpl {
                 SendMessageResponseHeader responseHeader =
                     (SendMessageResponseHeader) response.decodeCommandCustomHeader(SendMessageResponseHeader.class);
 
-                //Reset topic in messageQueue return to send() calls.
+                //If namespace not null , reset Topic without namespace.
                 String topic = msg.getTopic();
                 if (null != this.clientConfig.getNamespace()) {
                     topic = NamespaceUtil.withoutNamespace(topic, this.clientConfig.getNamespace());
@@ -998,6 +998,7 @@ public class MQClientAPIImpl {
             default:
                 throw new MQBrokerException(response.getCode(), response.getRemark());
         }
+
         PopResult popResult = new PopResult(popStatus, msgFoundList);
         PopMessageResponseHeader responseHeader = (PopMessageResponseHeader) response.decodeCommandCustomHeader(PopMessageResponseHeader.class);
         popResult.setRestNum(responseHeader.getRestNum());
@@ -1049,7 +1050,7 @@ public class MQClientAPIImpl {
                         messageExt.getProperties().put(MessageConst.PROPERTY_FIRST_POP_TIME, String.valueOf(responseHeader.getPopTime()));
                     }
                 }
-                messageExt.setTopic(topic);
+                messageExt.setTopic(NamespaceUtil.withoutNamespace(topic, this.clientConfig.getNamespace()));
             }
         }
         return popResult;
@@ -1068,6 +1069,7 @@ public class MQClientAPIImpl {
             case ResponseCode.SUCCESS: {
                 ByteBuffer byteBuffer = ByteBuffer.wrap(response.getBody());
                 MessageExt messageExt = MessageDecoder.clientDecode(byteBuffer, true);
+                //If namespace not null , reset Topic without namespace.
                 if (null != this.clientConfig.getNamespace()) {
                     messageExt.setTopic(NamespaceUtil.withoutNamespace(messageExt.getTopic(), this.clientConfig.getNamespace()));
                 }

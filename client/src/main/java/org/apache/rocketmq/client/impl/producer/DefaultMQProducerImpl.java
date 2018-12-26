@@ -710,12 +710,21 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                 switch (communicationMode) {
                     case ASYNC:
                         Message tmpMessage = msg;
-                        if (msgBodyCompressed || topicWithNamespace) {
+                        boolean messageCloned = false;
+                        if (msgBodyCompressed) {
                             //If msg body was compressed, msgbody should be reset using prevBody.
                             //Clone new message using commpressed message body and recover origin massage.
                             //Fix bug:https://github.com/apache/rocketmq-externals/issues/66
                             tmpMessage = MessageAccessor.cloneMessage(msg);
+                            messageCloned = true;
                             msg.setBody(prevBody);
+                        }
+
+                        if (topicWithNamespace) {
+                            if (!messageCloned) {
+                                tmpMessage = MessageAccessor.cloneMessage(msg);
+                                messageCloned = true;
+                            }
                             msg.setTopic(NamespaceUtil.withoutNamespace(msg.getTopic(), this.defaultMQProducer.getNamespace()));
                         }
 

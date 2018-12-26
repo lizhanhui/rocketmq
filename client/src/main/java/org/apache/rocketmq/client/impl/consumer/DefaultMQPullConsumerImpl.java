@@ -265,6 +265,7 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner, MQPopConsumer
             subProperties
         );
         this.pullAPIWrapper.processPullResult(mq, pullResult, subscriptionData);
+        //If namespace not null , reset Topic without namespace.
         this.resetTopic(pullResult.getMsgFoundList());
         if (!this.consumeMessageHookList.isEmpty()) {
             ConsumeMessageContext consumeMessageContext = null;
@@ -283,6 +284,7 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner, MQPopConsumer
     }
 
     public void resetTopic(List<MessageExt> msgList) {
+        //If namespace not null , reset Topic without namespace.
         for (MessageExt messageExt : msgList) {
             if (null != this.getDefaultMQPullConsumer().getNamespace()) {
                 messageExt.setTopic(NamespaceUtil.withoutNamespace(messageExt.getTopic(), this.defaultMQPullConsumer.getNamespace()));
@@ -526,8 +528,9 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner, MQPopConsumer
 
                     @Override
                     public void onSuccess(PullResult pullResult) {
-                        pullCallback
-                            .onSuccess(DefaultMQPullConsumerImpl.this.pullAPIWrapper.processPullResult(mq, pullResult, subscriptionData));
+                        PullResult userPullResult = DefaultMQPullConsumerImpl.this.pullAPIWrapper.processPullResult(mq, pullResult, subscriptionData);
+                        resetTopic(userPullResult.getMsgFoundList());
+                        pullCallback.onSuccess(userPullResult);
                     }
 
                     @Override
@@ -609,6 +612,7 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner, MQPopConsumer
             MessageAccessor.setReconsumeTime(newMsg, String.valueOf(msg.getReconsumeTimes() + 1));
             MessageAccessor.setMaxReconsumeTimes(newMsg, String.valueOf(this.defaultMQPullConsumer.getMaxReconsumeTimes()));
             newMsg.setDelayTimeLevel(3 + msg.getReconsumeTimes());
+            //Call inner message producer, message's topic should be with namespace.
             this.mQClientFactory.getDefaultMQProducer().send(newMsg);
         } finally {
             msg.setTopic(NamespaceUtil.withoutNamespace(msg.getTopic(), this.defaultMQPullConsumer.getNamespace()));

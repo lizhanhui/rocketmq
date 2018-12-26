@@ -252,17 +252,16 @@ public class MQAdminImpl {
         throw new MQClientException("The broker[" + mq.getBrokerName() + "] not exist", null);
     }
 
-    public MessageExt viewMessage(
-        String msgId) throws RemotingException, MQBrokerException, InterruptedException, MQClientException {
-
+    public MessageExt viewMessage(String msgId)
+        throws RemotingException, MQBrokerException, InterruptedException, MQClientException {
         MessageId messageId = null;
         try {
             messageId = MessageDecoder.decodeMessageId(msgId);
         } catch (Exception e) {
             throw new MQClientException(ResponseCode.NO_MESSAGE, "query message by id finished, but no message.");
         }
-        return this.mQClientFactory.getMQClientAPIImpl().viewMessage(RemotingUtil.socketAddress2String(messageId.getAddress()),
-            messageId.getOffset(), timeoutMillis);
+        return this.mQClientFactory.getMQClientAPIImpl().viewMessage(
+            RemotingUtil.socketAddress2String(messageId.getAddress()), messageId.getOffset(), timeoutMillis);
     }
 
     public QueryResult queryMessage(String topic, String key, int maxNum, long begin,
