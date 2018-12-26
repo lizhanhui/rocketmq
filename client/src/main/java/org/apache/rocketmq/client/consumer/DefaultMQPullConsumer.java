@@ -249,7 +249,7 @@ public class DefaultMQPullConsumer extends ClientConfig implements MQPullConsume
     }
 
     public void setRegisterTopics(Set<String> registerTopics) {
-        this.registerTopics = registerTopics;
+        this.registerTopics = withNamespace(registerTopics);
     }
 
     @Override

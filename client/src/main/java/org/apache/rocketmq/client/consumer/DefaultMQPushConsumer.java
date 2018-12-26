@@ -543,7 +543,11 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
     }
 
     public void setSubscription(Map<String, String> subscription) {
-        this.subscription = subscription;
+        Map<String, String> subscriptionWithNamespace = new HashMap<String, String>();
+        for (String topic : subscription.keySet()) {
+            subscriptionWithNamespace.put(withNamespace(topic), subscription.get(topic));
+        }
+        this.subscription = subscriptionWithNamespace;
     }
 
     /**
