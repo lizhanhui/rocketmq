@@ -16,6 +16,9 @@
  */
 package org.apache.rocketmq.client;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.common.UtilAll;
@@ -103,6 +106,26 @@ public class ClientConfig {
 
     public String withNamespace(String resource) {
         return NamespaceUtil.wrapNamespace(this.getNamespace(), resource);
+    }
+
+    public Set<String> withNamespace(Set<String> resourceSet) {
+        Set<String> resourceWithNamespace = new HashSet<String>();
+        for (String resource : resourceSet) {
+            resourceWithNamespace.add(withNamespace(resource));
+        }
+        return resourceWithNamespace;
+    }
+
+    public String withoutNamespace(String resource) {
+        return NamespaceUtil.withoutNamespace(resource, this.getNamespace());
+    }
+
+    public Set<String> withoutNamespace(Set<String> resourceSet) {
+        Set<String> resourceWithoutNamespace = new HashSet<String>();
+        for (String resource : resourceSet) {
+            resourceWithoutNamespace.add(withoutNamespace(resource));
+        }
+        return resourceWithoutNamespace;
     }
 
     public MessageQueue queueWithNamespace(MessageQueue queue) {
