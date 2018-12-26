@@ -237,6 +237,10 @@ public class ClientConfig {
         return namespace;
     }
 
+    protected void setNamespace(String namespace) {
+        this.namespace = namespace;
+    }
+
     public boolean isUseTLS() {
         return useTLS;
     }

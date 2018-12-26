@@ -286,6 +286,18 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
     }
 
     /**
+     * Constructor specifying consumer group, RPC hook and message queue allocating algorithm.
+     *
+     * @param consumerGroup Consume queue.
+     * @param rpcHook RPC hook to execute before each remoting command.
+     * @param allocateMessageQueueStrategy message queue allocating algorithm.
+     */
+    public DefaultMQPushConsumer(final String consumerGroup, RPCHook rpcHook,
+        AllocateMessageQueueStrategy allocateMessageQueueStrategy) {
+       this(null, consumerGroup, rpcHook, allocateMessageQueueStrategy);
+    }
+
+    /**
      * Constructor specifying namespace, consumer group, RPC hook and message queue allocating algorithm.
      *
      * @param namespace Namespace for this MQ Producer instance.

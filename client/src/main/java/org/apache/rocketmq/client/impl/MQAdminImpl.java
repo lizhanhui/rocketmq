@@ -425,6 +425,13 @@ public class MQAdminImpl {
                     }
                 }
 
+                //If namespace not null , reset Topic without namespace.
+                for (MessageExt messageExt : messageList) {
+                    if (null != this.mQClientFactory.getClientConfig().getNamespace()) {
+                        messageExt.setTopic(NamespaceUtil.withoutNamespace(messageExt.getTopic(), this.mQClientFactory.getClientConfig().getNamespace()));
+                    }
+                }
+
                 if (!messageList.isEmpty()) {
                     return new QueryResult(indexLastUpdateTimestamp, messageList);
                 } else {
