@@ -85,12 +85,23 @@ public class NamespaceUtil {
      * @return
      */
     public static String withoutNamespace(String resource, String namespace) {
-        if (StringUtils.isEmpty(resource) || StringUtils.isEmpty(namespace) ||
-            !resource.contains(namespace)) {
+        if (StringUtils.isEmpty(resource) || StringUtils.isEmpty(namespace)) {
             return resource;
         }
 
-        return withoutNamespace(resource);
+        StringBuffer prefixBuffer = new StringBuffer();
+        if (isRetryTopic(resource)) {
+            prefixBuffer.append(MixAll.RETRY_GROUP_TOPIC_PREFIX);
+        } else if (isDLQTopic(resource)) {
+            prefixBuffer.append(MixAll.DLQ_GROUP_TOPIC_PREFIX);
+        }
+        prefixBuffer.append(namespace).append(NAMESPACE_SEPARATOR);
+
+        if (resource.startsWith(prefixBuffer.toString())) {
+            return withoutNamespace(resource);
+        }
+
+        return resource;
     }
 
     public static String wrapNamespace(String namespace, String resource) {
