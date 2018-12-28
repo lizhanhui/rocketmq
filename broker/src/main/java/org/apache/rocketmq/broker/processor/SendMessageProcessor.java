@@ -16,9 +16,6 @@
  */
 package org.apache.rocketmq.broker.processor;
 
-import java.net.SocketAddress;
-import java.util.List;
-
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.rocketmq.broker.BrokerController;
 import org.apache.rocketmq.broker.mqtrace.ConsumeMessageContext;
@@ -55,6 +52,9 @@ import org.apache.rocketmq.store.MessageExtBrokerInner;
 import org.apache.rocketmq.store.PutMessageResult;
 import org.apache.rocketmq.store.config.StorePathConfigHelper;
 import org.apache.rocketmq.store.stats.BrokerStatsManager;
+
+import java.net.SocketAddress;
+import java.util.List;
 
 public class SendMessageProcessor extends AbstractSendMessageProcessor implements NettyRequestProcessor {
     private static final InternalLogger DLQ_LOG = InternalLoggerFactory.getLogger(LoggerName.DLQ_LOGGER_NAME);
@@ -244,8 +244,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         if (putMessageResult != null) {
             String commercialOwner = request.getExtFields().get(BrokerStatsManager.COMMERCIAL_OWNER);
             String authType = request.getExtFields().get(BrokerStatsManager.ACCOUNT_AUTH_TYPE);
-            String accountOwnerParent = request.getExtFields().get(BrokerStatsManager.ACCOUNT_OWNER_PARENT);
-            String accountOwnerSelf = request.getExtFields().get(BrokerStatsManager.ACCOUNT_OWNER_SELF);
+            String user = request.getExtFields().get(BrokerStatsManager.ACCOUNT_OWNER_SELF);
 
             switch (putMessageResult.getPutMessageStatus()) {
                 case PUT_OK:
@@ -286,20 +285,18 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
             }
 
             // TODO message type
-            String topicType = topicConfig.isOrder() ? "Order" : "Other";
             this.brokerController.getBrokerStatsManager().incAccountValue(
                 isDLQ ? BrokerStatsManager.ACCOUNT_SEND_BACK_TO_DLQ : BrokerStatsManager.ACCOUNT_SEND_BACK,
                 commercialOwner,
+                user,
                 authType,
-                accountOwnerParent,
-                accountOwnerSelf,
                 namespace,
                 NamespaceUtil.withoutNamespace(requestHeader.getOriginTopic()),
                 NamespaceUtil.withoutNamespace(requestHeader.getGroup()),
-                topicType,
                 "",
-                succeeded ? BrokerStatsManager.StatsType.SEND_SUCCESS.name() : BrokerStatsManager.StatsType.SEND_FAILURE.name(),
                 1,
+                succeeded ? 1 : 0,
+                succeeded ? 0 : 1,
                 putMessageResult.getAppendMessageResult().getWroteBytes());
 
             if (!succeeded) {
@@ -660,6 +657,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         }
     }
 
+    @Override
     public SocketAddress getStoreHost() {
         return storeHost;
     }

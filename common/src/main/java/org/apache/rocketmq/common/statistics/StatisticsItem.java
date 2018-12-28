@@ -33,6 +33,8 @@ public class StatisticsItem {
     private AtomicLong[] itemAccumulates;
     private AtomicLong invokeTimes;
 
+    private Interceptor interceptor;
+
     /**
      * last timestamp when the item was updated
      */
@@ -65,6 +67,10 @@ public class StatisticsItem {
 
         invokeTimes.addAndGet(1);
         lastTimeStamp.set(System.currentTimeMillis());
+
+        if (interceptor != null) {
+            interceptor.inc(itemIncs);
+        }
     }
 
     public String getStatKind() {
@@ -140,4 +146,13 @@ public class StatisticsItem {
         }
         return ret;
     }
+
+    public Interceptor getInterceptor() {
+        return interceptor;
+    }
+
+    public void setInterceptor(Interceptor interceptor) {
+        this.interceptor = interceptor;
+    }
+
 }

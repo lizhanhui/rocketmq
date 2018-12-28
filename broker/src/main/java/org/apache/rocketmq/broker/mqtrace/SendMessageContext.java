@@ -16,11 +16,10 @@
  */
 package org.apache.rocketmq.broker.mqtrace;
 
-import java.util.Properties;
-
-import org.apache.rocketmq.common.TopicConfig;
 import org.apache.rocketmq.common.message.MessageType;
 import org.apache.rocketmq.store.stats.BrokerStatsManager;
+
+import java.util.Properties;
 
 public class SendMessageContext {
     /** namespace */
@@ -46,7 +45,6 @@ public class SendMessageContext {
     private long bornTimeStamp;
     private long requestTimeStamp;
     private MessageType msgType = MessageType.Trans_msg_Commit;
-    private TopicConfig topicConfig;
 
     private boolean isSuccess = false;
 
@@ -90,14 +88,6 @@ public class SendMessageContext {
 
     public void setMsgType(final MessageType msgType) {
         this.msgType = msgType;
-    }
-
-    public TopicConfig getTopicConfig() {
-        return topicConfig;
-    }
-
-    public void setTopicConfig(TopicConfig topicConfig) {
-        this.topicConfig = topicConfig;
     }
 
     public String getMsgUniqueKey() {

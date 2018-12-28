@@ -16,6 +16,8 @@
  */
 package org.apache.rocketmq.common.statistics;
 
+import org.apache.commons.lang3.tuple.Pair;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,6 +28,11 @@ public class StatisticsManager {
      * Set of Statistics Kind Metadata
      */
     private Map<String, StatisticsKindMeta> kindMetaMap;
+
+    /**
+     * item names to calculate statistics brief
+     */
+    private Pair<String, long[][]>[] briefMetas;
 
     /**
      * Statistics
@@ -46,6 +53,10 @@ public class StatisticsManager {
         statsTable.putIfAbsent(kindMeta.getName(), new ConcurrentHashMap<String, StatisticsItem>(16));
     }
 
+    public void setBriefMeta(Pair<String, long[][]>[] briefMetas) {
+        this.briefMetas = briefMetas;
+    }
+
     /**
      * Increment a StatisticsItem
      *
@@ -61,6 +72,7 @@ public class StatisticsManager {
             // if not exist, create and schedule
             if (item == null) {
                 item = new StatisticsItem(kind, key, kindMetaMap.get(kind).getItemNames());
+                item.setInterceptor(new StatisticsBriefInterceptor(item, briefMetas));
                 StatisticsItem oldItem = itemMap.putIfAbsent(key, item);
                 if (oldItem != null) {
                     item = oldItem;
