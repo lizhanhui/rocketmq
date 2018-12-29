@@ -159,11 +159,13 @@ public class StatisticsItemScheduledIncrementPrinter extends StatisticsItemSched
             StringBuilder sb = new StringBuilder();
             StatisticsBriefInterceptor briefInterceptor = (StatisticsBriefInterceptor)interceptor;
             for (StatisticsBrief brief : briefInterceptor.getStatisticsBriefs()) {
-                sb.append(SEPERATOR).append(brief.getTotal());
-                sb.append(SEPERATOR).append(brief.getMax());
+                long max = brief.getMax();
+                long tp999 = Math.min(brief.tp999(), max);
+                //sb.append(SEPERATOR).append(brief.getTotal());
+                sb.append(SEPERATOR).append(max);
                 //sb.append(SEPERATOR).append(brief.getMin());
-                //sb.append(SEPERATOR).append(String.format("%.2f", brief.getAvg()));
-                sb.append(SEPERATOR).append(brief.tp999());
+                sb.append(SEPERATOR).append(String.format("%.2f", brief.getAvg()));
+                sb.append(SEPERATOR).append(tp999);
             }
             return sb.toString();
         }
