@@ -333,10 +333,9 @@ public class BrokerStatsManager {
         this.statsTable.get(key).addValue(statsKey, incValue, 1);
     }
 
-    public void incAccountValue(final String statType, final String owner, final String user, final String authType,
-                                final String instanceId, final String topic, final String group, final String msgType,
+    public void incAccountValue(final String statType, final String owner, final String instanceId, final String topic, final String group, final String msgType,
                                 final long... incValues) {
-        final String key = buildAccountStatKey(owner, user, authType, instanceId, topic, group, msgType);
+        final String key = buildAccountStatKey(owner, instanceId, topic, group, msgType);
         this.accountStatManager.inc(statType, key, incValues);
     }
 
@@ -369,14 +368,12 @@ public class BrokerStatsManager {
         return strBuilder.toString();
     }
 
-    public String buildAccountStatKey(final String owner, final String user, final String authType,
-                                      final String instanceId, final String topic, final String group,
+    public String buildAccountStatKey(final String owner, final String instanceId,
+                                      final String topic, final String group,
                                       final String msgType) {
         final String sep = "|";
         StringBuffer strBuilder = new StringBuffer();
         strBuilder.append(owner).append(sep);
-        strBuilder.append(user).append(sep);
-        strBuilder.append(authType).append(sep);
         strBuilder.append(instanceId).append(sep);
         strBuilder.append(topic).append(sep);
         strBuilder.append(group).append(sep);

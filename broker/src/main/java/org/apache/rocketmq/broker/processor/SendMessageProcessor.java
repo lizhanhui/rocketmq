@@ -288,8 +288,6 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
             this.brokerController.getBrokerStatsManager().incAccountValue(
                 isDLQ ? BrokerStatsManager.ACCOUNT_SEND_BACK_TO_DLQ : BrokerStatsManager.ACCOUNT_SEND_BACK,
                 commercialOwner,
-                user,
-                authType,
                 namespace,
                 NamespaceUtil.withoutNamespace(requestHeader.getOriginTopic()),
                 NamespaceUtil.withoutNamespace(requestHeader.getGroup()),
