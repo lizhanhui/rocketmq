@@ -26,16 +26,17 @@ public class StatisticsItemScheduledPrinter {
     protected ScheduledExecutorService executor;
     protected long interval;
     protected InitialDelay initialDelay;
+    protected Enable enable;
 
     public StatisticsItemScheduledPrinter(String name, StatisticsItemPrinter printer,
-                                          ScheduledExecutorService executor,
-                                          InitialDelay initialDelay,
-                                          long interval) {
+                                          ScheduledExecutorService executor, InitialDelay initialDelay,
+                                          long interval, Enable enable) {
         this.name = name;
         this.printer = printer;
         this.executor = executor;
         this.initialDelay = initialDelay;
         this.interval = interval;
+        this.enable = enable;
     }
 
     /**
@@ -45,7 +46,9 @@ public class StatisticsItemScheduledPrinter {
         executor.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
-                printer.print(name, statisticsItem);
+                if (enabled()) {
+                    printer.print(name, statisticsItem);
+                }
             }
         }, getInitialDelay(), interval, TimeUnit.MILLISECONDS);
     }
@@ -58,8 +61,19 @@ public class StatisticsItemScheduledPrinter {
         long get();
     }
 
+    public interface Enable {
+        /**
+         * Get enabled value
+         * @return
+         */
+        boolean get();
+    }
+
     protected long getInitialDelay() {
-        long ret = initialDelay != null ? initialDelay.get() : 0;
-        return ret;
+        return initialDelay != null ? initialDelay.get() : 0;
+    }
+
+    protected boolean enabled() {
+        return enable != null ? enable.get() : false;
     }
 }

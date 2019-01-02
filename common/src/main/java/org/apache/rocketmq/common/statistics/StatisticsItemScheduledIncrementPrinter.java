@@ -19,6 +19,7 @@ package org.apache.rocketmq.common.statistics;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class StatisticsItemScheduledIncrementPrinter extends StatisticsItemScheduledPrinter {
 
@@ -26,6 +27,7 @@ public class StatisticsItemScheduledIncrementPrinter extends StatisticsItemSched
 
     public static final int TPS_INITIAL_DELAY = 0;
     public static final int TPS_INTREVAL = 1000;
+    public static final String SEPERATOR = "|";
 
     /**
      * last snapshots of all scheduled items
@@ -37,11 +39,9 @@ public class StatisticsItemScheduledIncrementPrinter extends StatisticsItemSched
         = new ConcurrentHashMap<String, ConcurrentHashMap<String, StatisticsItemSampleBrief>>();
 
     public StatisticsItemScheduledIncrementPrinter(String name, StatisticsItemPrinter printer,
-                                                   ScheduledExecutorService executor,
-                                                   InitialDelay initialDelay,
-                                                   long interval,
-                                                   String[] tpsItemNames) {
-        super(name, printer, executor, initialDelay, interval);
+                                                   ScheduledExecutorService executor, InitialDelay initialDelay,
+                                                   long interval, String[] tpsItemNames, Enable enable) {
+        super(name, printer, executor, initialDelay, interval, enable);
         this.tpsItemNames = tpsItemNames;
     }
 
@@ -52,23 +52,42 @@ public class StatisticsItemScheduledIncrementPrinter extends StatisticsItemSched
     public void schedule(final StatisticsItem item) {
         setItemSampleBrief(item.getStatKind(), item.getStatObject(), new StatisticsItemSampleBrief(item, tpsItemNames));
 
+        // print log every ${interval} miliseconds
         executor.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
+                if (!enabled()) {
+                    return;
+                }
+
                 StatisticsItem snapshot = item.snapshot();
                 StatisticsItem lastSnapshot = getItemSnapshot(lastItemSnapshots, item.getStatKind(),
                     item.getStatObject());
                 StatisticsItem increment = snapshot.subtract(lastSnapshot);
+
+                Interceptor inteceptor = item.getInterceptor();
+                String inteceptorStr = formatInterceptor(inteceptor);
+                if (inteceptor != null) {
+                    inteceptor.reset();
+                }
+
                 StatisticsItemSampleBrief brief = getSampleBrief(item.getStatKind(), item.getStatObject());
-                printer.print(name, increment, "|", brief.toString());
+                if (hasIncreased(increment)) {
+                    printer.print(name, increment, inteceptorStr, brief.toString());
+                }
                 setItemSnapshot(lastItemSnapshots, snapshot);
                 brief.reset();
             }
         }, getInitialDelay(), interval, TimeUnit.MILLISECONDS);
 
+        // sample every TPS_INTREVAL
         executor.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
+                if (!enabled()) {
+                    return;
+                }
+
                 StatisticsItem snapshot = item.snapshot();
                 StatisticsItemSampleBrief brief = getSampleBrief(item.getStatKind(), item.getStatObject());
                 brief.sample(snapshot);
@@ -118,6 +137,41 @@ public class StatisticsItemScheduledIncrementPrinter extends StatisticsItemSched
         itemMap.put(key, brief);
     }
 
+    private boolean hasIncreased(StatisticsItem increment) {
+        if (increment.getInvokeTimes().get() == 0) {
+            return false;
+        }
+
+        for (AtomicLong acc : increment.getItemAccumulates()) {
+            if (acc.get() != 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String formatInterceptor(Interceptor interceptor) {
+        if (interceptor == null) {
+            return "";
+        }
+
+        if (interceptor instanceof StatisticsBriefInterceptor) {
+            StringBuilder sb = new StringBuilder();
+            StatisticsBriefInterceptor briefInterceptor = (StatisticsBriefInterceptor)interceptor;
+            for (StatisticsBrief brief : briefInterceptor.getStatisticsBriefs()) {
+                long max = brief.getMax();
+                long tp999 = Math.min(brief.tp999(), max);
+                //sb.append(SEPERATOR).append(brief.getTotal());
+                sb.append(SEPERATOR).append(max);
+                //sb.append(SEPERATOR).append(brief.getMin());
+                sb.append(SEPERATOR).append(String.format("%.2f", brief.getAvg()));
+                sb.append(SEPERATOR).append(tp999);
+            }
+            return sb.toString();
+        }
+        return "";
+    }
+
     public static class StatisticsItemSampleBrief {
         private StatisticsItem lastSnapshot;
 
@@ -157,16 +211,11 @@ public class StatisticsItemScheduledIncrementPrinter extends StatisticsItemSched
         @Override
         public String toString() {
             StringBuilder sb = new StringBuilder();
-            final String sep = "|";
             for (int i = 0; i < briefs.length; i++) {
                 ItemSampleBrief brief = briefs[i];
-                sb.append(brief.getMax()).append(sep);
-                sb.append(brief.getMin()).append(sep);
-                sb.append(String.format("%.2f", brief.getAvg()));
-
-                if (i < briefs.length - 1) {
-                    sb.append(sep);
-                }
+                sb.append(SEPERATOR).append(brief.getMax());
+                //sb.append(SEPERATOR).append(brief.getMin());
+                sb.append(SEPERATOR).append(String.format("%.2f", brief.getAvg()));
             }
             return sb.toString();
         }
@@ -224,5 +273,4 @@ public class StatisticsItemScheduledIncrementPrinter extends StatisticsItemSched
             return cnt != 0 ? ((double)total) / cnt : 0;
         }
     }
-
 }

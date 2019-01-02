@@ -16,8 +16,6 @@
  */
 package org.apache.rocketmq.broker.processor;
 
-import java.util.List;
-
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -58,6 +56,8 @@ import org.apache.rocketmq.store.GetMessageResult;
 import org.apache.rocketmq.store.MessageFilter;
 import org.apache.rocketmq.store.config.BrokerRole;
 import org.apache.rocketmq.store.stats.BrokerStatsManager;
+
+import java.util.List;
 
 public class PullMessageProcessor implements NettyRequestProcessor {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
@@ -337,7 +337,6 @@ public class PullMessageProcessor implements NettyRequestProcessor {
                 context.setConsumerGroup(requestHeader.getConsumerGroup());
                 context.setTopic(requestHeader.getTopic());
                 context.setQueueId(requestHeader.getQueueId());
-                context.setTopicConfig(topicConfig);
                 context.setAccountAuthType(authType);
                 context.setAccountOwnerParent(ownerParent);
                 context.setAccountOwnerSelf(ownerSelf);
