@@ -284,7 +284,7 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner, MQPopConsumer
     }
 
     public void resetTopic(List<MessageExt> msgList) {
-        if (null == msgList || msgList.size() == 0){
+        if (null == msgList || msgList.size() == 0) {
             return;
         }
 
