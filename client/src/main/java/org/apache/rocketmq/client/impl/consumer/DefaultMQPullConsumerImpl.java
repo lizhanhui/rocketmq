@@ -284,6 +284,10 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner, MQPopConsumer
     }
 
     public void resetTopic(List<MessageExt> msgList) {
+        if (null == msgList || msgList.size() == 0){
+            return;
+        }
+
         //If namespace not null , reset Topic without namespace.
         for (MessageExt messageExt : msgList) {
             if (null != this.getDefaultMQPullConsumer().getNamespace()) {
