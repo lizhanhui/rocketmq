@@ -17,8 +17,12 @@
 package org.apache.rocketmq.namesrv.routeinfo;
 
 import io.netty.channel.Channel;
+
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
+
+import org.apache.rocketmq.common.DataVersion;
 import org.apache.rocketmq.common.TopicConfig;
 import org.apache.rocketmq.common.namesrv.RegisterBrokerResult;
 import org.apache.rocketmq.common.protocol.body.TopicConfigSerializeWrapper;
@@ -54,6 +58,55 @@ public class RouteInfoManagerTest {
     }
 
     @Test
+    public void testQueryBrokerTopicConfig() {
+        {
+            DataVersion targetVersion = new DataVersion();
+            targetVersion.setCounter(new AtomicLong(10L));
+            targetVersion.setTimestamp(100L);
+
+            DataVersion dataVersion = routeInfoManager.queryBrokerTopicConfig("default-cluster", "127.0.0.1:10911");
+            assertThat(dataVersion.equals(targetVersion)).isTrue();
+        }
+
+        {
+            // register broker default-cluster-1 with the same addr, then test
+            DataVersion targetVersion = new DataVersion();
+            targetVersion.setCounter(new AtomicLong(20L));
+            targetVersion.setTimestamp(200L);
+
+            ConcurrentHashMap<String, TopicConfig> topicConfigConcurrentHashMap = new ConcurrentHashMap<>();
+            TopicConfig topicConfig = new TopicConfig();
+            topicConfig.setWriteQueueNums(8);
+            topicConfig.setTopicName("unit-test");
+            topicConfig.setPerm(6);
+            topicConfig.setReadQueueNums(8);
+            topicConfig.setOrder(false);
+            topicConfigConcurrentHashMap.put("unit-test-1", topicConfig);
+
+            TopicConfigSerializeWrapper topicConfigSerializeWrapper = new TopicConfigSerializeWrapper();
+            topicConfigSerializeWrapper.setDataVersion(targetVersion);
+            topicConfigSerializeWrapper.setTopicConfigTable(topicConfigConcurrentHashMap);
+            Channel channel = mock(Channel.class);
+            RegisterBrokerResult registerBrokerResult = routeInfoManager.registerBroker("default-cluster-1", "127.0.0.1:10911", "default-broker-1", 1234, "127.0.0.1:1001",
+                    topicConfigSerializeWrapper, new ArrayList<String>(), channel);
+            assertThat(registerBrokerResult).isNotNull();
+
+            DataVersion dataVersion0 = routeInfoManager.queryBrokerTopicConfig("default-cluster", "127.0.0.1:10911");
+            assertThat(targetVersion.equals(dataVersion0)).isFalse();
+
+            DataVersion dataVersion1 = routeInfoManager.queryBrokerTopicConfig("default-cluster-1", "127.0.0.1:10911");
+            assertThat(targetVersion.equals(dataVersion1)).isTrue();
+        }
+
+        // unregister broker default-cluster-1, then test
+        {
+            routeInfoManager.unregisterBroker("default-cluster-1", "127.0.0.1:10911", "default-broker-1", 1234);
+            assertThat(null != routeInfoManager.queryBrokerTopicConfig("default-cluster", "127.0.0.1:10911")).isTrue();
+            assertThat(null == routeInfoManager.queryBrokerTopicConfig("default-cluster-1", "127.0.0.1:10911")).isTrue();
+        }
+    }
+
+    @Test
     public void testGetAllTopicList() {
         byte[] topicInfo = routeInfoManager.getAllTopicList();
         Assert.assertTrue(topicInfo != null);
@@ -62,7 +115,10 @@ public class RouteInfoManagerTest {
 
     @Test
     public void testRegisterBroker() {
-        TopicConfigSerializeWrapper topicConfigSerializeWrapper = new TopicConfigSerializeWrapper();
+        DataVersion dataVersion = new DataVersion();
+        dataVersion.setCounter(new AtomicLong(10L));
+        dataVersion.setTimestamp(100L);
+
         ConcurrentHashMap<String, TopicConfig> topicConfigConcurrentHashMap = new ConcurrentHashMap<>();
         TopicConfig topicConfig = new TopicConfig();
         topicConfig.setWriteQueueNums(8);
@@ -71,10 +127,13 @@ public class RouteInfoManagerTest {
         topicConfig.setReadQueueNums(8);
         topicConfig.setOrder(false);
         topicConfigConcurrentHashMap.put("unit-test", topicConfig);
+
+        TopicConfigSerializeWrapper topicConfigSerializeWrapper = new TopicConfigSerializeWrapper();
+        topicConfigSerializeWrapper.setDataVersion(dataVersion);
         topicConfigSerializeWrapper.setTopicConfigTable(topicConfigConcurrentHashMap);
         Channel channel = mock(Channel.class);
         RegisterBrokerResult registerBrokerResult = routeInfoManager.registerBroker("default-cluster", "127.0.0.1:10911", "default-broker", 1234, "127.0.0.1:1001",
-            topicConfigSerializeWrapper, new ArrayList<String>(), channel);
+                topicConfigSerializeWrapper, new ArrayList<String>(), channel);
         assertThat(registerBrokerResult).isNotNull();
     }
 
