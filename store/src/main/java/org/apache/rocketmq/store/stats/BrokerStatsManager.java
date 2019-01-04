@@ -74,7 +74,7 @@ public class BrokerStatsManager {
     public static final String ACCOUNT_SEND_BACK = "SEND_BACK";
     public static final String ACCOUNT_SEND_BACK_TO_DLQ = "SEND_BACK_TO_DLQ";
 
-    public static final String REQUEST_COUNT = "REQUEST_COUNT";
+    public static final String MSG_COUNT = "MSG_COUNT";
     public static final String SUCCESS_COUNT = "SUCCESS_COUNT";
     public static final String FAILURE_COUNT = "FAILURE_COUNT";
     public static final String SIZE = "SIZE";
@@ -184,7 +184,7 @@ public class BrokerStatsManager {
         accountStatManager.setBriefMeta(new Pair[]{
             Pair.of(RT, new long[][]{{50, 50}, {100, 10}, {1000, 10}}),
             Pair.of(INNER_RT, new long[][]{{10, 10}, {100, 10}, {1000, 10}})});
-        String[] itemNames = new String[] {REQUEST_COUNT, SUCCESS_COUNT, FAILURE_COUNT, SIZE, RT, INNER_RT};
+        String[] itemNames = new String[] {MSG_COUNT, SUCCESS_COUNT, FAILURE_COUNT, SIZE, RT, INNER_RT};
         this.accountStatManager.addStatisticsKindMeta(createStatisticsKindMeta(
             ACCOUNT_SEND, itemNames, this.accountExecutor, formatter, ACCOUNT_LOG, ACCOUNT_STAT_INVERTAL));
         this.accountStatManager.addStatisticsKindMeta(createStatisticsKindMeta(
@@ -404,7 +404,7 @@ public class BrokerStatsManager {
                     }
                 },
                 interval,
-                new String[] {REQUEST_COUNT},
+                new String[] {MSG_COUNT},
                 new StatisticsItemScheduledPrinter.Enable() {
                     @Override
                     public boolean get() {
