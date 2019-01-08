@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.client.ClientConfig;
 import org.apache.rocketmq.client.consumer.AckCallback;
 import org.apache.rocketmq.client.consumer.AckResult;
@@ -586,7 +587,7 @@ public class MQClientAPIImpl {
 
                 //If namespace not null , reset Topic without namespace.
                 String topic = msg.getTopic();
-                if (null != this.clientConfig.getNamespace()) {
+                if (StringUtils.isNotEmpty(this.clientConfig.getNamespace())) {
                     topic = NamespaceUtil.withoutNamespace(topic, this.clientConfig.getNamespace());
                 }
 
@@ -1070,7 +1071,7 @@ public class MQClientAPIImpl {
                 ByteBuffer byteBuffer = ByteBuffer.wrap(response.getBody());
                 MessageExt messageExt = MessageDecoder.clientDecode(byteBuffer, true);
                 //If namespace not null , reset Topic without namespace.
-                if (null != this.clientConfig.getNamespace()) {
+                if (StringUtils.isNotEmpty(this.clientConfig.getNamespace())) {
                     messageExt.setTopic(NamespaceUtil.withoutNamespace(messageExt.getTopic(), this.clientConfig.getNamespace()));
                 }
                 return messageExt;
