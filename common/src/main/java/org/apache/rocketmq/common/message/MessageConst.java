@@ -42,6 +42,7 @@ public class MessageConst {
     public static final String PROPERTY_EXTEND_UNIQ_INFO = "EXTEND_UNIQ_INFO";
     public static final String PROPERTY_MAX_RECONSUME_TIMES = "MAX_RECONSUME_TIMES";
     public static final String PROPERTY_CONSUME_START_TIMESTAMP = "CONSUME_START_TIME";
+    public static final String PROPERTY_INSTANCE_ID = "INSTANCE_ID";
     public static final String PROPERTY_TIMER_DELAY_SEC = "TIMER_DELAY_SEC";
     public static final String PROPERTY_TIMER_DELIVER_MS = "TIMER_DELIVER_MS";
     public static final String PROPERTY_TIMER_IN_MS = "TIMER_IN_MS";
@@ -54,6 +55,7 @@ public class MessageConst {
     public static final String PROPERTY_POP_CK = "POP_CK";
     public static final String PROPERTY_POP_CK_OFFSET = "POP_CK_OFFSET";
     public static final String PROPERTY_FIRST_POP_TIME = "1ST_POP_TIME";
+    public static final String PROPERTY_SHARDING_KEY = "__SHARDINGKEY";
 
     public static final String KEY_SEPARATOR = " ";
 
@@ -91,5 +93,6 @@ public class MessageConst {
         STRING_HASH_SET.add(PROPERTY_POP_CK_OFFSET);
         STRING_HASH_SET.add(PROPERTY_FIRST_POP_TIME);
         STRING_HASH_SET.add(PROPERTY_EXTEND_UNIQ_INFO);
+        STRING_HASH_SET.add(PROPERTY_INSTANCE_ID);
     }
 }

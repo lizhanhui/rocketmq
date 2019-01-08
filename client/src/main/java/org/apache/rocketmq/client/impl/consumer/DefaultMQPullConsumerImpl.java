@@ -16,6 +16,14 @@
  */
 package org.apache.rocketmq.client.impl.consumer;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
+
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
 import org.apache.rocketmq.client.QueryResult;
@@ -52,6 +60,13 @@ import org.apache.rocketmq.common.UtilAll;
 import org.apache.rocketmq.common.consumer.ConsumeFromWhere;
 import org.apache.rocketmq.common.filter.FilterAPI;
 import org.apache.rocketmq.common.help.FAQUrl;
+import org.apache.rocketmq.common.message.Message;
+import org.apache.rocketmq.common.message.MessageAccessor;
+import org.apache.rocketmq.common.message.MessageConst;
+import org.apache.rocketmq.common.message.MessageExt;
+import org.apache.rocketmq.common.message.MessageQueue;
+import org.apache.rocketmq.common.protocol.NamespaceUtil;
+import org.apache.rocketmq.common.protocol.body.ConsumerRunningInfo;
 import org.apache.rocketmq.common.protocol.header.AckMessageRequestHeader;
 import org.apache.rocketmq.common.protocol.header.ChangeInvisibleTimeRequestHeader;
 import org.apache.rocketmq.common.protocol.header.ExtraInfoUtil;
@@ -60,27 +75,14 @@ import org.apache.rocketmq.common.protocol.header.PeekMessageRequestHeader;
 import org.apache.rocketmq.common.protocol.header.PollingInfoRequestHeader;
 import org.apache.rocketmq.common.protocol.header.PopMessageRequestHeader;
 import org.apache.rocketmq.common.protocol.header.StatisticsMessagesRequestHeader;
-import org.apache.rocketmq.logging.InternalLogger;
-import org.apache.rocketmq.common.message.Message;
-import org.apache.rocketmq.common.message.MessageAccessor;
-import org.apache.rocketmq.common.message.MessageConst;
-import org.apache.rocketmq.common.message.MessageExt;
-import org.apache.rocketmq.common.message.MessageQueue;
-import org.apache.rocketmq.common.protocol.body.ConsumerRunningInfo;
 import org.apache.rocketmq.common.protocol.heartbeat.ConsumeType;
 import org.apache.rocketmq.common.protocol.heartbeat.MessageModel;
 import org.apache.rocketmq.common.protocol.heartbeat.SubscriptionData;
 import org.apache.rocketmq.common.sysflag.PullSysFlag;
+import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.remoting.RPCHook;
 import org.apache.rocketmq.remoting.common.RemotingHelper;
 import org.apache.rocketmq.remoting.exception.RemotingException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-import java.util.concurrent.ConcurrentMap;
 
 public class DefaultMQPullConsumerImpl implements MQConsumerInner, MQPopConsumer {
     private final InternalLogger log = ClientLogger.getLog();
@@ -144,7 +146,7 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner, MQPopConsumer
             }
         }
 
-        return mqResult;
+        return parseSubscribeMessageQueues(mqResult);
     }
 
     public List<MessageQueue> fetchPublishMessageQueues(String topic) throws MQClientException {
@@ -156,11 +158,21 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner, MQPopConsumer
         this.makeSureStateOK();
         // check if has info in memory, otherwise invoke api.
         Set<MessageQueue> result = this.rebalanceImpl.getTopicSubscribeInfoTable().get(topic);
-        if (null != result) {
-            return result;
+        if (null == result) {
+            result = this.mQClientFactory.getMQAdminImpl().fetchSubscribeMessageQueues(topic);
         }
 
-        return this.mQClientFactory.getMQAdminImpl().fetchSubscribeMessageQueues(topic);
+        return parseSubscribeMessageQueues(result);
+    }
+
+    public Set<MessageQueue> parseSubscribeMessageQueues(Set<MessageQueue> queueSet) {
+        Set<MessageQueue> resultQueues = new HashSet<MessageQueue>();
+        for (MessageQueue messageQueue : queueSet) {
+            String userTopic = NamespaceUtil.withoutNamespace(messageQueue.getTopic(),
+                this.defaultMQPullConsumer.getNamespace());
+            resultQueues.add(new MessageQueue(userTopic, messageQueue.getBrokerName(), messageQueue.getQueueId()));
+        }
+        return resultQueues;
     }
 
     public long earliestMsgStoreTime(MessageQueue mq) throws MQClientException {
@@ -253,9 +265,12 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner, MQPopConsumer
             subProperties
         );
         this.pullAPIWrapper.processPullResult(mq, pullResult, subscriptionData);
+        //If namespace not null , reset Topic without namespace.
+        this.resetTopic(pullResult.getMsgFoundList());
         if (!this.consumeMessageHookList.isEmpty()) {
             ConsumeMessageContext consumeMessageContext = null;
             consumeMessageContext = new ConsumeMessageContext();
+            consumeMessageContext.setNamespace(defaultMQPullConsumer.getNamespace());
             consumeMessageContext.setConsumerGroup(this.groupName());
             consumeMessageContext.setMq(mq);
             consumeMessageContext.setMsgList(pullResult.getMsgFoundList());
@@ -266,6 +281,20 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner, MQPopConsumer
             this.executeHookAfter(consumeMessageContext);
         }
         return pullResult;
+    }
+
+    public void resetTopic(List<MessageExt> msgList) {
+        if (null == msgList || msgList.size() == 0) {
+            return;
+        }
+
+        //If namespace not null , reset Topic without namespace.
+        for (MessageExt messageExt : msgList) {
+            if (null != this.getDefaultMQPullConsumer().getNamespace()) {
+                messageExt.setTopic(NamespaceUtil.withoutNamespace(messageExt.getTopic(), this.defaultMQPullConsumer.getNamespace()));
+            }
+        }
+
     }
 
     public void subscriptionAutomatically(final String topic) {
@@ -503,8 +532,9 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner, MQPopConsumer
 
                     @Override
                     public void onSuccess(PullResult pullResult) {
-                        pullCallback
-                            .onSuccess(DefaultMQPullConsumerImpl.this.pullAPIWrapper.processPullResult(mq, pullResult, subscriptionData));
+                        PullResult userPullResult = DefaultMQPullConsumerImpl.this.pullAPIWrapper.processPullResult(mq, pullResult, subscriptionData);
+                        resetTopic(userPullResult.getMsgFoundList());
+                        pullCallback.onSuccess(userPullResult);
                     }
 
                     @Override
@@ -586,7 +616,10 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner, MQPopConsumer
             MessageAccessor.setReconsumeTime(newMsg, String.valueOf(msg.getReconsumeTimes() + 1));
             MessageAccessor.setMaxReconsumeTimes(newMsg, String.valueOf(this.defaultMQPullConsumer.getMaxReconsumeTimes()));
             newMsg.setDelayTimeLevel(3 + msg.getReconsumeTimes());
+            //Call inner message producer, message's topic should be with namespace.
             this.mQClientFactory.getDefaultMQProducer().send(newMsg);
+        } finally {
+            msg.setTopic(NamespaceUtil.withoutNamespace(msg.getTopic(), this.defaultMQPullConsumer.getNamespace()));
         }
     }
 

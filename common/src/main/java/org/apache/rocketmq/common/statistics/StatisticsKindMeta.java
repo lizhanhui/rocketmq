@@ -14,23 +14,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.rocketmq.common.statistics;
 
-package org.apache.rocketmq.common.message;
+/**
+ * Statistics Kind Metadata
+ */
+public class StatisticsKindMeta {
+    private String name;
+    private String[] itemNames;
+    private StatisticsItemScheduledPrinter scheduledPrinter;
 
-public enum MessageType {
-    Normal_Msg("Normal"),
-    Order_Msg("Order"),
-    Trans_Msg_Half("Trans"),
-    Trans_msg_Commit("TransCommit"),
-    Delay_Msg("Delay");
-
-    private final String shortName;
-
-    MessageType(String shortName) {
-        this.shortName = shortName;
+    public String getName() {
+        return name;
     }
 
-    public String getShortName() {
-        return shortName;
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String[] getItemNames() {
+        return itemNames;
+    }
+
+    public void setItemNames(String[] itemNames) {
+        this.itemNames = itemNames;
+    }
+
+    public StatisticsItemScheduledPrinter getScheduledPrinter() {
+        return scheduledPrinter;
+    }
+
+    public void setScheduledPrinter(StatisticsItemScheduledPrinter scheduledPrinter) {
+        this.scheduledPrinter = scheduledPrinter;
     }
 }

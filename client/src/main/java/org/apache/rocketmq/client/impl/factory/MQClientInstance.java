@@ -39,6 +39,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.client.ClientConfig;
 import org.apache.rocketmq.client.admin.MQAdminExtInner;
 import org.apache.rocketmq.client.exception.MQBrokerException;
@@ -66,9 +67,9 @@ import org.apache.rocketmq.common.ServiceState;
 import org.apache.rocketmq.common.UtilAll;
 import org.apache.rocketmq.common.constant.PermName;
 import org.apache.rocketmq.common.filter.ExpressionType;
-import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.message.MessageQueue;
+import org.apache.rocketmq.common.protocol.NamespaceUtil;
 import org.apache.rocketmq.common.protocol.ResponseCode;
 import org.apache.rocketmq.common.protocol.body.ConsumeMessageDirectlyResult;
 import org.apache.rocketmq.common.protocol.body.ConsumerRunningInfo;
@@ -80,6 +81,7 @@ import org.apache.rocketmq.common.protocol.heartbeat.SubscriptionData;
 import org.apache.rocketmq.common.protocol.route.BrokerData;
 import org.apache.rocketmq.common.protocol.route.QueueData;
 import org.apache.rocketmq.common.protocol.route.TopicRouteData;
+import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.remoting.RPCHook;
 import org.apache.rocketmq.remoting.common.RemotingHelper;
 import org.apache.rocketmq.remoting.exception.RemotingException;
@@ -378,6 +380,27 @@ public class MQClientInstance {
     }
 
     /**
+     *
+     * @param offsetTable
+     * @param namespace
+     * @return newOffsetTable
+     */
+    public Map<MessageQueue, Long> parseOffsetTableFromBroker(Map<MessageQueue, Long> offsetTable, String namespace) {
+        HashMap<MessageQueue, Long> newOffsetTable = new HashMap<MessageQueue, Long>();
+        if (StringUtils.isNotEmpty(namespace)) {
+            for (Entry<MessageQueue, Long> entry : offsetTable.entrySet()) {
+                MessageQueue queue = entry.getKey();
+                queue.setTopic(NamespaceUtil.withoutNamespace(queue.getTopic(), namespace));
+                newOffsetTable.put(queue, entry.getValue());
+            }
+        } else {
+            newOffsetTable.putAll(offsetTable);
+        }
+
+        return newOffsetTable;
+    }
+
+    /**
      * Remove offline broker
      */
     private void cleanOfflineBroker() {
@@ -552,7 +575,7 @@ public class MQClientInstance {
                             }
 
                             try {
-                                int version = this.mQClientAPIImpl.sendHearbeat(addr, heartbeatData, 3000);
+                                int version = this.mQClientAPIImpl.sendHeartbeat(addr, heartbeatData, 3000);
                                 if (!this.brokerVersionTable.containsKey(brokerName)) {
                                     this.brokerVersionTable.put(brokerName, new HashMap<String, Integer>(4));
                                 }

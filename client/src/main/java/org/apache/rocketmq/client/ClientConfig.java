@@ -16,8 +16,14 @@
  */
 package org.apache.rocketmq.client;
 
+import java.util.HashSet;
+import java.util.Set;
+
+import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.common.UtilAll;
+import org.apache.rocketmq.common.message.MessageQueue;
+import org.apache.rocketmq.common.protocol.NamespaceUtil;
 import org.apache.rocketmq.remoting.common.RemotingUtil;
 import org.apache.rocketmq.remoting.netty.TlsSystemConfig;
 import org.apache.rocketmq.remoting.protocol.LanguageCode;
@@ -35,6 +41,7 @@ public class ClientConfig {
     private String namesrvAddr = System.getProperty(MixAll.NAMESRV_ADDR_PROPERTY, System.getenv(MixAll.NAMESRV_ADDR_ENV));
     private String clientIP = RemotingUtil.getLocalAddress();
     private String instanceName = System.getProperty("rocketmq.client.name", "DEFAULT");
+    protected String namespace;
 
     private int clientCallbackExecutorThreads = Integer.parseInt(System.getProperty(CLIENT_CALLBACK_EXECUTOR_THREAD_NUMS,
         String.valueOf(Runtime.getRuntime().availableProcessors())));
@@ -97,6 +104,38 @@ public class ClientConfig {
         }
     }
 
+    public String withNamespace(String resource) {
+        return NamespaceUtil.wrapNamespace(this.getNamespace(), resource);
+    }
+
+    public Set<String> withNamespace(Set<String> resourceSet) {
+        Set<String> resourceWithNamespace = new HashSet<String>();
+        for (String resource : resourceSet) {
+            resourceWithNamespace.add(withNamespace(resource));
+        }
+        return resourceWithNamespace;
+    }
+
+    public String withoutNamespace(String resource) {
+        return NamespaceUtil.withoutNamespace(resource, this.getNamespace());
+    }
+
+    public Set<String> withoutNamespace(Set<String> resourceSet) {
+        Set<String> resourceWithoutNamespace = new HashSet<String>();
+        for (String resource : resourceSet) {
+            resourceWithoutNamespace.add(withoutNamespace(resource));
+        }
+        return resourceWithoutNamespace;
+    }
+
+    public MessageQueue queueWithNamespace(MessageQueue queue) {
+        if (StringUtils.isEmpty(this.getNamespace())) {
+            return queue;
+        }
+
+        return new MessageQueue(withNamespace(queue.getTopic()), queue.getBrokerName(), queue.getQueueId());
+    }
+
     public void resetClientConfig(final ClientConfig cc) {
         this.namesrvAddr = cc.namesrvAddr;
         this.clientIP = cc.clientIP;
@@ -112,6 +151,7 @@ public class ClientConfig {
         this.decodeDecompressBody = cc.decodeDecompressBody;
         this.useTLS = cc.useTLS;
         this.language = cc.language;
+        this.namespace = cc.namespace;
         this.autoCleanTopicRouteNotFound = cc.autoCleanTopicRouteNotFound;
     }
 
@@ -131,6 +171,7 @@ public class ClientConfig {
         cc.decodeDecompressBody = decodeDecompressBody;
         cc.useTLS = useTLS;
         cc.language = language;
+        cc.namespace = namespace;
         cc.autoCleanTopicRouteNotFound = autoCleanTopicRouteNotFound;
         return cc;
     }
@@ -215,6 +256,14 @@ public class ClientConfig {
         this.decodeDecompressBody = decodeDecompressBody;
     }
 
+    public String getNamespace() {
+        return namespace;
+    }
+
+    protected void setNamespace(String namespace) {
+        this.namespace = namespace;
+    }
+
     public boolean isUseTLS() {
         return useTLS;
     }
@@ -246,7 +295,7 @@ public class ClientConfig {
             + ", heartbeatBrokerInterval=" + heartbeatBrokerInterval + ", persistConsumerOffsetInterval="
             + persistConsumerOffsetInterval + ", unitMode=" + unitMode + ", unitName=" + unitName + ", vipChannelEnabled="
             + vipChannelEnabled + ", decodeReadBody=" + decodeReadBody + ", decodeDecompressBody=" + decodeDecompressBody
-            + ", useTLS=" + useTLS + ", language=" + language.name()
+            + ", useTLS=" + useTLS + ", language=" + language.name() + ", namespace=" + namespace
             + ", autoCleanNoRouteTopic=" + autoCleanTopicRouteNotFound + "]";
     }
 }
