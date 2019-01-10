@@ -50,7 +50,7 @@ public class DefaultConsumerIdsChangeListener implements ConsumerIdsChangeListen
             @Override
             public void run() {
                 try {
-                    doConsumerChange();
+                    notifyConsumerChange();
                 } catch (Exception e) {
                     logger.error("schedule doConsumerChange ", e);
                 }
@@ -94,7 +94,7 @@ public class DefaultConsumerIdsChangeListener implements ConsumerIdsChangeListen
         }
     }
 
-    private void doConsumerChange() {
+    private void notifyConsumerChange() {
 
         if (consumerChannelMap.isEmpty()) {
             return;
