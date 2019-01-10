@@ -16,19 +16,46 @@
  */
 package org.apache.rocketmq.broker.client;
 
-import io.netty.channel.Channel;
-
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
+import io.netty.channel.Channel;
 import org.apache.rocketmq.broker.BrokerController;
+import org.apache.rocketmq.common.ThreadFactoryImpl;
+import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.common.protocol.heartbeat.SubscriptionData;
+import org.apache.rocketmq.logging.InternalLogger;
+import org.apache.rocketmq.logging.InternalLoggerFactory;
 
 public class DefaultConsumerIdsChangeListener implements ConsumerIdsChangeListener {
+    private static final InternalLogger logger = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
     private final BrokerController brokerController;
+    private final int cacheSize = 8096;
+
+    private final ScheduledExecutorService scheduledExecutorService = Executors
+        .newSingleThreadScheduledExecutor(new ThreadFactoryImpl(
+            "DefaultConsumerIdsScheduledThread"));
+
+    private ConcurrentHashMap<String,List<Channel>> consumerChannelMap = new ConcurrentHashMap<>(cacheSize);
 
     public DefaultConsumerIdsChangeListener(BrokerController brokerController) {
         this.brokerController = brokerController;
+
+        scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    doConsumerChange();
+                } catch (Exception e) {
+                    logger.error("schedule doConsumerChange ", e);
+                }
+            }
+        }, 30, 15, TimeUnit.SECONDS);
     }
 
     @Override
@@ -43,8 +70,12 @@ public class DefaultConsumerIdsChangeListener implements ConsumerIdsChangeListen
                 }
                 List<Channel> channels = (List<Channel>) args[0];
                 if (channels != null && brokerController.getBrokerConfig().isNotifyConsumerIdsChangedEnable()) {
-                    for (Channel chl : channels) {
-                        this.brokerController.getBroker2Client().notifyConsumerIdsChanged(chl, group);
+                    if (this.brokerController.getBrokerConfig().isRealTimeNotifyConsumerChange()) {
+                        for (Channel chl : channels) {
+                            this.brokerController.getBroker2Client().notifyConsumerIdsChanged(chl, group);
+                        }
+                    } else {
+                        consumerChannelMap.put(group, channels);
                     }
                 }
                 break;
@@ -60,6 +91,30 @@ public class DefaultConsumerIdsChangeListener implements ConsumerIdsChangeListen
                 break;
             default:
                 throw new RuntimeException("Unknown event " + event);
+        }
+    }
+
+    private void doConsumerChange() {
+
+        if (consumerChannelMap.isEmpty()) {
+            return;
+        }
+
+        ConcurrentHashMap<String, List<Channel>> processMap = new ConcurrentHashMap<>(consumerChannelMap);
+        consumerChannelMap = new ConcurrentHashMap<>(cacheSize);
+
+        for (Map.Entry<String, List<Channel>> entry : processMap.entrySet()) {
+            String consumerId = entry.getKey();
+            List<Channel> channelList = entry.getValue();
+            try {
+                if (channelList != null && brokerController.getBrokerConfig().isNotifyConsumerIdsChangedEnable()) {
+                    for (Channel chl : channelList) {
+                        this.brokerController.getBroker2Client().notifyConsumerIdsChanged(chl, consumerId);
+                    }
+                }
+            } catch (Exception e) {
+                logger.error(String.format("doConsumerChange %s ", consumerId), e);
+            }
         }
     }
 }
