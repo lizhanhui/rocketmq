@@ -174,12 +174,13 @@ public class RouteInfoManager {
 
                 if (null != topicConfigWrapper
                     && MixAll.MASTER_ID == brokerId) {
-                    if (this.isBrokerTopicConfigChanged(clusterName, brokerAddr, topicConfigWrapper.getDataVersion())
-                        || registerFirst) {
-                        ConcurrentMap<String, TopicConfig> tcTable =
-                            topicConfigWrapper.getTopicConfigTable();
-                        if (tcTable != null) {
-                            for (Map.Entry<String, TopicConfig> entry : tcTable.entrySet()) {
+                    ConcurrentMap<String, TopicConfig> tcTable =
+                        topicConfigWrapper.getTopicConfigTable();
+                    if (tcTable != null) {
+                        for (Map.Entry<String, TopicConfig> entry : tcTable.entrySet()) {
+                            if (registerFirst || this.isTopicConfigChanged(clusterName, brokerAddr,
+                                topicConfigWrapper.getDataVersion(), brokerName,
+                                entry.getValue().getTopicName())) {
                                 this.createAndUpdateQueueData(brokerName, entry.getValue());
                             }
                         }
@@ -230,6 +231,24 @@ public class RouteInfoManager {
         final DataVersion dataVersion) {
         DataVersion prev = queryBrokerTopicConfig(clusterName, brokerAddr);
         return null == prev || !prev.equals(dataVersion);
+    }
+
+    public boolean isTopicConfigChanged(final String clusterName, final String brokerAddr,
+                                        final DataVersion dataVersion,String brokerName, String topic) {
+        boolean isChange = isBrokerTopicConfigChanged(clusterName, brokerAddr, dataVersion);
+        if (isChange) {
+            return true;
+        }
+        final List<QueueData> queueDataList = this.topicQueueTable.get(topic);
+        if (queueDataList == null || queueDataList.isEmpty()) {
+            return true;
+        }
+        for (QueueData queueData : queueDataList) {
+            if (queueData.getBrokerName().equals(brokerName)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public DataVersion queryBrokerTopicConfig(final String clusterName, final String brokerAddr) {
