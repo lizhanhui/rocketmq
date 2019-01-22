@@ -234,7 +234,7 @@ public class RouteInfoManager {
     }
 
     public boolean isTopicConfigChanged(final String clusterName, final String brokerAddr,
-                                        final DataVersion dataVersion,String brokerName, String topic) {
+                                        final DataVersion dataVersion, String brokerName, String topic) {
         boolean isChange = isBrokerTopicConfigChanged(clusterName, brokerAddr, dataVersion);
         if (isChange) {
             return true;
