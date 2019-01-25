@@ -16,6 +16,8 @@
  */
 package org.apache.rocketmq.broker.processor;
 
+import java.util.List;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -56,8 +58,6 @@ import org.apache.rocketmq.store.GetMessageResult;
 import org.apache.rocketmq.store.MessageFilter;
 import org.apache.rocketmq.store.config.BrokerRole;
 import org.apache.rocketmq.store.stats.BrokerStatsManager;
-
-import java.util.List;
 
 public class PullMessageProcessor implements NettyRequestProcessor {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
@@ -353,8 +353,8 @@ public class PullMessageProcessor implements NettyRequestProcessor {
                         context.setCommercialOwner(owner);
 
                         context.setRcvStat(BrokerStatsManager.StatsType.RCV_SUCCESS);
-                        context.setRcvTimes(1);
-                        context.setRcvSize(getMessageResult.getBufferTotalSize());
+                        context.setRcvMsgNum(getMessageResult.getMessageCount());
+                        context.setRcvMsgSize(getMessageResult.getBufferTotalSize());
 
                         break;
                     case ResponseCode.PULL_NOT_FOUND:
@@ -365,8 +365,8 @@ public class PullMessageProcessor implements NettyRequestProcessor {
                             context.setCommercialOwner(owner);
 
                             context.setRcvStat(BrokerStatsManager.StatsType.RCV_EPOLLS);
-                            context.setRcvTimes(1);
-                            context.setRcvSize(0);
+                            context.setRcvMsgNum(0);
+                            context.setRcvMsgSize(0);
                         }
                         break;
                     case ResponseCode.PULL_RETRY_IMMEDIATELY:
@@ -376,8 +376,8 @@ public class PullMessageProcessor implements NettyRequestProcessor {
                         context.setCommercialOwner(owner);
 
                         context.setRcvStat(BrokerStatsManager.StatsType.RCV_EPOLLS);
-                        context.setRcvTimes(1);
-                        context.setRcvSize(0);
+                        context.setRcvMsgNum(0);
+                        context.setRcvMsgSize(0);
                         break;
                     default:
                         assert false;
