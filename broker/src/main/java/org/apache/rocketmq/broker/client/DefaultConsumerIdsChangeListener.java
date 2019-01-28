@@ -33,7 +33,7 @@ import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.logging.InternalLoggerFactory;
 
 public class DefaultConsumerIdsChangeListener implements ConsumerIdsChangeListener {
-    private static final InternalLogger logger = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
+    private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
     private final BrokerController brokerController;
     private final int cacheSize = 8096;
 
@@ -51,7 +51,7 @@ public class DefaultConsumerIdsChangeListener implements ConsumerIdsChangeListen
                 try {
                     notifyConsumerChange();
                 } catch (Exception e) {
-                    logger.error("schedule doConsumerChange ", e);
+                    log.error("schedule doConsumerChange ", e);
                 }
             }
         }, 30, 15, TimeUnit.SECONDS);
@@ -112,7 +112,7 @@ public class DefaultConsumerIdsChangeListener implements ConsumerIdsChangeListen
                     }
                 }
             } catch (Exception e) {
-                logger.error(String.format("doConsumerChange %s ", consumerId), e);
+                log.error(String.format("doConsumerChange %s ", consumerId), e);
             }
         }
     }
