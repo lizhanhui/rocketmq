@@ -170,6 +170,8 @@ public class BrokerConfig {
     private int popCkStayBufferTime = 10 * 1000;
     private int popCkStayBufferTimeOut = 3 * 1000;
 
+    private boolean realTimeNotifyConsumerChange;
+
     private int pullBatchMaxMessageCount = 160;
 
     public long getMaxPopPollingSize() {
@@ -836,5 +838,13 @@ public class BrokerConfig {
 
     public void setPullBatchMaxMessageCount(int pullBatchMaxMessageCount) {
         this.pullBatchMaxMessageCount = pullBatchMaxMessageCount;
+    }
+
+    public boolean isRealTimeNotifyConsumerChange() {
+        return realTimeNotifyConsumerChange;
+    }
+
+    public void setRealTimeNotifyConsumerChange(boolean realTimeNotifyConsumerChange) {
+        this.realTimeNotifyConsumerChange = realTimeNotifyConsumerChange;
     }
 }
