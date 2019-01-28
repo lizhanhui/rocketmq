@@ -174,7 +174,6 @@ public class BrokerConfig {
 
     private int pullBatchMaxMessageCount = 160;
 
-    private boolean realTimeNotifyConsumerChange = true;
 
     public long getMaxPopPollingSize() {
         return maxPopPollingSize;
@@ -840,14 +839,6 @@ public class BrokerConfig {
 
     public void setPullBatchMaxMessageCount(int pullBatchMaxMessageCount) {
         this.pullBatchMaxMessageCount = pullBatchMaxMessageCount;
-    }
-
-    public boolean isRealTimeNotifyConsumerChange() {
-        return realTimeNotifyConsumerChange;
-    }
-
-    public void setRealTimeNotifyConsumerChange(boolean realTimeNotifyConsumerChange) {
-        this.realTimeNotifyConsumerChange = realTimeNotifyConsumerChange;
     }
 
     public boolean isRealTimeNotifyConsumerChange() {
