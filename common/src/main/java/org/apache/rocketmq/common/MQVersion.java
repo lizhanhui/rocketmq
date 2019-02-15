@@ -18,7 +18,7 @@ package org.apache.rocketmq.common;
 
 public class MQVersion {
 
-    public static final int CURRENT_VERSION = Version.V4_3_4_SNAPSHOT.ordinal();
+    public static final int CURRENT_VERSION = Version.V4_3_4_VTOA_SNAPSHOT.ordinal();
 
     public static String getVersionDesc(int value) {
         int length = Version.values().length;
@@ -444,6 +444,7 @@ public class MQVersion {
         V4_3_3,
 
         V4_3_4_SNAPSHOT,
+        V4_3_4_VTOA_SNAPSHOT,
         V4_3_4,
 
         V4_3_5_SNAPSHOT,
