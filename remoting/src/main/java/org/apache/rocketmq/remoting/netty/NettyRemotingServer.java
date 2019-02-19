@@ -64,7 +64,8 @@ import org.apache.rocketmq.remoting.exception.RemotingSendRequestException;
 import org.apache.rocketmq.remoting.exception.RemotingTimeoutException;
 import org.apache.rocketmq.remoting.exception.RemotingTooMuchRequestException;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
-import org.apache.rocketmq.remoting.vtoa.VPCTunnelUtils;
+import org.apache.rocketmq.remoting.protocol.RemotingCommandType;
+import org.apache.rocketmq.remoting.vtoa.VpcTunnelUtils;
 import org.apache.rocketmq.remoting.vtoa.Vtoa;
 
 public class NettyRemotingServer extends NettyRemotingAbstract implements RemotingServer {
@@ -401,10 +402,16 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
 
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, RemotingCommand msg) throws Exception {
-            log.warn("Get tunnel Id is " + VPCTunnelUtils.getTunnelID(ctx, new Vtoa()));
+            if (nettyServerConfig.isValidateTunnelIdFromVtoaEnable()) {
+                if (msg != null && msg.getType() == RemotingCommandType.REQUEST_COMMAND) {
+                    msg.addExtField(VpcTunnelUtils.PROPERTY_VTOA_TUNNEL_ID,
+                        String.valueOf(VpcTunnelUtils.getInstance().getTunnelID(ctx, new Vtoa())));
+                }
+            }
             processMessageReceived(ctx, msg);
         }
     }
+
 
     class NettyConnectManageHandler extends ChannelDuplexHandler {
         @Override

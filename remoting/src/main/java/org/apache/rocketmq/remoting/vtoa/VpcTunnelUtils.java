@@ -22,25 +22,37 @@ import java.net.Socket;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.channel.unix.FileDescriptor;
 import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.remoting.common.RemotingHelper;
 
-public class VPCTunnelUtils {
+public class VpcTunnelUtils {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(RemotingHelper.ROCKETMQ_REMOTING);
+    public static final String PROPERTY_VTOA_TUNNEL_ID = "VTOA_TUNNEL_ID";
 
-    public static int getTunnelID(ChannelHandlerContext ctx, Vtoa toa) {
-        int result = LibVtoa.INSTANCE.getVtoa(getSocketFd(ctx), toa);
-        if (result > 0 && toa != null) {
-            return toa.getTunnelId();
+    static {
+        System.loadLibrary("getvip");
+    }
+
+    public native static int getvip(int fd, Vtoa v);
+    private static VpcTunnelUtils instance = new VpcTunnelUtils();
+
+    public static VpcTunnelUtils getInstance() {
+        return instance;
+    }
+
+    public int getTunnelID(ChannelHandlerContext ctx, Vtoa toa) {
+        int result = VpcTunnelUtils.getInstance().getvip(getSocketFd(ctx), toa);
+        if (result == 0 && toa != null) {
+            log.debug("Get tunnel_id from vtoa: vid={}, vaddr={}, vport={}", toa.getVid(), toa.getVaddr(), toa.getVport());
+            return toa.getVid();
         }
 
         return -1;
     }
 
     /**
-     * Fetch socket fd from Netty ChannelHandlerContext by Vtoa demo
+     * Fetch socket fd from Netty ChannelHandlerContext
      *
      * @param ctx
      * @return
@@ -68,7 +80,7 @@ public class VPCTunnelUtils {
             fileDescriptorField.setAccessible(true);
             Object fileDescriptorValue = fileDescriptorField.get(socketChannel);
             fileDescriptorField.set(socketChannel, fileDescriptorValue);
-            FileDescriptor fileDescriptor = (FileDescriptor)fileDescriptorValue;
+            java.io.FileDescriptor fileDescriptor = (java.io.FileDescriptor)fileDescriptorValue;
 
             /* fd */
             Field fdField = fileDescriptor.getClass().getDeclaredField("fd");
@@ -83,11 +95,7 @@ public class VPCTunnelUtils {
         } catch (IllegalAccessException e) {
             log.error("Get socket field failed. ", e);
         }
-        return 0;
-    }
 
-    public static void main(String[] args) {
-        log.error(LibVtoa.VTOA_FILE_PATH);
-        log.error(System.getProperty("java.library.path"));
+        return 0;
     }
 }

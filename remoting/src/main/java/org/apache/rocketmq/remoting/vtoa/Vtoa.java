@@ -17,31 +17,31 @@
 package org.apache.rocketmq.remoting.vtoa;
 
 public class Vtoa {
-    public int tunnelId;
-    public int addr;
-    public int port;
+    public int vid;
+    public int vaddr;
+    public int vport;
 
-    public int getTunnelId() {
-        return tunnelId;
+    public int getVid() {
+        return vid;
     }
 
-    public void setTunnelId(int tunnelId) {
-        this.tunnelId = tunnelId;
+    public void setVid(int vid) {
+        this.vid = vid;
     }
 
-    public int getAddr() {
-        return addr;
+    public int getVaddr() {
+        return vaddr;
     }
 
-    public void setAddr(int addr) {
-        this.addr = addr;
+    public void setVaddr(int vaddr) {
+        this.vaddr = vaddr;
     }
 
-    public int getPort() {
-        return port;
+    public int getVport() {
+        return vport;
     }
 
-    public void setPort(int port) {
-        this.port = port;
+    public void setVport(int vport) {
+        this.vport = vport;
     }
 }
