@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -82,6 +83,7 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
     private DefaultEventExecutorGroup defaultEventExecutorGroup;
 
     private List<RPCHook> rpcHookList = new CopyOnWriteArrayList<RPCHook>();
+    private ConcurrentHashMap<Channel, Integer> tunnelTable = new ConcurrentHashMap<Channel, Integer>(16);
 
     private int port = 0;
 
@@ -402,13 +404,23 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
 
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, RemotingCommand msg) throws Exception {
+            processTunnelId(ctx, msg);
+            processMessageReceived(ctx, msg);
+        }
+
+        public void processTunnelId(ChannelHandlerContext ctx, RemotingCommand msg) {
             if (nettyServerConfig.isValidateTunnelIdFromVtoaEnable()) {
                 if (msg != null && msg.getType() == RemotingCommandType.REQUEST_COMMAND) {
-                    msg.addExtField(VpcTunnelUtils.PROPERTY_VTOA_TUNNEL_ID,
-                        String.valueOf(VpcTunnelUtils.getInstance().getTunnelID(ctx, new Vtoa())));
+                    int tunnelId;
+                    if (tunnelTable.contains(ctx.channel())) {
+                        tunnelId = tunnelTable.get(ctx.channel());
+                    } else {
+                        tunnelId = VpcTunnelUtils.getInstance().getTunnelID(ctx, new Vtoa());
+                        tunnelTable.put(ctx.channel(), tunnelId);
+                    }
+                    msg.addExtField(VpcTunnelUtils.PROPERTY_VTOA_TUNNEL_ID, String.valueOf(tunnelId));
                 }
             }
-            processMessageReceived(ctx, msg);
         }
     }
 
@@ -418,6 +430,9 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
         public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
             final String remoteAddress = RemotingHelper.parseChannelRemoteAddr(ctx.channel());
             log.info("NETTY SERVER PIPELINE: channelRegistered {}", remoteAddress);
+            if (nettyServerConfig.isValidateTunnelIdFromVtoaEnable()) {
+                tunnelTable.put(ctx.channel(), VpcTunnelUtils.getInstance().getTunnelID(ctx, new Vtoa()));
+            }
             super.channelRegistered(ctx);
         }
 
@@ -425,6 +440,9 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
         public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
             final String remoteAddress = RemotingHelper.parseChannelRemoteAddr(ctx.channel());
             log.info("NETTY SERVER PIPELINE: channelUnregistered, the channel[{}]", remoteAddress);
+            if (nettyServerConfig.isValidateTunnelIdFromVtoaEnable()) {
+                tunnelTable.remove(ctx.channel());
+            }
             super.channelUnregistered(ctx);
         }
 
@@ -458,6 +476,9 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
                     final String remoteAddress = RemotingHelper.parseChannelRemoteAddr(ctx.channel());
                     log.warn("NETTY SERVER PIPELINE: IDLE exception [{}]", remoteAddress);
                     RemotingUtil.closeChannel(ctx.channel());
+                    if (nettyServerConfig.isValidateTunnelIdFromVtoaEnable()) {
+                        tunnelTable.remove(ctx.channel());
+                    }
                     if (NettyRemotingServer.this.channelEventListener != null) {
                         NettyRemotingServer.this
                             .putNettyEvent(new NettyEvent(NettyEventType.IDLE, remoteAddress, ctx.channel()));
@@ -478,6 +499,9 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
                 NettyRemotingServer.this.putNettyEvent(new NettyEvent(NettyEventType.EXCEPTION, remoteAddress, ctx.channel()));
             }
 
+            if (nettyServerConfig.isValidateTunnelIdFromVtoaEnable()) {
+                tunnelTable.remove(ctx.channel());
+            }
             RemotingUtil.closeChannel(ctx.channel());
         }
     }
