@@ -83,7 +83,7 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
     private DefaultEventExecutorGroup defaultEventExecutorGroup;
 
     private List<RPCHook> rpcHookList = new CopyOnWriteArrayList<RPCHook>();
-    private ConcurrentHashMap<Channel, Integer> tunnelTable = new ConcurrentHashMap<Channel, Integer>(16);
+    private ConcurrentHashMap<Channel, Vtoa> tunnelTable = new ConcurrentHashMap<Channel, Vtoa>(16);
 
     private int port = 0;
 
@@ -410,15 +410,13 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
 
         public void processTunnelId(ChannelHandlerContext ctx, RemotingCommand msg) {
             if (nettyServerConfig.isValidateTunnelIdFromVtoaEnable()) {
-                if (msg != null && msg.getType() == RemotingCommandType.REQUEST_COMMAND) {
-                    int tunnelId;
-                    if (tunnelTable.contains(ctx.channel())) {
-                        tunnelId = tunnelTable.get(ctx.channel());
-                    } else {
-                        tunnelId = VpcTunnelUtils.getInstance().getTunnelID(ctx, new Vtoa());
-                        tunnelTable.put(ctx.channel(), tunnelId);
+                if (null != msg && msg.getType() == RemotingCommandType.REQUEST_COMMAND) {
+                    Vtoa vtoa = tunnelTable.get(ctx.channel());
+                    if (null == vtoa) {
+                        vtoa = VpcTunnelUtils.getInstance().getTunnelID(ctx);
+                        tunnelTable.put(ctx.channel(), vtoa);
                     }
-                    msg.addExtField(VpcTunnelUtils.PROPERTY_VTOA_TUNNEL_ID, String.valueOf(tunnelId));
+                    msg.addExtField(VpcTunnelUtils.PROPERTY_VTOA_TUNNEL_ID, String.valueOf(vtoa.getVid()));
                 }
             }
         }
@@ -431,7 +429,7 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
             final String remoteAddress = RemotingHelper.parseChannelRemoteAddr(ctx.channel());
             log.info("NETTY SERVER PIPELINE: channelRegistered {}", remoteAddress);
             if (nettyServerConfig.isValidateTunnelIdFromVtoaEnable()) {
-                tunnelTable.put(ctx.channel(), VpcTunnelUtils.getInstance().getTunnelID(ctx, new Vtoa()));
+                tunnelTable.put(ctx.channel(), VpcTunnelUtils.getInstance().getTunnelID(ctx));
             }
             super.channelRegistered(ctx);
         }

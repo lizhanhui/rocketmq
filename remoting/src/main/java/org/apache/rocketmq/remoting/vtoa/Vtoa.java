@@ -21,6 +21,15 @@ public class Vtoa {
     public int vaddr;
     public int vport;
 
+    public Vtoa() {
+    }
+
+    public Vtoa(int vid, int vaddr, int vport) {
+        this.vid = vid;
+        this.vaddr = vaddr;
+        this.vport = vport;
+    }
+
     public int getVid() {
         return vid;
     }

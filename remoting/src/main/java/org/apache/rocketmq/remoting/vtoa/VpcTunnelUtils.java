@@ -41,14 +41,16 @@ public class VpcTunnelUtils {
         return instance;
     }
 
-    public int getTunnelID(ChannelHandlerContext ctx, Vtoa toa) {
-        int result = VpcTunnelUtils.getInstance().getvip(getSocketFd(ctx), toa);
-        if (result == 0 && toa != null) {
-            log.debug("Get tunnel_id from vtoa: vid={}, vaddr={}, vport={}", toa.getVid(), toa.getVaddr(), toa.getVport());
-            return toa.getVid();
+    public Vtoa getTunnelID(ChannelHandlerContext ctx) {
+        Vtoa vtoa = new Vtoa(-1, -1, -1);
+        int result = VpcTunnelUtils.getInstance().getvip(getSocketFd(ctx), vtoa);
+        if (result == 0 && vtoa != null) {
+            log.debug("Get tunnel_id from vtoa success: resultCode={}, vid={}, vaddr={}, vport={}",result, vtoa.getVid(), vtoa.getVaddr(), vtoa.getVport());
+        } else {
+            log.debug("Get tunnel_id from vtoa error: resultCode={}, vid={}, vaddr={}, vport={}", result, vtoa.getVid(), vtoa.getVaddr(), vtoa.getVport());
         }
 
-        return -1;
+        return vtoa;
     }
 
     /**
