@@ -22,6 +22,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import org.apache.rocketmq.broker.BrokerController;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
+import org.apache.rocketmq.common.UtilAll;
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.logging.InternalLoggerFactory;
@@ -37,6 +38,8 @@ public class BrokerFastFailure {
     private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryImpl(
         "BrokerFastFailureScheduledThread"));
     private final BrokerController brokerController;
+
+    private volatile long jstackTime = System.currentTimeMillis();
 
     public BrokerFastFailure(final BrokerController brokerController) {
         this.brokerController = brokerController;
@@ -113,6 +116,10 @@ public class BrokerFastFailure {
                         if (blockingQueue.remove(runnable)) {
                             rt.setStopRun(true);
                             rt.returnResponse(RemotingSysResponseCode.SYSTEM_BUSY, String.format("[TIMEOUT_CLEAN_QUEUE]broker busy, start flow control for a while, period in queue: %sms, size of queue: %d", behind, blockingQueue.size()));
+                            if (System.currentTimeMillis() - jstackTime > 15000) {
+                                jstackTime = System.currentTimeMillis();
+                                log.warn("broker jstack \n " + UtilAll.jstack());
+                            }
                         }
                     } else {
                         break;
