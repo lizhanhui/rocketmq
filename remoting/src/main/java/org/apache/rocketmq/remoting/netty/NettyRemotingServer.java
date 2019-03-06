@@ -461,6 +461,9 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
             log.info("NETTY SERVER PIPELINE: channelInactive, the channel[{}]", remoteAddress);
             super.channelInactive(ctx);
 
+            if (nettyServerConfig.isValidateTunnelIdFromVtoaEnable()) {
+                tunnelTable.remove(ctx.channel());
+            }
             if (NettyRemotingServer.this.channelEventListener != null) {
                 NettyRemotingServer.this.putNettyEvent(new NettyEvent(NettyEventType.CLOSE, remoteAddress, ctx.channel()));
             }
