@@ -24,6 +24,7 @@ import org.apache.rocketmq.common.DataVersion;
 import org.apache.rocketmq.common.MQVersion;
 import org.apache.rocketmq.common.MQVersion.Version;
 import org.apache.rocketmq.common.MixAll;
+import org.apache.rocketmq.common.UtilAll;
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.common.help.FAQUrl;
 import org.apache.rocketmq.logging.InternalLogger;
@@ -46,10 +47,12 @@ import org.apache.rocketmq.common.protocol.header.namesrv.QueryDataVersionReques
 import org.apache.rocketmq.common.protocol.header.namesrv.QueryDataVersionResponseHeader;
 import org.apache.rocketmq.common.protocol.header.namesrv.RegisterBrokerRequestHeader;
 import org.apache.rocketmq.common.protocol.header.namesrv.RegisterBrokerResponseHeader;
+import org.apache.rocketmq.common.protocol.header.namesrv.RegisterTopicRequestHeader;
 import org.apache.rocketmq.common.protocol.header.namesrv.UnRegisterBrokerRequestHeader;
 import org.apache.rocketmq.common.protocol.header.namesrv.WipeWritePermOfBrokerRequestHeader;
 import org.apache.rocketmq.common.protocol.header.namesrv.WipeWritePermOfBrokerResponseHeader;
 import org.apache.rocketmq.common.protocol.route.TopicRouteData;
+import org.apache.rocketmq.common.protocol.route.TopicRouteDatas;
 import org.apache.rocketmq.namesrv.NamesrvController;
 import org.apache.rocketmq.remoting.common.RemotingHelper;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
@@ -105,6 +108,8 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
                 return getAllTopicListFromNameserver(ctx, request);
             case RequestCode.DELETE_TOPIC_IN_NAMESRV:
                 return deleteTopicInNamesrv(ctx, request);
+            case RequestCode.REGISTER_TOPIC_IN_NAMESRV:
+                return registerTopicToNamesrv(ctx, request);
             case RequestCode.GET_KVLIST_BY_NAMESPACE:
                 return this.getKVListByNamespace(ctx, request);
             case RequestCode.GET_TOPICS_BY_CLUSTER:
@@ -196,6 +201,12 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         final RegisterBrokerRequestHeader requestHeader =
             (RegisterBrokerRequestHeader) request.decodeCommandCustomHeader(RegisterBrokerRequestHeader.class);
 
+        if (!checksum(ctx, request, requestHeader)) {
+            response.setCode(ResponseCode.SYSTEM_ERROR);
+            response.setRemark("crc32 not match");
+            return response;
+        }
+
         RegisterBrokerBody registerBrokerBody = new RegisterBrokerBody();
 
         if (request.getBody() != null) {
@@ -230,6 +241,19 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         return response;
     }
 
+    private boolean checksum(ChannelHandlerContext ctx, RemotingCommand request,
+        RegisterBrokerRequestHeader requestHeader) {
+        if (requestHeader.getBodyCrc32() != 0) {
+            final int crc32 = UtilAll.crc32(request.getBody());
+            if (crc32 != requestHeader.getBodyCrc32()) {
+                log.warn(String.format("receive registerBroker request,crc32 not match,from %s",
+                    RemotingHelper.parseChannelRemoteAddr(ctx.channel())));
+                return false;
+            }
+        }
+        return true;
+    }
+
     public RemotingCommand queryBrokerTopicConfig(ChannelHandlerContext ctx,
         RemotingCommand request) throws RemotingCommandException {
         final RemotingCommand response = RemotingCommand.createResponseCommand(QueryDataVersionResponseHeader.class);
@@ -237,13 +261,15 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         final QueryDataVersionRequestHeader requestHeader =
             (QueryDataVersionRequestHeader) request.decodeCommandCustomHeader(QueryDataVersionRequestHeader.class);
         DataVersion dataVersion = DataVersion.decode(request.getBody(), DataVersion.class);
+        String clusterName = requestHeader.getClusterName();
+        String brokerAddr = requestHeader.getBrokerAddr();
 
-        Boolean changed = this.namesrvController.getRouteInfoManager().isBrokerTopicConfigChanged(requestHeader.getBrokerAddr(), dataVersion);
+        Boolean changed = this.namesrvController.getRouteInfoManager().isBrokerTopicConfigChanged(clusterName, brokerAddr, dataVersion);
         if (!changed) {
-            this.namesrvController.getRouteInfoManager().updateBrokerInfoUpdateTimestamp(requestHeader.getBrokerAddr());
+            this.namesrvController.getRouteInfoManager().updateBrokerInfoUpdateTimestamp(clusterName, brokerAddr);
         }
 
-        DataVersion nameSeverDataVersion = this.namesrvController.getRouteInfoManager().queryBrokerTopicConfig(requestHeader.getBrokerAddr());
+        DataVersion nameSeverDataVersion = this.namesrvController.getRouteInfoManager().queryBrokerTopicConfig(clusterName, brokerAddr);
         response.setCode(ResponseCode.SUCCESS);
         response.setRemark(null);
 
@@ -260,6 +286,12 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         final RegisterBrokerResponseHeader responseHeader = (RegisterBrokerResponseHeader) response.readCustomHeader();
         final RegisterBrokerRequestHeader requestHeader =
             (RegisterBrokerRequestHeader) request.decodeCommandCustomHeader(RegisterBrokerRequestHeader.class);
+
+        if (!checksum(ctx, request, requestHeader)) {
+            response.setCode(ResponseCode.SYSTEM_ERROR);
+            response.setRemark("crc32 not match");
+            return response;
+        }
 
         TopicConfigSerializeWrapper topicConfigWrapper;
         if (request.getBody() != null) {
@@ -314,26 +346,50 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         final GetRouteInfoRequestHeader requestHeader =
             (GetRouteInfoRequestHeader) request.decodeCommandCustomHeader(GetRouteInfoRequestHeader.class);
 
-        TopicRouteData topicRouteData = this.namesrvController.getRouteInfoManager().pickupTopicRouteData(requestHeader.getTopic());
+        if (requestHeader.getTopic().indexOf(GetRouteInfoRequestHeader.split) < 0) {
+            TopicRouteData topicRouteData = this.namesrvController.getRouteInfoManager().pickupTopicRouteData(requestHeader.getTopic());
 
-        if (topicRouteData != null) {
-            if (this.namesrvController.getNamesrvConfig().isOrderMessageEnable()) {
-                String orderTopicConf =
-                    this.namesrvController.getKvConfigManager().getKVConfig(NamesrvUtil.NAMESPACE_ORDER_TOPIC_CONFIG,
-                        requestHeader.getTopic());
-                topicRouteData.setOrderTopicConf(orderTopicConf);
+            if (topicRouteData != null) {
+                if (this.namesrvController.getNamesrvConfig().isOrderMessageEnable()) {
+                    String orderTopicConf =
+                        this.namesrvController.getKvConfigManager().getKVConfig(NamesrvUtil.NAMESPACE_ORDER_TOPIC_CONFIG,
+                            requestHeader.getTopic());
+                    topicRouteData.setOrderTopicConf(orderTopicConf);
+                }
+
+                byte[] content = topicRouteData.encode();
+                response.setBody(content);
+                response.setCode(ResponseCode.SUCCESS);
+                response.setRemark(null);
+                return response;
             }
 
-            byte[] content = topicRouteData.encode();
-            response.setBody(content);
-            response.setCode(ResponseCode.SUCCESS);
-            response.setRemark(null);
+            response.setCode(ResponseCode.TOPIC_NOT_EXIST);
+            response.setRemark("No topic route info in name server for the topic: " + requestHeader.getTopic()
+                + FAQUrl.suggestTodo(FAQUrl.APPLY_TOPIC_URL));
             return response;
         }
 
-        response.setCode(ResponseCode.TOPIC_NOT_EXIST);
-        response.setRemark("No topic route info in name server for the topic: " + requestHeader.getTopic()
-            + FAQUrl.suggestTodo(FAQUrl.APPLY_TOPIC_URL));
+        String[] topics = requestHeader.getTopic().split(String.valueOf(GetRouteInfoRequestHeader.split));
+        TopicRouteDatas topicRouteDatas = new TopicRouteDatas();
+
+        for (String topic : topics) {
+            TopicRouteData topicRouteData = this.namesrvController.getRouteInfoManager().pickupTopicRouteData(topic);
+            if (topicRouteData == null) {
+                continue;
+            }
+
+            if (this.namesrvController.getNamesrvConfig().isOrderMessageEnable()) {
+                String orderTopicConf =
+                    this.namesrvController.getKvConfigManager().getKVConfig(NamesrvUtil.NAMESPACE_ORDER_TOPIC_CONFIG, topic);
+                topicRouteData.setOrderTopicConf(orderTopicConf);
+            }
+
+            topicRouteDatas.getTopics().put(topic, topicRouteData);
+        }
+        response.setBody(topicRouteDatas.encode());
+        response.setCode(ResponseCode.SUCCESS);
+        response.setRemark(null);
         return response;
     }
 
@@ -374,6 +430,22 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         byte[] body = this.namesrvController.getRouteInfoManager().getAllTopicList();
 
         response.setBody(body);
+        response.setCode(ResponseCode.SUCCESS);
+        response.setRemark(null);
+        return response;
+    }
+
+    private RemotingCommand registerTopicToNamesrv(ChannelHandlerContext ctx, RemotingCommand request) throws RemotingCommandException {
+        final RemotingCommand response = RemotingCommand.createResponseCommand(null);
+
+        final RegisterTopicRequestHeader requestHeader =
+            (RegisterTopicRequestHeader) request.decodeCommandCustomHeader(RegisterTopicRequestHeader.class);
+
+        TopicRouteData topicRouteData = TopicRouteData.decode(request.getBody(), TopicRouteData.class);
+        if (topicRouteData != null && topicRouteData.getQueueDatas() != null && !topicRouteData.getQueueDatas().isEmpty()) {
+            this.namesrvController.getRouteInfoManager().registerTopic(requestHeader.getTopic(), topicRouteData.getQueueDatas());
+        }
+
         response.setCode(ResponseCode.SUCCESS);
         response.setRemark(null);
         return response;

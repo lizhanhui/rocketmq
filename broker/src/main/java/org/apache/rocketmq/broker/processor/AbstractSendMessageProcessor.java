@@ -27,11 +27,11 @@ import org.apache.rocketmq.common.constant.DBMsgConstants;
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.common.constant.PermName;
 import org.apache.rocketmq.common.help.FAQUrl;
-import org.apache.rocketmq.logging.InternalLogger;
-import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.common.message.MessageAccessor;
 import org.apache.rocketmq.common.message.MessageConst;
 import org.apache.rocketmq.common.message.MessageDecoder;
+import org.apache.rocketmq.common.message.MessageType;
+import org.apache.rocketmq.common.protocol.NamespaceUtil;
 import org.apache.rocketmq.common.protocol.RequestCode;
 import org.apache.rocketmq.common.protocol.ResponseCode;
 import org.apache.rocketmq.common.protocol.header.SendMessageRequestHeader;
@@ -40,6 +40,8 @@ import org.apache.rocketmq.common.protocol.header.SendMessageResponseHeader;
 import org.apache.rocketmq.common.sysflag.MessageSysFlag;
 import org.apache.rocketmq.common.sysflag.TopicSysFlag;
 import org.apache.rocketmq.common.utils.ChannelUtil;
+import org.apache.rocketmq.logging.InternalLogger;
+import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.remoting.common.RemotingHelper;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 import org.apache.rocketmq.remoting.netty.NettyRequestProcessor;
@@ -70,15 +72,19 @@ public abstract class AbstractSendMessageProcessor implements NettyRequestProces
 
     protected SendMessageContext buildMsgContext(ChannelHandlerContext ctx,
         SendMessageRequestHeader requestHeader) {
-        SendMessageContext mqtraceContext;
-        mqtraceContext = new SendMessageContext();
-        mqtraceContext.setProducerGroup(requestHeader.getProducerGroup());
-        mqtraceContext.setTopic(requestHeader.getTopic());
-        mqtraceContext.setMsgProps(requestHeader.getProperties());
-        mqtraceContext.setBornHost(RemotingHelper.parseChannelRemoteAddr(ctx.channel()));
-        mqtraceContext.setBrokerAddr(this.brokerController.getBrokerAddr());
-        mqtraceContext.setBrokerRegionId(this.brokerController.getBrokerConfig().getRegionId());
-        mqtraceContext.setBornTimeStamp(requestHeader.getBornTimestamp());
+        String namespace = NamespaceUtil.getNamespaceFromResource(requestHeader.getTopic());
+
+        SendMessageContext traceContext;
+        traceContext = new SendMessageContext();
+        traceContext.setNamespace(namespace);
+        traceContext.setProducerGroup(requestHeader.getProducerGroup());
+        traceContext.setTopic(requestHeader.getTopic());
+        traceContext.setMsgProps(requestHeader.getProperties());
+        traceContext.setBornHost(RemotingHelper.parseChannelRemoteAddr(ctx.channel()));
+        traceContext.setBrokerAddr(this.brokerController.getBrokerAddr());
+        traceContext.setBrokerRegionId(this.brokerController.getBrokerConfig().getRegionId());
+        traceContext.setBornTimeStamp(requestHeader.getBornTimestamp());
+        traceContext.setRequestTimeStamp(System.currentTimeMillis());
 
         Map<String, String> properties = MessageDecoder.string2messageProperties(requestHeader.getProperties());
         String uniqueKey = properties.get(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX);
@@ -89,8 +95,14 @@ public abstract class AbstractSendMessageProcessor implements NettyRequestProces
         if (uniqueKey == null) {
             uniqueKey = "";
         }
-        mqtraceContext.setMsgUniqueKey(uniqueKey);
-        return mqtraceContext;
+        traceContext.setMsgUniqueKey(uniqueKey);
+
+        if (properties.containsKey(MessageConst.PROPERTY_SHARDING_KEY)) {
+            traceContext.setMsgType(MessageType.Order_Msg);
+        } else {
+            traceContext.setMsgType(MessageType.Normal_Msg);
+        }
+        return traceContext;
     }
 
     public boolean hasSendMessageHook() {
@@ -250,7 +262,9 @@ public abstract class AbstractSendMessageProcessor implements NettyRequestProces
                 try {
                     final SendMessageRequestHeader requestHeader = parseRequestHeader(request);
 
+                    String namespace = NamespaceUtil.getNamespaceFromResource(requestHeader.getTopic());
                     if (null != requestHeader) {
+                        context.setNamespace(namespace);
                         context.setProducerGroup(requestHeader.getProducerGroup());
                         context.setTopic(requestHeader.getTopic());
                         context.setBodyLength(request.getBody().length);

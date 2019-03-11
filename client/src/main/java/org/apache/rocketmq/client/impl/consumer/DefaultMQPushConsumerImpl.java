@@ -27,6 +27,10 @@ import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
+
+import io.netty.channel.EventLoopGroup;
+import io.netty.util.concurrent.EventExecutorGroup;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.client.QueryResult;
 import org.apache.rocketmq.client.Validators;
 import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
@@ -56,12 +60,12 @@ import org.apache.rocketmq.common.UtilAll;
 import org.apache.rocketmq.common.consumer.ConsumeFromWhere;
 import org.apache.rocketmq.common.filter.FilterAPI;
 import org.apache.rocketmq.common.help.FAQUrl;
-import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.common.message.Message;
 import org.apache.rocketmq.common.message.MessageAccessor;
 import org.apache.rocketmq.common.message.MessageConst;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.message.MessageQueue;
+import org.apache.rocketmq.common.protocol.NamespaceUtil;
 import org.apache.rocketmq.common.protocol.body.ConsumeStatus;
 import org.apache.rocketmq.common.protocol.body.ConsumerRunningInfo;
 import org.apache.rocketmq.common.protocol.body.ProcessQueueInfo;
@@ -72,6 +76,7 @@ import org.apache.rocketmq.common.protocol.heartbeat.SubscriptionData;
 import org.apache.rocketmq.common.protocol.route.BrokerData;
 import org.apache.rocketmq.common.protocol.route.TopicRouteData;
 import org.apache.rocketmq.common.sysflag.PullSysFlag;
+import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.remoting.RPCHook;
 import org.apache.rocketmq.remoting.common.RemotingHelper;
 import org.apache.rocketmq.remoting.exception.RemotingException;
@@ -108,6 +113,8 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
     private ConsumeMessageService consumeMessageService;
     private long queueFlowControlTimes = 0;
     private long queueMaxSpanFlowControlTimes = 0;
+    private EventLoopGroup eventLoopGroup;
+    private EventExecutorGroup eventExecutorGroup;
 
     public DefaultMQPushConsumerImpl(DefaultMQPushConsumer defaultMQPushConsumer, RPCHook rpcHook) {
         this.defaultMQPushConsumer = defaultMQPushConsumer;
@@ -169,7 +176,17 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
             throw new MQClientException("The topic[" + topic + "] not exist", null);
         }
 
-        return result;
+        return parseSubscribeMessageQueues(result);
+    }
+
+    public Set<MessageQueue> parseSubscribeMessageQueues(Set<MessageQueue> messageQueueList) {
+        Set<MessageQueue> resultQueues = new HashSet<MessageQueue>();
+        for (MessageQueue queue : messageQueueList) {
+            String userTopic = NamespaceUtil.withoutNamespace(queue.getTopic(), this.defaultMQPushConsumer.getNamespace());
+            resultQueues.add(new MessageQueue(userTopic, queue.getBrokerName(), queue.getQueueId()));
+        }
+
+        return resultQueues;
     }
 
     public DefaultMQPushConsumer getDefaultMQPushConsumer() {
@@ -519,6 +536,8 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
             newMsg.setDelayTimeLevel(3 + msg.getReconsumeTimes());
 
             this.mQClientFactory.getDefaultMQProducer().send(newMsg);
+        } finally {
+            msg.setTopic(NamespaceUtil.withoutNamespace(msg.getTopic(), this.defaultMQPushConsumer.getNamespace()));
         }
     }
 
@@ -566,7 +585,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                     this.defaultMQPushConsumer.changeInstanceNameToPID();
                 }
 
-                this.mQClientFactory = MQClientManager.getInstance().getAndCreateMQClientInstance(this.defaultMQPushConsumer, this.rpcHook);
+                this.mQClientFactory = MQClientManager.getInstance().getAndCreateMQClientInstance(this.defaultMQPushConsumer, this.rpcHook, this.eventLoopGroup, this.eventExecutorGroup);
 
                 this.rebalanceImpl.setConsumerGroup(this.defaultMQPushConsumer.getConsumerGroup());
                 this.rebalanceImpl.setMessageModel(this.defaultMQPushConsumer.getMessageModel());
@@ -1023,6 +1042,10 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
     }
 
     @Override
+    public void removeTopicSubscribeInfo(String topic) {
+    }
+
+    @Override
     public boolean isSubscribeTopicNeedUpdate(String topic) {
         Map<String, SubscriptionData> subTable = this.getSubscriptionInner();
         if (subTable != null) {
@@ -1069,6 +1092,10 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
         for (SubscriptionData sd : subSet) {
             ConsumeStatus consumeStatus = this.mQClientFactory.getConsumerStatsManager().consumeStatus(this.groupName(), sd.getTopic());
             info.getStatusTable().put(sd.getTopic(), consumeStatus);
+        }
+
+        if (defaultMQPushConsumer.getConsumerStatusReporter() != null) {
+            info.getUserConsumerInfo().putAll(defaultMQPushConsumer.getConsumerStatusReporter().reportStatus());
         }
 
         return info;
@@ -1134,12 +1161,41 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
         return queueTimeSpan;
     }
 
+    public void resetRetryAndNamespace(final List<MessageExt> msgs, String consumerGroup) {
+        final String groupTopic = MixAll.getRetryTopic(consumerGroup);
+        for (MessageExt msg : msgs) {
+            String retryTopic = msg.getProperty(MessageConst.PROPERTY_RETRY_TOPIC);
+            if (retryTopic != null && groupTopic.equals(msg.getTopic())) {
+                msg.setTopic(retryTopic);
+            }
+
+            if (StringUtils.isNotEmpty(this.defaultMQPushConsumer.getNamespace())) {
+                msg.setTopic(NamespaceUtil.withoutNamespace(msg.getTopic(), this.defaultMQPushConsumer.getNamespace()));
+            }
+        }
+    }
+
     public ConsumeMessageService getConsumeMessageService() {
         return consumeMessageService;
     }
 
     public void setConsumeMessageService(ConsumeMessageService consumeMessageService) {
         this.consumeMessageService = consumeMessageService;
+    }
 
+    public EventLoopGroup getEventLoopGroup() {
+        return eventLoopGroup;
+    }
+
+    public void setEventLoopGroup(EventLoopGroup eventLoopGroup) {
+        this.eventLoopGroup = eventLoopGroup;
+    }
+
+    public EventExecutorGroup getEventExecutorGroup() {
+        return eventExecutorGroup;
+    }
+
+    public void setEventExecutorGroup(EventExecutorGroup eventExecutorGroup) {
+        this.eventExecutorGroup = eventExecutorGroup;
     }
 }

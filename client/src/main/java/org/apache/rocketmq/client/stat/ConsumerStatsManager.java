@@ -40,6 +40,24 @@ public class ConsumerStatsManager {
     private final StatsItemSet topicAndGroupPullTPS;
     private final StatsItemSet topicAndGroupPullRT;
 
+    private static final String POP_RT = "POP_RT";
+    private static final String POP_QPS = "POP_QPS";
+    private static final String PEEK_RT = "PEEK_RT";
+    private static final String PEEK_QPS = "PEEK_QPS";
+    private static final String ACK_RT = "ACK_RT";
+    private static final String ACK_QPS = "ACK_QPS";
+    private static final String CHANGE_RT = "CHANGE_RT";
+    private static final String CHANGE_QPS = "CHANGE_QPS";
+
+    private final StatsItemSet popRT;
+    private final StatsItemSet popQPS;
+    private final StatsItemSet peekRT;
+    private final StatsItemSet peekQPS;
+    private final StatsItemSet ackRT;
+    private final StatsItemSet ackQPS;
+    private final StatsItemSet changeRT;
+    private final StatsItemSet changeQPS;
+
     public ConsumerStatsManager(final ScheduledExecutorService scheduledExecutorService) {
         this.topicAndGroupConsumeOKTPS =
             new StatsItemSet(TOPIC_AND_GROUP_CONSUME_OK_TPS, scheduledExecutorService, log);
@@ -53,6 +71,15 @@ public class ConsumerStatsManager {
         this.topicAndGroupPullTPS = new StatsItemSet(TOPIC_AND_GROUP_PULL_TPS, scheduledExecutorService, log);
 
         this.topicAndGroupPullRT = new StatsItemSet(TOPIC_AND_GROUP_PULL_RT, scheduledExecutorService, log);
+
+        this.popRT = new StatsItemSet(POP_RT, scheduledExecutorService, log);
+        this.popQPS = new StatsItemSet(POP_QPS, scheduledExecutorService, log);
+        this.peekRT = new StatsItemSet(PEEK_RT, scheduledExecutorService, log);
+        this.peekQPS = new StatsItemSet(PEEK_QPS, scheduledExecutorService, log);
+        this.ackRT = new StatsItemSet(ACK_RT, scheduledExecutorService, log);
+        this.ackQPS = new StatsItemSet(ACK_QPS, scheduledExecutorService, log);
+        this.changeRT = new StatsItemSet(CHANGE_RT, scheduledExecutorService, log);
+        this.changeQPS = new StatsItemSet(CHANGE_QPS, scheduledExecutorService, log);
     }
 
     public void start() {
@@ -151,5 +178,37 @@ public class ConsumerStatsManager {
 
     private StatsSnapshot getConsumeFailedTPS(final String group, final String topic) {
         return this.topicAndGroupConsumeFailedTPS.getStatsDataInMinute(topic + "@" + group);
+    }
+
+    public void incPopRT(final String brokerName, final String group, final String topic, final long rt) {
+        this.popRT.addValue(brokerName + ":" + topic + "@" + group, (int) rt, 1);
+    }
+
+    public void incPopQPS(final String brokerName, final String group, final String topic) {
+        this.popQPS.addValue(brokerName + ":" + topic + "@" + group, 1, 1);
+    }
+
+    public void incPeekRT(final String brokerName, final String group, final String topic, final long rt) {
+        this.peekRT.addValue(brokerName + ":" + topic + "@" + group, (int) rt, 1);
+    }
+
+    public void incPeekQPS(final String brokerName, final String group, final String topic) {
+        this.peekQPS.addValue(brokerName + ":" + topic + "@" + group, 1, 1);
+    }
+
+    public void incAckRT(final String brokerName, final String group, final String topic, final long rt) {
+        this.ackRT.addValue(brokerName + ":" + topic + "@" + group, (int) rt, 1);
+    }
+
+    public void incAckQPS(final String brokerName, final String group, final String topic) {
+        this.ackQPS.addValue(brokerName + ":" + topic + "@" + group, 1, 1);
+    }
+
+    public void incChangeRT(final String brokerName, final String group, final String topic, final long rt) {
+        this.changeRT.addValue(brokerName + ":" + topic + "@" + group, (int) rt, 1);
+    }
+
+    public void incChangeQPS(final String brokerName, final String group, final String topic) {
+        this.changeQPS.addValue(brokerName + ":" + topic + "@" + group, 1, 1);
     }
 }

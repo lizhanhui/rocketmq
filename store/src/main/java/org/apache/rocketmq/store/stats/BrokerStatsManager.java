@@ -16,16 +16,25 @@
  */
 package org.apache.rocketmq.store.stats;
 
-import java.util.HashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import org.apache.rocketmq.common.ThreadFactoryImpl;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.rocketmq.common.BrokerConfig;
+import org.apache.rocketmq.common.UtilAll;
 import org.apache.rocketmq.common.constant.LoggerName;
-import org.apache.rocketmq.logging.InternalLogger;
-import org.apache.rocketmq.logging.InternalLoggerFactory;
+import org.apache.rocketmq.common.statistics.StatisticsItemFormatter;
+import org.apache.rocketmq.common.statistics.StatisticsItemPrinter;
+import org.apache.rocketmq.common.statistics.StatisticsItemScheduledIncrementPrinter;
+import org.apache.rocketmq.common.statistics.StatisticsItemScheduledPrinter;
+import org.apache.rocketmq.common.statistics.StatisticsKindMeta;
+import org.apache.rocketmq.common.statistics.StatisticsManager;
 import org.apache.rocketmq.common.stats.MomentStatsItemSet;
 import org.apache.rocketmq.common.stats.StatsItem;
 import org.apache.rocketmq.common.stats.StatsItemSet;
+import org.apache.rocketmq.common.utils.ThreadUtils;
+import org.apache.rocketmq.logging.InternalLogger;
+import org.apache.rocketmq.logging.InternalLoggerFactory;
+
+import java.util.HashMap;
+import java.util.concurrent.ScheduledExecutorService;
 
 public class BrokerStatsManager {
 
@@ -34,12 +43,16 @@ public class BrokerStatsManager {
     public static final String GROUP_GET_NUMS = "GROUP_GET_NUMS";
     public static final String GROUP_GET_SIZE = "GROUP_GET_SIZE";
     public static final String SNDBCK_PUT_NUMS = "SNDBCK_PUT_NUMS";
+    public static final String DLQ_PUT_NUMS = "DLQ_PUT_NUMS";
     public static final String BROKER_PUT_NUMS = "BROKER_PUT_NUMS";
     public static final String BROKER_GET_NUMS = "BROKER_GET_NUMS";
     public static final String GROUP_GET_FROM_DISK_NUMS = "GROUP_GET_FROM_DISK_NUMS";
     public static final String GROUP_GET_FROM_DISK_SIZE = "GROUP_GET_FROM_DISK_SIZE";
     public static final String BROKER_GET_FROM_DISK_NUMS = "BROKER_GET_FROM_DISK_NUMS";
     public static final String BROKER_GET_FROM_DISK_SIZE = "BROKER_GET_FROM_DISK_SIZE";
+
+    public static final String SNDBCK2DLQ_TIMES = "SNDBCK2DLQ_TIMES";
+
     // For commercial
     public static final String COMMERCIAL_SEND_TIMES = "COMMERCIAL_SEND_TIMES";
     public static final String COMMERCIAL_SNDBCK_TIMES = "COMMERCIAL_SNDBCK_TIMES";
@@ -49,6 +62,25 @@ public class BrokerStatsManager {
     public static final String COMMERCIAL_RCV_SIZE = "COMMERCIAL_RCV_SIZE";
     public static final String COMMERCIAL_PERM_FAILURES = "COMMERCIAL_PERM_FAILURES";
     public static final String COMMERCIAL_OWNER = "Owner";
+
+    public static final String ACCOUNT_OWNER_PARENT = "OWNER_PARENT";
+    public static final String ACCOUNT_OWNER_SELF = "OWNER_SELF";
+
+    public static final long ACCOUNT_STAT_INVERTAL = 60 * 1000;
+    public static final String ACCOUNT_AUTH_TYPE = "AUTH_TYPE";
+
+    public static final String ACCOUNT_SEND = "SEND";
+    public static final String ACCOUNT_RCV = "RCV";
+    public static final String ACCOUNT_SEND_BACK = "SEND_BACK";
+    public static final String ACCOUNT_SEND_BACK_TO_DLQ = "SEND_BACK_TO_DLQ";
+
+    public static final String MSG_COUNT = "MSG_COUNT";
+    public static final String SUCCESS_COUNT = "SUCCESS_COUNT";
+    public static final String FAILURE_COUNT = "FAILURE_COUNT";
+    public static final String SIZE = "SIZE";
+    public static final String RT = "RT";
+    public static final String INNER_RT = "INNER_RT";
+
     // Message Size limit for one api-calling count.
     public static final double SIZE_PER_COUNT = 64 * 1024;
 
@@ -70,44 +102,97 @@ public class BrokerStatsManager {
      * read disk follow stats
      */
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.ROCKETMQ_STATS_LOGGER_NAME);
-    private static final InternalLogger COMMERCIAL_LOG = InternalLoggerFactory.getLogger(LoggerName.COMMERCIAL_LOGGER_NAME);
-    private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryImpl(
-        "BrokerStatsThread"));
-    private final ScheduledExecutorService commercialExecutor = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryImpl(
-        "CommercialStatsThread"));
+    private static final InternalLogger COMMERCIAL_LOG = InternalLoggerFactory.getLogger(
+        LoggerName.COMMERCIAL_LOGGER_NAME);
+    private static final InternalLogger ACCOUNT_LOG = InternalLoggerFactory.getLogger(LoggerName.ACCOUNT_LOGGER_NAME);
+    private static final InternalLogger DLQ_STAT_LOG = InternalLoggerFactory.getLogger(
+        LoggerName.DLQ_STATS_LOGGER_NAME);
+    private final ScheduledExecutorService scheduledExecutorService =
+        ThreadUtils.newSingleThreadScheduledExecutor("BrokerStatsThread", true);
+    private final ScheduledExecutorService commercialExecutor =
+        ThreadUtils.newSingleThreadScheduledExecutor("CommercialStatsThread", true);
+    private final ScheduledExecutorService accountExecutor =
+        ThreadUtils.newSingleThreadScheduledExecutor("AccountStatsThread", true);
+
     private final HashMap<String, StatsItemSet> statsTable = new HashMap<String, StatsItemSet>();
     private final String clusterName;
-    private final MomentStatsItemSet momentStatsItemSetFallSize = new MomentStatsItemSet(GROUP_GET_FALL_SIZE, scheduledExecutorService, log);
-    private final MomentStatsItemSet momentStatsItemSetFallTime = new MomentStatsItemSet(GROUP_GET_FALL_TIME, scheduledExecutorService, log);
+    private final MomentStatsItemSet momentStatsItemSetFallSize = new MomentStatsItemSet(GROUP_GET_FALL_SIZE,
+        scheduledExecutorService, log);
+    private final MomentStatsItemSet momentStatsItemSetFallTime = new MomentStatsItemSet(GROUP_GET_FALL_TIME,
+        scheduledExecutorService, log);
+
+    private final StatisticsManager accountStatManager = new StatisticsManager();
+
+    private BrokerConfig brokerConfig;
+
+    public BrokerStatsManager(BrokerConfig brokerConfig) {
+        this.brokerConfig = brokerConfig;
+        this.clusterName = brokerConfig.getBrokerClusterName();
+        init();
+    }
 
     public BrokerStatsManager(String clusterName) {
         this.clusterName = clusterName;
+        init();
+    }
 
+    public void init() {
         this.statsTable.put(TOPIC_PUT_NUMS, new StatsItemSet(TOPIC_PUT_NUMS, this.scheduledExecutorService, log));
         this.statsTable.put(TOPIC_PUT_SIZE, new StatsItemSet(TOPIC_PUT_SIZE, this.scheduledExecutorService, log));
         this.statsTable.put(GROUP_GET_NUMS, new StatsItemSet(GROUP_GET_NUMS, this.scheduledExecutorService, log));
         this.statsTable.put(GROUP_GET_SIZE, new StatsItemSet(GROUP_GET_SIZE, this.scheduledExecutorService, log));
         this.statsTable.put(GROUP_GET_LATENCY, new StatsItemSet(GROUP_GET_LATENCY, this.scheduledExecutorService, log));
         this.statsTable.put(SNDBCK_PUT_NUMS, new StatsItemSet(SNDBCK_PUT_NUMS, this.scheduledExecutorService, log));
+        this.statsTable.put(DLQ_PUT_NUMS, new StatsItemSet(DLQ_PUT_NUMS, this.scheduledExecutorService, log));
         this.statsTable.put(BROKER_PUT_NUMS, new StatsItemSet(BROKER_PUT_NUMS, this.scheduledExecutorService, log));
         this.statsTable.put(BROKER_GET_NUMS, new StatsItemSet(BROKER_GET_NUMS, this.scheduledExecutorService, log));
-        this.statsTable.put(GROUP_GET_FROM_DISK_NUMS, new StatsItemSet(GROUP_GET_FROM_DISK_NUMS, this.scheduledExecutorService, log));
-        this.statsTable.put(GROUP_GET_FROM_DISK_SIZE, new StatsItemSet(GROUP_GET_FROM_DISK_SIZE, this.scheduledExecutorService, log));
-        this.statsTable.put(BROKER_GET_FROM_DISK_NUMS, new StatsItemSet(BROKER_GET_FROM_DISK_NUMS, this.scheduledExecutorService, log));
-        this.statsTable.put(BROKER_GET_FROM_DISK_SIZE, new StatsItemSet(BROKER_GET_FROM_DISK_SIZE, this.scheduledExecutorService, log));
+        this.statsTable.put(GROUP_GET_FROM_DISK_NUMS,
+            new StatsItemSet(GROUP_GET_FROM_DISK_NUMS, this.scheduledExecutorService, log));
+        this.statsTable.put(GROUP_GET_FROM_DISK_SIZE,
+            new StatsItemSet(GROUP_GET_FROM_DISK_SIZE, this.scheduledExecutorService, log));
+        this.statsTable.put(BROKER_GET_FROM_DISK_NUMS,
+            new StatsItemSet(BROKER_GET_FROM_DISK_NUMS, this.scheduledExecutorService, log));
+        this.statsTable.put(BROKER_GET_FROM_DISK_SIZE,
+            new StatsItemSet(BROKER_GET_FROM_DISK_SIZE, this.scheduledExecutorService, log));
 
-        this.statsTable.put(COMMERCIAL_SEND_TIMES, new StatsItemSet(COMMERCIAL_SEND_TIMES, this.commercialExecutor, COMMERCIAL_LOG));
-        this.statsTable.put(COMMERCIAL_RCV_TIMES, new StatsItemSet(COMMERCIAL_RCV_TIMES, this.commercialExecutor, COMMERCIAL_LOG));
-        this.statsTable.put(COMMERCIAL_SEND_SIZE, new StatsItemSet(COMMERCIAL_SEND_SIZE, this.commercialExecutor, COMMERCIAL_LOG));
-        this.statsTable.put(COMMERCIAL_RCV_SIZE, new StatsItemSet(COMMERCIAL_RCV_SIZE, this.commercialExecutor, COMMERCIAL_LOG));
-        this.statsTable.put(COMMERCIAL_RCV_EPOLLS, new StatsItemSet(COMMERCIAL_RCV_EPOLLS, this.commercialExecutor, COMMERCIAL_LOG));
-        this.statsTable.put(COMMERCIAL_SNDBCK_TIMES, new StatsItemSet(COMMERCIAL_SNDBCK_TIMES, this.commercialExecutor, COMMERCIAL_LOG));
-        this.statsTable.put(COMMERCIAL_PERM_FAILURES, new StatsItemSet(COMMERCIAL_PERM_FAILURES, this.commercialExecutor, COMMERCIAL_LOG));
+        this.statsTable.put(SNDBCK2DLQ_TIMES,
+            new StatsItemSet(SNDBCK2DLQ_TIMES, this.scheduledExecutorService, DLQ_STAT_LOG));
 
-        this.statsTable.put(CONSUMER_REGISTER_TIME, new StatsItemSet(CONSUMER_REGISTER_TIME, this.scheduledExecutorService, log));
-        this.statsTable.put(PRODUCER_REGISTER_TIME, new StatsItemSet(PRODUCER_REGISTER_TIME, this.scheduledExecutorService, log));
+        this.statsTable.put(COMMERCIAL_SEND_TIMES,
+            new StatsItemSet(COMMERCIAL_SEND_TIMES, this.commercialExecutor, COMMERCIAL_LOG));
+        this.statsTable.put(COMMERCIAL_RCV_TIMES,
+            new StatsItemSet(COMMERCIAL_RCV_TIMES, this.commercialExecutor, COMMERCIAL_LOG));
+        this.statsTable.put(COMMERCIAL_SEND_SIZE,
+            new StatsItemSet(COMMERCIAL_SEND_SIZE, this.commercialExecutor, COMMERCIAL_LOG));
+        this.statsTable.put(COMMERCIAL_RCV_SIZE,
+            new StatsItemSet(COMMERCIAL_RCV_SIZE, this.commercialExecutor, COMMERCIAL_LOG));
+        this.statsTable.put(COMMERCIAL_RCV_EPOLLS,
+            new StatsItemSet(COMMERCIAL_RCV_EPOLLS, this.commercialExecutor, COMMERCIAL_LOG));
+        this.statsTable.put(COMMERCIAL_SNDBCK_TIMES,
+            new StatsItemSet(COMMERCIAL_SNDBCK_TIMES, this.commercialExecutor, COMMERCIAL_LOG));
+        this.statsTable.put(COMMERCIAL_PERM_FAILURES,
+            new StatsItemSet(COMMERCIAL_PERM_FAILURES, this.commercialExecutor, COMMERCIAL_LOG));
+
+        this.statsTable.put(CONSUMER_REGISTER_TIME,
+            new StatsItemSet(CONSUMER_REGISTER_TIME, this.scheduledExecutorService, log));
+        this.statsTable.put(PRODUCER_REGISTER_TIME,
+            new StatsItemSet(PRODUCER_REGISTER_TIME, this.scheduledExecutorService, log));
 
         this.statsTable.put(CHANNEL_ACTIVITY, new StatsItemSet(CHANNEL_ACTIVITY, this.scheduledExecutorService, log));
+
+        StatisticsItemFormatter formatter = new StatisticsItemFormatter();
+        accountStatManager.setBriefMeta(new Pair[]{
+            Pair.of(RT, new long[][]{{50, 50}, {100, 10}, {1000, 10}}),
+            Pair.of(INNER_RT, new long[][]{{10, 10}, {100, 10}, {1000, 10}})});
+        String[] itemNames = new String[] {MSG_COUNT, SUCCESS_COUNT, FAILURE_COUNT, SIZE, RT, INNER_RT};
+        this.accountStatManager.addStatisticsKindMeta(createStatisticsKindMeta(
+            ACCOUNT_SEND, itemNames, this.accountExecutor, formatter, ACCOUNT_LOG, ACCOUNT_STAT_INVERTAL));
+        this.accountStatManager.addStatisticsKindMeta(createStatisticsKindMeta(
+            ACCOUNT_RCV, itemNames, this.accountExecutor, formatter, ACCOUNT_LOG, ACCOUNT_STAT_INVERTAL));
+        this.accountStatManager.addStatisticsKindMeta(createStatisticsKindMeta(
+            ACCOUNT_SEND_BACK, itemNames, this.accountExecutor, formatter, ACCOUNT_LOG, ACCOUNT_STAT_INVERTAL));
+        this.accountStatManager.addStatisticsKindMeta(createStatisticsKindMeta(
+            ACCOUNT_SEND_BACK_TO_DLQ, itemNames, this.accountExecutor, formatter, ACCOUNT_LOG, ACCOUNT_STAT_INVERTAL));
     }
 
     public MomentStatsItemSet getMomentStatsItemSetFallSize() {
@@ -217,21 +302,41 @@ public class BrokerStatsManager {
     }
 
     public void recordDiskFallBehindTime(final String group, final String topic, final int queueId,
-        final long fallBehind) {
+                                         final long fallBehind) {
         final String statsKey = String.format("%d@%s@%s", queueId, topic, group);
         this.momentStatsItemSetFallTime.getAndCreateStatsItem(statsKey).getValue().set(fallBehind);
     }
 
     public void recordDiskFallBehindSize(final String group, final String topic, final int queueId,
-        final long fallBehind) {
+                                         final long fallBehind) {
         final String statsKey = String.format("%d@%s@%s", queueId, topic, group);
         this.momentStatsItemSetFallSize.getAndCreateStatsItem(statsKey).getValue().set(fallBehind);
     }
 
-    public void incCommercialValue(final String key, final String owner, final String group,
-        final String topic, final String type, final int incValue) {
+    public void incDLQStatValue(final String key, final String owner, final String group,
+                                final String topic, final String type, final int incValue) {
         final String statsKey = buildCommercialStatsKey(owner, topic, group, type);
         this.statsTable.get(key).addValue(statsKey, incValue, 1);
+    }
+
+    public void incCommercialValue(final String key, final String owner, final String group,
+                                   final String topic, final String type, final int incValue) {
+        final String statsKey = buildCommercialStatsKey(owner, topic, group, type);
+        this.statsTable.get(key).addValue(statsKey, incValue, 1);
+    }
+
+    public void incAccountValue(final String key, final String accountOwnerParent, final String accountOwnerSelf,
+                                final String instanceId, final String group, final String topic,
+                                final String msgType, final int incValue) {
+        final String statsKey = buildAccountStatsKey(accountOwnerParent, accountOwnerSelf, instanceId, topic, group,
+            msgType);
+        this.statsTable.get(key).addValue(statsKey, incValue, 1);
+    }
+
+    public void incAccountValue(final String statType, final String owner, final String instanceId, final String topic, final String group, final String msgType,
+                                final long... incValues) {
+        final String key = buildAccountStatKey(owner, instanceId, topic, group, msgType);
+        this.accountStatManager.inc(statType, key, incValues);
     }
 
     public String buildCommercialStatsKey(String owner, String topic, String group, String type) {
@@ -246,14 +351,84 @@ public class BrokerStatsManager {
         return strBuilder.toString();
     }
 
+    public String buildAccountStatsKey(String accountOwnerParent, String accountOwnerSelf, String instanceId,
+                                       String topic, String group, String msgType) {
+        StringBuffer strBuilder = new StringBuffer();
+        strBuilder.append(accountOwnerParent);
+        strBuilder.append("@");
+        strBuilder.append(accountOwnerSelf);
+        strBuilder.append("@");
+        strBuilder.append(instanceId);
+        strBuilder.append("@");
+        strBuilder.append(topic);
+        strBuilder.append("@");
+        strBuilder.append(group);
+        strBuilder.append("@");
+        strBuilder.append(msgType);
+        return strBuilder.toString();
+    }
+
+    public String buildAccountStatKey(final String owner, final String instanceId,
+                                      final String topic, final String group,
+                                      final String msgType) {
+        final String sep = "|";
+        StringBuffer strBuilder = new StringBuffer();
+        strBuilder.append(owner).append(sep);
+        strBuilder.append(instanceId).append(sep);
+        strBuilder.append(topic).append(sep);
+        strBuilder.append(group).append(sep);
+        strBuilder.append(msgType);
+        return strBuilder.toString();
+    }
+
+    private StatisticsKindMeta createStatisticsKindMeta(String name,
+                                                              String[] itemNames,
+                                                              ScheduledExecutorService executorService,
+                                                              StatisticsItemFormatter formatter,
+                                                              InternalLogger log,
+                                                              long interval) {
+        final BrokerConfig brokerConfig = this.brokerConfig;
+        StatisticsItemPrinter printer = new StatisticsItemPrinter(formatter, log);
+        StatisticsKindMeta kindMeta = new StatisticsKindMeta();
+        kindMeta.setName(name);
+        kindMeta.setItemNames(itemNames);
+        kindMeta.setScheduledPrinter(
+            new StatisticsItemScheduledIncrementPrinter(
+                "Stat In One Minute: ",
+                printer,
+                executorService,
+                new StatisticsItemScheduledPrinter.InitialDelay() {
+                    @Override
+                    public long get() {
+                        return Math.abs(UtilAll.computNextMinutesTimeMillis() - System.currentTimeMillis());
+                    }
+                },
+                interval,
+                new String[] {MSG_COUNT},
+                new StatisticsItemScheduledPrinter.Enable() {
+                    @Override
+                    public boolean get() {
+                        return brokerConfig != null ? brokerConfig.isAccountStatsEnable() : true;
+                    }
+                }
+            )
+        );
+        return kindMeta;
+    }
+
     public enum StatsType {
         SEND_SUCCESS,
         SEND_FAILURE,
-        SEND_BACK,
-        SEND_TIMER,
-        SEND_TRANSACTION,
+
         RCV_SUCCESS,
         RCV_EPOLLS,
+        SEND_BACK,
+        SEND_BACK_TO_DLQ,
+
+        SEND_ORDER,
+        SEND_TIMER,
+        SEND_TRANSACTION,
+
         PERM_FAILURE
     }
 }

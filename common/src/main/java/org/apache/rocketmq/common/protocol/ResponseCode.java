@@ -73,4 +73,11 @@ public class ResponseCode extends RemotingSysResponseCode {
     public static final int CONSUME_MSG_TIMEOUT = 207;
 
     public static final int NO_MESSAGE = 208;
+    
+    public static final int POLLING_FULL = 209;
+
+    public static final int POLLING_TIMEOUT = 210;
+    
+
+
 }

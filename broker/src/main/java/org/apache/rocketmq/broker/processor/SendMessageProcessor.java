@@ -17,8 +17,6 @@
 package org.apache.rocketmq.broker.processor;
 
 import io.netty.channel.ChannelHandlerContext;
-import java.net.SocketAddress;
-import java.util.List;
 import org.apache.rocketmq.broker.BrokerController;
 import org.apache.rocketmq.broker.mqtrace.ConsumeMessageContext;
 import org.apache.rocketmq.broker.mqtrace.ConsumeMessageHook;
@@ -28,6 +26,7 @@ import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.common.TopicConfig;
 import org.apache.rocketmq.common.TopicFilterType;
 import org.apache.rocketmq.common.UtilAll;
+import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.common.constant.PermName;
 import org.apache.rocketmq.common.help.FAQUrl;
 import org.apache.rocketmq.common.message.MessageAccessor;
@@ -35,6 +34,7 @@ import org.apache.rocketmq.common.message.MessageConst;
 import org.apache.rocketmq.common.message.MessageDecoder;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.message.MessageExtBatch;
+import org.apache.rocketmq.common.protocol.NamespaceUtil;
 import org.apache.rocketmq.common.protocol.RequestCode;
 import org.apache.rocketmq.common.protocol.ResponseCode;
 import org.apache.rocketmq.common.protocol.header.ConsumerSendMsgBackRequestHeader;
@@ -43,6 +43,8 @@ import org.apache.rocketmq.common.protocol.header.SendMessageResponseHeader;
 import org.apache.rocketmq.common.subscription.SubscriptionGroupConfig;
 import org.apache.rocketmq.common.sysflag.MessageSysFlag;
 import org.apache.rocketmq.common.sysflag.TopicSysFlag;
+import org.apache.rocketmq.logging.InternalLogger;
+import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 import org.apache.rocketmq.remoting.netty.NettyRequestProcessor;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
@@ -51,7 +53,11 @@ import org.apache.rocketmq.store.PutMessageResult;
 import org.apache.rocketmq.store.config.StorePathConfigHelper;
 import org.apache.rocketmq.store.stats.BrokerStatsManager;
 
+import java.net.SocketAddress;
+import java.util.List;
+
 public class SendMessageProcessor extends AbstractSendMessageProcessor implements NettyRequestProcessor {
+    private static final InternalLogger DLQ_LOG = InternalLoggerFactory.getLogger(LoggerName.DLQ_LOGGER_NAME);
 
     private List<ConsumeMessageHook> consumeMessageHookList;
 
@@ -62,7 +68,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
     @Override
     public RemotingCommand processRequest(ChannelHandlerContext ctx,
         RemotingCommand request) throws RemotingCommandException {
-        SendMessageContext mqtraceContext;
+        SendMessageContext traceContext;
         switch (request.getCode()) {
             case RequestCode.CONSUMER_SEND_MSG_BACK:
                 return this.consumerSendMsgBack(ctx, request);
@@ -72,17 +78,17 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
                     return null;
                 }
 
-                mqtraceContext = buildMsgContext(ctx, requestHeader);
-                this.executeSendMessageHookBefore(ctx, request, mqtraceContext);
+                traceContext = buildMsgContext(ctx, requestHeader);
+                this.executeSendMessageHookBefore(ctx, request, traceContext);
 
                 RemotingCommand response;
                 if (requestHeader.isBatch()) {
-                    response = this.sendBatchMessage(ctx, request, mqtraceContext, requestHeader);
+                    response = this.sendBatchMessage(ctx, request, traceContext, requestHeader);
                 } else {
-                    response = this.sendMessage(ctx, request, mqtraceContext, requestHeader);
+                    response = this.sendMessage(ctx, request, traceContext, requestHeader);
                 }
 
-                this.executeSendMessageHookAfter(response, mqtraceContext);
+                this.executeSendMessageHookAfter(response, traceContext);
                 return response;
         }
     }
@@ -99,14 +105,25 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         final ConsumerSendMsgBackRequestHeader requestHeader =
             (ConsumerSendMsgBackRequestHeader) request.decodeCommandCustomHeader(ConsumerSendMsgBackRequestHeader.class);
 
+        String namespace = NamespaceUtil.getNamespaceFromResource(requestHeader.getGroup());
+
         if (this.hasConsumeMessageHook() && !UtilAll.isBlank(requestHeader.getOriginMsgId())) {
 
             ConsumeMessageContext context = new ConsumeMessageContext();
-            context.setConsumerGroup(requestHeader.getGroup());
+            context.setNamespace(namespace);
             context.setTopic(requestHeader.getOriginTopic());
+            context.setConsumerGroup(requestHeader.getGroup());
             context.setCommercialRcvStats(BrokerStatsManager.StatsType.SEND_BACK);
             context.setCommercialRcvTimes(1);
             context.setCommercialOwner(request.getExtFields().get(BrokerStatsManager.COMMERCIAL_OWNER));
+
+            context.setAccountAuthType(request.getExtFields().get(BrokerStatsManager.ACCOUNT_AUTH_TYPE));
+            context.setAccountOwnerParent(request.getExtFields().get(BrokerStatsManager.ACCOUNT_OWNER_PARENT));
+            context.setAccountOwnerSelf(request.getExtFields().get(BrokerStatsManager.ACCOUNT_OWNER_SELF));
+            context.setRcvStat(BrokerStatsManager.StatsType.SEND_BACK);
+            context.setRcvTimes(1);
+            //Set msg body size 0 when sent back by consumer.
+            context.setRcvSize(0);
 
             this.executeConsumeMessageHookAfter(context);
         }
@@ -176,8 +193,11 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
             maxReconsumeTimes = requestHeader.getMaxReconsumeTimes();
         }
 
+        boolean isDLQ = false;
         if (msgExt.getReconsumeTimes() >= maxReconsumeTimes
             || delayLevel < 0) {
+
+            isDLQ = true;
             newTopic = MixAll.getDLQTopic(requestHeader.getGroup());
             queueIdInt = Math.abs(this.random.nextInt() % 99999999) % DLQ_NUMS_PER_GROUP;
 
@@ -213,11 +233,19 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         msgInner.setStoreHost(this.getStoreHost());
         msgInner.setReconsumeTimes(msgExt.getReconsumeTimes() + 1);
 
-        String originMsgId = MessageAccessor.getOriginMessageId(msgExt);
-        MessageAccessor.setOriginMessageId(msgInner, UtilAll.isBlank(originMsgId) ? msgExt.getMsgId() : originMsgId);
+        String originalMsgId = MessageAccessor.getOriginMessageId(msgExt);
+        if (UtilAll.isBlank(originalMsgId)) {
+            originalMsgId = msgExt.getMsgId();
+            MessageAccessor.setOriginMessageId(msgInner, originalMsgId);
+        }
 
+        boolean succeeded = false;
         PutMessageResult putMessageResult = this.brokerController.getMessageStore().putMessage(msgInner);
         if (putMessageResult != null) {
+            String commercialOwner = request.getExtFields().get(BrokerStatsManager.COMMERCIAL_OWNER);
+            String authType = request.getExtFields().get(BrokerStatsManager.ACCOUNT_AUTH_TYPE);
+            String user = request.getExtFields().get(BrokerStatsManager.ACCOUNT_OWNER_SELF);
+
             switch (putMessageResult.getPutMessageStatus()) {
                 case PUT_OK:
                     String backTopic = msgExt.getTopic();
@@ -228,17 +256,65 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
 
                     this.brokerController.getBrokerStatsManager().incSendBackNums(requestHeader.getGroup(), backTopic);
 
+                    if (isDLQ) {
+                        this.brokerController.getBrokerStatsManager().incDLQStatValue(
+                            BrokerStatsManager.SNDBCK2DLQ_TIMES,
+                            commercialOwner,
+                            requestHeader.getGroup(),
+                            requestHeader.getOriginTopic(),
+                            BrokerStatsManager.StatsType.SEND_BACK_TO_DLQ.name(),
+                            1);
+
+                        String uniqKey = msgInner.getProperties().get(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX);
+                        DLQ_LOG.info("send msg to DLQ {}, owner={}, originalTopic={}, consumerId={}, msgUniqKey={}, storeTimestamp={}",
+                            newTopic,
+                            commercialOwner,
+                            requestHeader.getOriginTopic(),
+                            requestHeader.getGroup(),
+                            uniqKey,
+                            putMessageResult.getAppendMessageResult().getStoreTimestamp());
+                    }
+
                     response.setCode(ResponseCode.SUCCESS);
                     response.setRemark(null);
 
-                    return response;
+                    succeeded = true;
+                    break;
                 default:
                     break;
             }
 
-            response.setCode(ResponseCode.SYSTEM_ERROR);
-            response.setRemark(putMessageResult.getPutMessageStatus().name());
+            // TODO message type
+            this.brokerController.getBrokerStatsManager().incAccountValue(
+                isDLQ ? BrokerStatsManager.ACCOUNT_SEND_BACK_TO_DLQ : BrokerStatsManager.ACCOUNT_SEND_BACK,
+                commercialOwner,
+                namespace,
+                NamespaceUtil.withoutNamespace(requestHeader.getOriginTopic()),
+                NamespaceUtil.withoutNamespace(requestHeader.getGroup()),
+                "",
+                1,
+                succeeded ? 1 : 0,
+                succeeded ? 0 : 1,
+                putMessageResult.getAppendMessageResult().getWroteBytes());
+
+            if (!succeeded) {
+                response.setCode(ResponseCode.SYSTEM_ERROR);
+                response.setRemark(putMessageResult.getPutMessageStatus().name());
+            }
+
             return response;
+        }
+
+        if (isDLQ) {
+            String owner = request.getExtFields().get(BrokerStatsManager.COMMERCIAL_OWNER);
+            String uniqKey = msgInner.getProperties().get(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX);
+            DLQ_LOG.info("failed to send msg to DLQ {}, owner={}, originalTopic={}, consumerId={}, msgUniqKey={}, result={}",
+                newTopic,
+                owner,
+                requestHeader.getOriginTopic(),
+                requestHeader.getGroup(),
+                uniqKey,
+                putMessageResult == null ? "null" : putMessageResult.getPutMessageStatus().toString());
         }
 
         response.setCode(ResponseCode.SYSTEM_ERROR);
@@ -305,10 +381,10 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
 
         log.debug("receive SendMessage request command, {}", request);
 
-        final long startTimstamp = this.brokerController.getBrokerConfig().getStartAcceptSendRequestTimeStamp();
-        if (this.brokerController.getMessageStore().now() < startTimstamp) {
+        final long startTimestamp = this.brokerController.getBrokerConfig().getStartAcceptSendRequestTimeStamp();
+        if (this.brokerController.getMessageStore().now() < startTimestamp) {
             response.setCode(ResponseCode.SYSTEM_ERROR);
-            response.setRemark(String.format("broker unable to service, until %s", UtilAll.timeMillisToHumanString2(startTimstamp)));
+            response.setRemark(String.format("broker unable to service, until %s", UtilAll.timeMillisToHumanString2(startTimestamp)));
             return response;
         }
 
@@ -406,6 +482,18 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
                 response.setRemark(
                     "service not available now, maybe disk full, " + diskUtil() + ", maybe your broker machine memory too small.");
                 break;
+            case WHEEL_TIMER_NOT_ENABLE:
+                response.setCode(ResponseCode.SYSTEM_ERROR);
+                response.setRemark("Wheel timer is not enabled");
+                break;
+            case WHEEL_TIMER_FLOW_CONTROL:
+                response.setCode(ResponseCode.SYSTEM_ERROR);
+                response.setRemark("Wheel timer is busy, start flow control for a while");
+                break;
+            case WHEEL_TIMER_MSG_ILLEGAL:
+                response.setCode(ResponseCode.MESSAGE_ILLEGAL);
+                response.setRemark("Wheel timer message illegal, the delay time should not be bigger than the max delay; or if set del msg, the delay time should bigger than the current time");
+                break;
             case OS_PAGECACHE_BUSY:
                 response.setCode(ResponseCode.SYSTEM_ERROR);
                 response.setRemark("[PC_SYNCHRONIZED]broker busy, start flow control for a while");
@@ -421,6 +509,9 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         }
 
         String owner = request.getExtFields().get(BrokerStatsManager.COMMERCIAL_OWNER);
+        String authType = request.getExtFields().get(BrokerStatsManager.ACCOUNT_AUTH_TYPE);
+        String ownerParent = request.getExtFields().get(BrokerStatsManager.ACCOUNT_OWNER_PARENT);
+        String ownerSelf = request.getExtFields().get(BrokerStatsManager.ACCOUNT_OWNER_SELF);
         if (sendOK) {
 
             this.brokerController.getBrokerStatsManager().incTopicPutNums(msg.getTopic(), putMessageResult.getAppendMessageResult().getMsgNum(), 1);
@@ -449,6 +540,13 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
                 sendMessageContext.setCommercialSendTimes(incValue);
                 sendMessageContext.setCommercialSendSize(wroteSize);
                 sendMessageContext.setCommercialOwner(owner);
+
+                sendMessageContext.setSendStat(BrokerStatsManager.StatsType.SEND_SUCCESS);
+                sendMessageContext.setAccountAuthType(authType);
+                sendMessageContext.setAccountOwnerParent(ownerParent);
+                sendMessageContext.setAccountOwnerSelf(ownerSelf);
+                sendMessageContext.setSendSize(wroteSize);
+                sendMessageContext.setSendTimes(1);
             }
             return null;
         } else {
@@ -460,6 +558,13 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
                 sendMessageContext.setCommercialSendTimes(incValue);
                 sendMessageContext.setCommercialSendSize(wroteSize);
                 sendMessageContext.setCommercialOwner(owner);
+
+                sendMessageContext.setSendStat(BrokerStatsManager.StatsType.SEND_FAILURE);
+                sendMessageContext.setAccountAuthType(authType);
+                sendMessageContext.setAccountOwnerParent(ownerParent);
+                sendMessageContext.setAccountOwnerSelf(ownerSelf);
+                sendMessageContext.setSendSize(wroteSize);
+                sendMessageContext.setSendTimes(1);
             }
         }
         return response;
@@ -480,10 +585,10 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
 
         log.debug("Receive SendMessage request command {}", request);
 
-        final long startTimstamp = this.brokerController.getBrokerConfig().getStartAcceptSendRequestTimeStamp();
-        if (this.brokerController.getMessageStore().now() < startTimstamp) {
+        final long startTimestamp = this.brokerController.getBrokerConfig().getStartAcceptSendRequestTimeStamp();
+        if (this.brokerController.getMessageStore().now() < startTimestamp) {
             response.setCode(ResponseCode.SYSTEM_ERROR);
-            response.setRemark(String.format("broker unable to service, until %s", UtilAll.timeMillisToHumanString2(startTimstamp)));
+            response.setRemark(String.format("broker unable to service, until %s", UtilAll.timeMillisToHumanString2(startTimestamp)));
             return response;
         }
 
@@ -550,6 +655,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         }
     }
 
+    @Override
     public SocketAddress getStoreHost() {
         return storeHost;
     }

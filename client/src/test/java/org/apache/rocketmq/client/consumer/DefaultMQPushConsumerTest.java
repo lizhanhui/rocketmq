@@ -24,14 +24,20 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.util.concurrent.DefaultEventExecutorGroup;
+import io.netty.util.concurrent.EventExecutorGroup;
 import org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyContext;
 import org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyStatus;
 import org.apache.rocketmq.client.consumer.listener.ConsumeOrderlyContext;
 import org.apache.rocketmq.client.consumer.listener.ConsumeOrderlyStatus;
 import org.apache.rocketmq.client.consumer.listener.MessageListenerConcurrently;
 import org.apache.rocketmq.client.consumer.listener.MessageListenerOrderly;
-import org.apache.rocketmq.client.exception.MQBrokerException;
 import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.client.impl.CommunicationMode;
 import org.apache.rocketmq.client.impl.FindBrokerResult;
@@ -51,14 +57,13 @@ import org.apache.rocketmq.common.message.MessageDecoder;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.message.MessageQueue;
 import org.apache.rocketmq.common.protocol.header.PullMessageRequestHeader;
-import org.apache.rocketmq.remoting.exception.RemotingException;
+import org.apache.rocketmq.remoting.netty.NettyRemotingClient;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
-import org.mockito.Spy;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.mockito.stubbing.Answer;
@@ -166,7 +171,7 @@ public class DefaultMQPushConsumerTest {
     }
 
     @Test
-    public void testPullMessage_Success() throws InterruptedException, RemotingException, MQBrokerException {
+    public void testPullMessage_Success() throws InterruptedException {
         final CountDownLatch countDownLatch = new CountDownLatch(1);
         final MessageExt[] messageExts = new MessageExt[1];
         pushConsumer.getDefaultMQPushConsumerImpl().setConsumeMessageService(new ConsumeMessageConcurrentlyService(pushConsumer.getDefaultMQPushConsumerImpl(), new MessageListenerConcurrently() {
@@ -250,6 +255,112 @@ public class DefaultMQPushConsumerTest {
         } catch (MQClientException e) {
             assertThat(e).hasMessageContaining("pullThresholdSizeForTopic Out of range [1, 102400]");
         }
+    }
+
+    @Test
+    public void testSetEventLoopGroup() throws Exception {
+        String group = "newGroup" + System.currentTimeMillis();
+        DefaultMQPushConsumer pushConsumer = new DefaultMQPushConsumer(group);
+        pushConsumer.setInstanceName(group);
+        pushConsumer.setNamesrvAddr("127.0.0.1:9876");
+        pushConsumer.setPullInterval(60 * 1000);
+        pushConsumer.registerMessageListener(new MessageListenerConcurrently() {
+            @Override
+            public ConsumeConcurrentlyStatus consumeMessage(List<MessageExt> msgs,
+                                                            ConsumeConcurrentlyContext context) {
+                return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;
+            }
+        });
+        EventLoopGroup eventLoopGroup = new NioEventLoopGroup(1, new ThreadFactory() {
+            private AtomicInteger threadIndex = new AtomicInteger(0);
+            @Override
+            public Thread newThread(Runnable r) {
+                return new Thread(r, String.format("NettyClientSelector_%d", this.threadIndex.incrementAndGet()));
+            }
+        });
+        pushConsumer.setEventLoopGroup(eventLoopGroup);
+        pushConsumer.start();
+
+        NettyRemotingClient remotingClient = (NettyRemotingClient) pushConsumer.getDefaultMQPushConsumerImpl()
+                .getmQClientFactory().getMQClientAPIImpl().getRemotingClient();
+        Field field = NettyRemotingClient.class.getDeclaredField("eventLoopGroupWorker");
+        field.setAccessible(true);
+        EventLoopGroup eventLoopGroupWorker = (EventLoopGroup) field.get(remotingClient);
+        assertThat(eventLoopGroup).isEqualTo(eventLoopGroupWorker);
+        pushConsumer.shutdown();
+    }
+
+    @Test
+    public void testSetEventLoopGroup_afterStartUp() throws Exception {
+        String group = "newGroup" + System.currentTimeMillis();
+        DefaultMQPushConsumer pushConsumer = new DefaultMQPushConsumer(group);
+        pushConsumer.setInstanceName(group);
+        pushConsumer.setNamesrvAddr("127.0.0.1:9876");
+        pushConsumer.setPullInterval(60 * 1000);
+        pushConsumer.registerMessageListener(new MessageListenerConcurrently() {
+            @Override
+            public ConsumeConcurrentlyStatus consumeMessage(List<MessageExt> msgs,
+                                                            ConsumeConcurrentlyContext context) {
+                return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;
+            }
+        });
+        EventLoopGroup eventLoopGroup = new NioEventLoopGroup(1, new ThreadFactory() {
+            private AtomicInteger threadIndex = new AtomicInteger(0);
+            @Override
+            public Thread newThread(Runnable r) {
+                return new Thread(r, String.format("NettyClientSelector_%d", this.threadIndex.incrementAndGet()));
+            }
+        });
+        pushConsumer.start();
+        Exception exception = null;
+        try {
+            pushConsumer.setEventLoopGroup(eventLoopGroup);
+        } catch (Exception e) {
+            exception = e;
+        }
+        Assert.assertTrue(exception instanceof MQClientException);
+        NettyRemotingClient remotingClient = (NettyRemotingClient) pushConsumer.getDefaultMQPushConsumerImpl()
+                .getmQClientFactory().getMQClientAPIImpl().getRemotingClient();
+        Field field = NettyRemotingClient.class.getDeclaredField("eventLoopGroupWorker");
+        field.setAccessible(true);
+        EventLoopGroup eventLoopGroupWorker = (EventLoopGroup) field.get(remotingClient);
+        assertThat(eventLoopGroup).isNotEqualTo(eventLoopGroupWorker);
+        pushConsumer.shutdown();
+    }
+
+    @Test
+    public void testSetEventExecutorGroup() throws Exception {
+        String group = "newGroup" + System.currentTimeMillis();
+        DefaultMQPushConsumer pushConsumer = new DefaultMQPushConsumer(group);
+        pushConsumer.setInstanceName(group);
+        pushConsumer.setNamesrvAddr("127.0.0.1:9876");
+        pushConsumer.setPullInterval(60 * 1000);
+        pushConsumer.registerMessageListener(new MessageListenerConcurrently() {
+            @Override
+            public ConsumeConcurrentlyStatus consumeMessage(List<MessageExt> msgs,
+                                                            ConsumeConcurrentlyContext context) {
+                return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;
+            }
+        });
+        EventExecutorGroup eventExecutorGroup = new DefaultEventExecutorGroup(
+                4,
+                new ThreadFactory() {
+                    private AtomicInteger threadIndex = new AtomicInteger(0);
+                    @Override
+                    public Thread newThread(Runnable r) {
+                        return new Thread(r, "NettyClientWorkerThread_" + this.threadIndex.incrementAndGet());
+                    }
+                });
+        pushConsumer.setEventExecutorGroup(eventExecutorGroup);
+        pushConsumer.start();
+
+        NettyRemotingClient remotingClient = (NettyRemotingClient) pushConsumer.getDefaultMQPushConsumerImpl()
+                .getmQClientFactory().getMQClientAPIImpl().getRemotingClient();
+        Field field = NettyRemotingClient.class.getDeclaredField("defaultEventExecutorGroup");
+        field.setAccessible(true);
+        EventExecutorGroup defaultEventExecutorGroup = (EventExecutorGroup) field.get(remotingClient);
+        assertThat(eventExecutorGroup).isEqualTo(defaultEventExecutorGroup);
+        pushConsumer.shutdown();
     }
 
     private DefaultMQPushConsumer createPushConsumer() {

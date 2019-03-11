@@ -47,6 +47,7 @@ import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.common.message.MessageDecoder;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.message.MessageExtBatch;
+import org.apache.rocketmq.common.message.MessageVersion;
 import org.apache.rocketmq.common.running.RunningStats;
 import org.apache.rocketmq.common.sysflag.MessageSysFlag;
 import org.apache.rocketmq.store.config.BrokerRole;
@@ -57,6 +58,8 @@ import org.apache.rocketmq.store.index.IndexService;
 import org.apache.rocketmq.store.index.QueryOffsetResult;
 import org.apache.rocketmq.store.schedule.ScheduleMessageService;
 import org.apache.rocketmq.store.stats.BrokerStatsManager;
+import org.apache.rocketmq.store.timer.PerfCounter;
+import org.apache.rocketmq.store.timer.TimerMessageStore;
 
 import static org.apache.rocketmq.store.config.BrokerRole.SLAVE;
 
@@ -101,6 +104,7 @@ public class DefaultMessageStore implements MessageStore {
     private volatile boolean shutdown = true;
 
     private StoreCheckpoint storeCheckpoint;
+    private TimerMessageStore timerMessageStore;
 
     private AtomicLong printTimes = new AtomicLong(0);
 
@@ -109,6 +113,10 @@ public class DefaultMessageStore implements MessageStore {
     private RandomAccessFile lockFile;
 
     private FileLock lock;
+
+    private final PerfCounter.Ticks ticks =  new PerfCounter.Ticks(log);
+
+    private final MessageVersion messageVersion;
 
     boolean shutDownNormal = false;
 
@@ -150,6 +158,7 @@ public class DefaultMessageStore implements MessageStore {
         File file = new File(StorePathConfigHelper.getLockFile(messageStoreConfig.getStorePathRootDir()));
         MappedFile.ensureDirOK(file.getParent());
         lockFile = new RandomAccessFile(file, "rw");
+        this.messageVersion = MessageVersion.valueOf(messageStoreConfig.getMessageVersion());
     }
 
     public void truncateDirtyLogicFiles(long phyOffset) {
@@ -328,8 +337,15 @@ public class DefaultMessageStore implements MessageStore {
             this.printTimes.set(0);
         }
 
-        if (msg.getTopic().length() > Byte.MAX_VALUE) {
-            log.warn("putMessage message topic length too long " + msg.getTopic().length());
+        int topicLen = msg.getTopic().length();
+        if (topicLen > this.messageStoreConfig.getMaxTopicLength()) {
+            log.warn("putMessage message topic[{}] length too long {}", msg.getTopic(), topicLen);
+            return new PutMessageResult(PutMessageStatus.MESSAGE_ILLEGAL, null);
+        }
+
+        if (topicLen > Byte.MAX_VALUE && this.messageVersion.equals(MessageVersion.MESSAGE_VERSION_V1)) {
+            log.warn("putMessage message topic[{}] length too long {}, but it is not supported by broker, {}",
+                msg.getTopic(), topicLen, this.messageStoreConfig.getMessageVersion());
             return new PutMessageResult(PutMessageStatus.MESSAGE_ILLEGAL, null);
         }
 
@@ -384,8 +400,15 @@ public class DefaultMessageStore implements MessageStore {
             this.printTimes.set(0);
         }
 
-        if (messageExtBatch.getTopic().length() > Byte.MAX_VALUE) {
-            log.warn("PutMessages topic length too long " + messageExtBatch.getTopic().length());
+        int topicLen = messageExtBatch.getTopic().length();
+        if (topicLen > this.messageStoreConfig.getMaxTopicLength()) {
+            log.warn("putMessage batch message topic[{}] length too long {}", messageExtBatch.getTopic(), topicLen);
+            return new PutMessageResult(PutMessageStatus.MESSAGE_ILLEGAL, null);
+        }
+
+        if (topicLen > Byte.MAX_VALUE && messageVersion.equals(MessageVersion.MESSAGE_VERSION_V1)) {
+            log.warn("putMessage batch message topic[{}] length too long {}, but it is not supported by broker, {}",
+                messageExtBatch.getTopic(), topicLen, this.messageStoreConfig.getMessageVersion());
             return new PutMessageResult(PutMessageStatus.MESSAGE_ILLEGAL, null);
         }
 
@@ -491,7 +514,9 @@ public class DefaultMessageStore implements MessageStore {
                         long maxPhyOffsetPulling = 0;
 
                         int i = 0;
-                        final int maxFilterMessageCount = Math.max(16000, maxMsgNums * ConsumeQueue.CQ_STORE_UNIT_SIZE);
+                        final int maxFilterMessageCount = Math.max(
+                            brokerConfig.getPullBatchMaxMessageCount() * ConsumeQueue.CQ_STORE_UNIT_SIZE,
+                            maxMsgNums * ConsumeQueue.CQ_STORE_UNIT_SIZE);
                         final boolean diskFallRecorded = this.messageStoreConfig.isDiskFallRecorded();
                         ConsumeQueueExt.CqExtUnit cqExtUnit = new ConsumeQueueExt.CqExtUnit();
                         for (; i < bufferConsumeQueue.getSize() && i < maxFilterMessageCount; i += ConsumeQueue.CQ_STORE_UNIT_SIZE) {
@@ -556,7 +581,7 @@ public class DefaultMessageStore implements MessageStore {
                             }
 
                             this.storeStatsService.getGetMessageTransferedMsgCount().incrementAndGet();
-                            getResult.addMessage(selectResult);
+                            getResult.addMessage(selectResult, offset + (i / ConsumeQueue.CQ_STORE_UNIT_SIZE));
                             status = GetMessageStatus.FOUND;
                             nextPhyFileStartOffset = Long.MIN_VALUE;
                         }
@@ -683,6 +708,27 @@ public class DefaultMessageStore implements MessageStore {
     @Override
     public SelectMappedBufferResult selectOneMessageByOffset(long commitLogOffset, int msgSize) {
         return this.commitLog.getMessage(commitLogOffset, msgSize);
+    }
+
+    @Override
+    public boolean getData(long offset, int size, ByteBuffer byteBuffer) {
+        return this.commitLog.getData(offset, size, byteBuffer);
+    }
+
+    @Override public long getTimingMessageCount(String topic) {
+        if (null == timerMessageStore) {
+            return 0L;
+        } else {
+            return timerMessageStore.getTimerMetrics().getTimingCount(topic);
+        }
+    }
+
+    @Override public TimerMessageStore getTimerMessageStore() {
+        return this.timerMessageStore;
+    }
+
+    @Override public void setTimerMessageStore(TimerMessageStore timerMessageStore) {
+        this.timerMessageStore = timerMessageStore;
     }
 
     public String getRunningDataInfo() {
@@ -905,7 +951,7 @@ public class DefaultMessageStore implements MessageStore {
             Entry<String, ConcurrentMap<Integer, ConsumeQueue>> next = it.next();
             String topic = next.getKey();
 
-            if (!topics.contains(topic) && !topic.equals(ScheduleMessageService.SCHEDULE_TOPIC)) {
+            if (!topics.contains(topic) && !topic.equals(ScheduleMessageService.SCHEDULE_TOPIC) && !topic.equals(TimerMessageStore.TIMER_TOPIC)) {
                 ConcurrentMap<Integer, ConsumeQueue> queueTable = next.getValue();
                 for (ConsumeQueue cq : queueTable.values()) {
                     cq.destroy();
@@ -932,7 +978,7 @@ public class DefaultMessageStore implements MessageStore {
         while (it.hasNext()) {
             Entry<String, ConcurrentMap<Integer, ConsumeQueue>> next = it.next();
             String topic = next.getKey();
-            if (!topic.equals(ScheduleMessageService.SCHEDULE_TOPIC)) {
+            if (!topic.equals(ScheduleMessageService.SCHEDULE_TOPIC) && !topic.equals(TimerMessageStore.TIMER_TOPIC)) {
                 ConcurrentMap<Integer, ConsumeQueue> queueTable = next.getValue();
                 Iterator<Entry<Integer, ConsumeQueue>> itQT = queueTable.entrySet().iterator();
                 while (itQT.hasNext()) {
@@ -1042,6 +1088,7 @@ public class DefaultMessageStore implements MessageStore {
     public long dispatchBehindBytes() {
         return this.reputMessageService.behind();
     }
+
 
     @Override
     public long flush() {
@@ -1742,11 +1789,6 @@ public class DefaultMessageStore implements MessageStore {
 
         private void doReput() {
             for (boolean doNext = true; this.isCommitLogAvailable() && doNext; ) {
-
-                if (DefaultMessageStore.this.getMessageStoreConfig().isDuplicationEnable()
-                    && this.reputFromOffset >= DefaultMessageStore.this.getConfirmOffset()) {
-                    break;
-                }
 
                 SelectMappedBufferResult result = DefaultMessageStore.this.commitLog.getData(reputFromOffset);
                 if (result != null) {

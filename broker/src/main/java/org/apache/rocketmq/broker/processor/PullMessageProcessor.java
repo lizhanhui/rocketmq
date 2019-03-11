@@ -16,11 +16,13 @@
  */
 package org.apache.rocketmq.broker.processor;
 
+import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import java.util.List;
 import org.apache.rocketmq.broker.BrokerController;
 import org.apache.rocketmq.broker.client.ConsumerGroupInfo;
 import org.apache.rocketmq.broker.filter.ConsumerFilterData;
@@ -37,8 +39,7 @@ import org.apache.rocketmq.common.constant.PermName;
 import org.apache.rocketmq.common.filter.ExpressionType;
 import org.apache.rocketmq.common.filter.FilterAPI;
 import org.apache.rocketmq.common.help.FAQUrl;
-import org.apache.rocketmq.logging.InternalLogger;
-import org.apache.rocketmq.logging.InternalLoggerFactory;
+import org.apache.rocketmq.common.protocol.NamespaceUtil;
 import org.apache.rocketmq.common.protocol.ResponseCode;
 import org.apache.rocketmq.common.protocol.header.PullMessageRequestHeader;
 import org.apache.rocketmq.common.protocol.header.PullMessageResponseHeader;
@@ -47,6 +48,8 @@ import org.apache.rocketmq.common.protocol.heartbeat.MessageModel;
 import org.apache.rocketmq.common.protocol.heartbeat.SubscriptionData;
 import org.apache.rocketmq.common.subscription.SubscriptionGroupConfig;
 import org.apache.rocketmq.common.sysflag.PullSysFlag;
+import org.apache.rocketmq.logging.InternalLogger;
+import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.remoting.common.RemotingHelper;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 import org.apache.rocketmq.remoting.netty.NettyRequestProcessor;
@@ -59,9 +62,11 @@ import org.apache.rocketmq.store.stats.BrokerStatsManager;
 
 public class PullMessageProcessor implements NettyRequestProcessor {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
+    private static final InternalLogger STORE_ERROR_LOGGER = InternalLoggerFactory.getLogger(LoggerName.STORE_ERROR_LOGGER_NAME);
     private final BrokerController brokerController;
     private List<ConsumeMessageHook> consumeMessageHookList;
     private PullMessageResultHandler pullMessageResultHandler;
+    private final AtomicLong frequency = new AtomicLong(0);
 
     public PullMessageProcessor(final BrokerController brokerController) {
         this.brokerController = brokerController;
@@ -101,6 +106,15 @@ public class PullMessageProcessor implements NettyRequestProcessor {
         if (null == subscriptionGroupConfig) {
             response.setCode(ResponseCode.SUBSCRIPTION_GROUP_NOT_EXIST);
             response.setRemark(String.format("subscription group [%s] does not exist, %s", requestHeader.getConsumerGroup(), FAQUrl.suggestTodo(FAQUrl.SUBSCRIPTION_GROUP_NOT_EXIST)));
+            if (frequency.getAndIncrement() % 100 == 0) {
+                String accessKey = request.getExtFields().get("AccessKey");
+                String ownerSelf = request.getExtFields().get(BrokerStatsManager.ACCOUNT_OWNER_SELF);
+                String ownerParent = request.getExtFields().get(BrokerStatsManager.COMMERCIAL_OWNER);
+                String clusterName = this.brokerController.getBrokerConfig().getBrokerClusterName();
+                String regionId = this.brokerController.getBrokerConfig().getRegionId();
+                STORE_ERROR_LOGGER.warn("NO GroupId in subscription. regionId={}, clusterName={}, groupId={}, topic={}, accesskey={}, selfUid={}, parentUid={}.",
+                    regionId, clusterName, requestHeader.getConsumerGroup(), requestHeader.getTopic(), accessKey, ownerSelf, ownerParent);
+            }
             return response;
         }
 
@@ -326,12 +340,19 @@ public class PullMessageProcessor implements NettyRequestProcessor {
             }
 
             if (this.hasConsumeMessageHook()) {
+                String owner = request.getExtFields().get(BrokerStatsManager.COMMERCIAL_OWNER);
+                String authType = request.getExtFields().get(BrokerStatsManager.ACCOUNT_AUTH_TYPE);
+                String ownerParent = request.getExtFields().get(BrokerStatsManager.ACCOUNT_OWNER_PARENT);
+                String ownerSelf = request.getExtFields().get(BrokerStatsManager.ACCOUNT_OWNER_SELF);
+
                 ConsumeMessageContext context = new ConsumeMessageContext();
                 context.setConsumerGroup(requestHeader.getConsumerGroup());
                 context.setTopic(requestHeader.getTopic());
                 context.setQueueId(requestHeader.getQueueId());
-
-                String owner = request.getExtFields().get(BrokerStatsManager.COMMERCIAL_OWNER);
+                context.setAccountAuthType(authType);
+                context.setAccountOwnerParent(ownerParent);
+                context.setAccountOwnerSelf(ownerSelf);
+                context.setNamespace(NamespaceUtil.getNamespaceFromResource(requestHeader.getTopic()));
 
                 switch (response.getCode()) {
                     case ResponseCode.SUCCESS:
@@ -343,6 +364,10 @@ public class PullMessageProcessor implements NettyRequestProcessor {
                         context.setCommercialRcvSize(getMessageResult.getBufferTotalSize());
                         context.setCommercialOwner(owner);
 
+                        context.setRcvStat(BrokerStatsManager.StatsType.RCV_SUCCESS);
+                        context.setRcvTimes(1);
+                        context.setRcvSize(getMessageResult.getBufferTotalSize());
+
                         break;
                     case ResponseCode.PULL_NOT_FOUND:
                         if (!brokerAllowSuspend) {
@@ -351,6 +376,9 @@ public class PullMessageProcessor implements NettyRequestProcessor {
                             context.setCommercialRcvTimes(1);
                             context.setCommercialOwner(owner);
 
+                            context.setRcvStat(BrokerStatsManager.StatsType.RCV_EPOLLS);
+                            context.setRcvTimes(1);
+                            context.setRcvSize(0);
                         }
                         break;
                     case ResponseCode.PULL_RETRY_IMMEDIATELY:
@@ -358,6 +386,10 @@ public class PullMessageProcessor implements NettyRequestProcessor {
                         context.setCommercialRcvStats(BrokerStatsManager.StatsType.RCV_EPOLLS);
                         context.setCommercialRcvTimes(1);
                         context.setCommercialOwner(owner);
+
+                        context.setRcvStat(BrokerStatsManager.StatsType.RCV_EPOLLS);
+                        context.setRcvTimes(1);
+                        context.setRcvSize(0);
                         break;
                     default:
                         assert false;

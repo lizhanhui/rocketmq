@@ -27,6 +27,8 @@ import org.apache.rocketmq.common.protocol.body.ConsumerOffsetSerializeWrapper;
 import org.apache.rocketmq.common.protocol.body.SubscriptionGroupWrapper;
 import org.apache.rocketmq.common.protocol.body.TopicConfigSerializeWrapper;
 import org.apache.rocketmq.store.config.StorePathConfigHelper;
+import org.apache.rocketmq.store.timer.TimerCheckpoint;
+import org.apache.rocketmq.store.timer.TimerMetrics;
 
 public class SlaveSynchronize {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
@@ -50,7 +52,9 @@ public class SlaveSynchronize {
         this.syncConsumerOffset();
         this.syncDelayOffset();
         this.syncSubscriptionGroupConfig();
+        this.syncTimerMetrics();
     }
+
 
     private void syncTopicConfig() {
         String masterAddrBak = this.masterAddr;
@@ -138,6 +142,42 @@ public class SlaveSynchronize {
                 }
             } catch (Exception e) {
                 log.error("SyncSubscriptionGroup Exception, {}", masterAddrBak, e);
+            }
+        }
+    }
+
+
+    public void syncTimerCheckPoint() {
+        String masterAddrBak = this.masterAddr;
+        if (masterAddrBak != null) {
+            try {
+                TimerCheckpoint checkpoint = this.brokerController.getBrokerOuterAPI().getTimerCheckPoint(masterAddrBak);
+                if (null != this.brokerController.getTimerCheckpoint()) {
+                    this.brokerController.getTimerCheckpoint().setLastReadTimeMs(checkpoint.getLastReadTimeMs());
+                    this.brokerController.getTimerCheckpoint().setMasterTimerQueueOffset(checkpoint.getMasterTimerQueueOffset());
+                }
+            } catch (Exception e) {
+                log.error("SyncSubscriptionGroup Exception, {}", masterAddrBak, e);
+            }
+        }
+    }
+
+    private void syncTimerMetrics() {
+        String masterAddrBak = this.masterAddr;
+        if (masterAddrBak != null) {
+            try {
+                if (null != brokerController.getMessageStore().getTimerMessageStore()) {
+                    TimerMetrics.TimerMetricsSerializeWrapper metricsSerializeWrapper =
+                        this.brokerController.getBrokerOuterAPI().getTimerMetrics(masterAddrBak);
+                    if (!brokerController.getMessageStore().getTimerMessageStore().getTimerMetrics().getDataVersion().equals(metricsSerializeWrapper.getDataVersion())) {
+                        this.brokerController.getMessageStore().getTimerMessageStore().getTimerMetrics().getDataVersion().assignNewOne(metricsSerializeWrapper.getDataVersion());
+                        this.brokerController.getMessageStore().getTimerMessageStore().getTimerMetrics().getTimingCount().clear();
+                        this.brokerController.getMessageStore().getTimerMessageStore().getTimerMetrics().getTimingCount().putAll(metricsSerializeWrapper.getTimingCount());
+                        this.brokerController.getMessageStore().getTimerMessageStore().getTimerMetrics().persist();
+                    }
+                }
+            } catch (Exception e) {
+                log.error("SyncTimerMetrics Exception, {}", masterAddrBak, e);
             }
         }
     }

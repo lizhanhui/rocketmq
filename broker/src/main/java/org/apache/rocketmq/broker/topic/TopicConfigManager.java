@@ -32,6 +32,7 @@ import org.apache.rocketmq.broker.BrokerPathConfigHelper;
 import org.apache.rocketmq.common.ConfigManager;
 import org.apache.rocketmq.common.DataVersion;
 import org.apache.rocketmq.common.MixAll;
+import org.apache.rocketmq.common.PopAckConstants;
 import org.apache.rocketmq.common.TopicConfig;
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.common.constant.PermName;
@@ -40,6 +41,7 @@ import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.common.protocol.body.KVTable;
 import org.apache.rocketmq.common.protocol.body.TopicConfigSerializeWrapper;
 import org.apache.rocketmq.common.sysflag.TopicSysFlag;
+import org.apache.rocketmq.store.timer.TimerMessageStore;
 
 public class TopicConfigManager extends ConfigManager {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
@@ -119,6 +121,24 @@ public class TopicConfigManager extends ConfigManager {
         {
             // MixAll.OFFSET_MOVED_EVENT
             String topic = MixAll.OFFSET_MOVED_EVENT;
+            TopicConfig topicConfig = new TopicConfig(topic);
+            this.systemTopicList.add(topic);
+            topicConfig.setReadQueueNums(1);
+            topicConfig.setWriteQueueNums(1);
+            this.topicConfigTable.put(topicConfig.getTopicName(), topicConfig);
+        }
+        {
+            // PopAckConstants.REVIVE_TOPIC
+            String topic = PopAckConstants.REVIVE_TOPIC + this.brokerController.getBrokerConfig().getBrokerClusterName();
+            TopicConfig topicConfig = new TopicConfig(topic);
+            this.systemTopicList.add(topic);
+            topicConfig.setReadQueueNums(this.brokerController.getBrokerConfig().getReviveQueueNum());
+            topicConfig.setWriteQueueNums(this.brokerController.getBrokerConfig().getReviveQueueNum());
+            this.topicConfigTable.put(topicConfig.getTopicName(), topicConfig);
+        }
+        {
+            // Wheel Timer Topic
+            String topic = TimerMessageStore.TIMER_TOPIC;
             TopicConfig topicConfig = new TopicConfig(topic);
             this.systemTopicList.add(topic);
             topicConfig.setReadQueueNums(1);
