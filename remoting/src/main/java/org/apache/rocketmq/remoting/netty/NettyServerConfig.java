@@ -30,6 +30,7 @@ public class NettyServerConfig implements Cloneable {
     private int writeBufferHighWaterMark = NettySystemConfig.writeBufferHighWaterMark;
     private int writeBufferLowWaterMark = NettySystemConfig.writeBufferLowWaterMark;
     private boolean serverPooledByteBufAllocatorEnable = true;
+    private boolean validateTunnelIdFromVtoaEnable = false;
 
     /**
      * make make install
@@ -142,6 +143,14 @@ public class NettyServerConfig implements Cloneable {
 
     public void setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
         this.writeBufferLowWaterMark = writeBufferLowWaterMark;
+    }
+
+    public boolean isValidateTunnelIdFromVtoaEnable() {
+        return validateTunnelIdFromVtoaEnable;
+    }
+
+    public void setValidateTunnelIdFromVtoaEnable(boolean validateTunnelIdFromVtoaEnable) {
+        this.validateTunnelIdFromVtoaEnable = validateTunnelIdFromVtoaEnable;
     }
 
     @Override
