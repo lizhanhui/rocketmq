@@ -17,6 +17,7 @@
 package org.apache.rocketmq.broker.processor;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -61,9 +62,11 @@ import org.apache.rocketmq.store.stats.BrokerStatsManager;
 
 public class PullMessageProcessor implements NettyRequestProcessor {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
+    private static final InternalLogger STORE_ERROR_LOGGER = InternalLoggerFactory.getLogger(LoggerName.STORE_ERROR_LOGGER_NAME);
     private final BrokerController brokerController;
     private List<ConsumeMessageHook> consumeMessageHookList;
     private PullMessageResultHandler pullMessageResultHandler;
+    private final AtomicLong frequency = new AtomicLong(0);
 
     public PullMessageProcessor(final BrokerController brokerController) {
         this.brokerController = brokerController;
@@ -103,6 +106,15 @@ public class PullMessageProcessor implements NettyRequestProcessor {
         if (null == subscriptionGroupConfig) {
             response.setCode(ResponseCode.SUBSCRIPTION_GROUP_NOT_EXIST);
             response.setRemark(String.format("subscription group [%s] does not exist, %s", requestHeader.getConsumerGroup(), FAQUrl.suggestTodo(FAQUrl.SUBSCRIPTION_GROUP_NOT_EXIST)));
+            if (frequency.getAndIncrement() % 100 == 0) {
+                String accessKey = request.getExtFields().get("AccessKey");
+                String ownerSelf = request.getExtFields().get(BrokerStatsManager.ACCOUNT_OWNER_SELF);
+                String ownerParent = request.getExtFields().get(BrokerStatsManager.COMMERCIAL_OWNER);
+                String clusterName = this.brokerController.getBrokerConfig().getBrokerClusterName();
+                String regionId = this.brokerController.getBrokerConfig().getRegionId();
+                STORE_ERROR_LOGGER.warn("NO GroupId in subscription. regionId={}, clusterName={}, groupId={}, topic={}, accesskey={}, selfUid={}, parentUid={}.",
+                    regionId, clusterName, requestHeader.getConsumerGroup(), requestHeader.getTopic(), accessKey, ownerSelf, ownerParent);
+            }
             return response;
         }
 

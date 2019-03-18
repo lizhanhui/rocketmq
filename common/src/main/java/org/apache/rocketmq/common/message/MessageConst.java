@@ -56,6 +56,7 @@ public class MessageConst {
     public static final String PROPERTY_POP_CK_OFFSET = "POP_CK_OFFSET";
     public static final String PROPERTY_FIRST_POP_TIME = "1ST_POP_TIME";
     public static final String PROPERTY_SHARDING_KEY = "__SHARDINGKEY";
+    public static final String PROPERTY_VTOA_TUNNEL_ID = "VTOA_TUNNEL_ID";
 
     public static final String KEY_SEPARATOR = " ";
 
@@ -94,5 +95,6 @@ public class MessageConst {
         STRING_HASH_SET.add(PROPERTY_FIRST_POP_TIME);
         STRING_HASH_SET.add(PROPERTY_EXTEND_UNIQ_INFO);
         STRING_HASH_SET.add(PROPERTY_INSTANCE_ID);
+        STRING_HASH_SET.add(PROPERTY_VTOA_TUNNEL_ID);
     }
 }
