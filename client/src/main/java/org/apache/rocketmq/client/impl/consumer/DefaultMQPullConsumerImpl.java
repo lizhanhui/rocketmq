@@ -594,6 +594,11 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner, MQPopConsumer
 
     public void sendMessageBack(MessageExt msg, int delayLevel, final String brokerName, String consumerGroup)
         throws RemotingException, MQBrokerException, InterruptedException, MQClientException {
+        sendMessageBack(msg, delayLevel, brokerName, consumerGroup, this.defaultMQPullConsumer.getMaxReconsumeTimes());
+    }
+
+    public void sendMessageBack(MessageExt msg, int delayLevel, final String brokerName, String consumerGroup, int maxReconsumeTimes)
+        throws RemotingException, MQBrokerException, InterruptedException, MQClientException {
         try {
             String brokerAddr = (null != brokerName) ? this.mQClientFactory.findBrokerAddressInPublish(brokerName)
                 : RemotingHelper.parseSocketAddressAddr(msg.getStoreHost());
@@ -603,7 +608,7 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner, MQPopConsumer
             }
 
             this.mQClientFactory.getMQClientAPIImpl().consumerSendMessageBack(brokerAddr, msg, consumerGroup, delayLevel, 3000,
-                this.defaultMQPullConsumer.getMaxReconsumeTimes());
+                maxReconsumeTimes);
         } catch (Exception e) {
             log.error("sendMessageBack Exception, " + this.defaultMQPullConsumer.getConsumerGroup(), e);
 
