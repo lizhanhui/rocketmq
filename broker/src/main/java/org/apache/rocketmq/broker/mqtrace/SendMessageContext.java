@@ -16,10 +16,10 @@
  */
 package org.apache.rocketmq.broker.mqtrace;
 
+import java.util.Properties;
+
 import org.apache.rocketmq.common.message.MessageType;
 import org.apache.rocketmq.store.stats.BrokerStatsManager;
-
-import java.util.Properties;
 
 public class SendMessageContext {
     /** namespace */
@@ -54,8 +54,8 @@ public class SendMessageContext {
     private String accountAuthType;
     private String accountOwnerParent;
     private String accountOwnerSelf;
-    private int sendTimes;
-    private int sendSize;
+    private int sendMsgNum;
+    private int sendMsgSize;
     private BrokerStatsManager.StatsType sendStat;
 
     /**
@@ -266,20 +266,20 @@ public class SendMessageContext {
         this.accountOwnerSelf = accountOwnerSelf;
     }
 
-    public int getSendTimes() {
-        return sendTimes;
+    public int getSendMsgNum() {
+        return sendMsgNum;
     }
 
-    public void setSendTimes(int sendTimes) {
-        this.sendTimes = sendTimes;
+    public void setSendMsgNum(int sendMsgNum) {
+        this.sendMsgNum = sendMsgNum;
     }
 
-    public int getSendSize() {
-        return sendSize;
+    public int getSendMsgSize() {
+        return sendMsgSize;
     }
 
-    public void setSendSize(int sendSize) {
-        this.sendSize = sendSize;
+    public void setSendMsgSize(int sendMsgSize) {
+        this.sendMsgSize = sendMsgSize;
     }
 
     public BrokerStatsManager.StatsType getSendStat() {
