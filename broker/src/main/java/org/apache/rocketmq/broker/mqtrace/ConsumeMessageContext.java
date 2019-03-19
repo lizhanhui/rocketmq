@@ -37,8 +37,8 @@ public class ConsumeMessageContext {
     private String accountAuthType;
     private String accountOwnerParent;
     private String accountOwnerSelf;
-    private int rcvTimes;
-    private int rcvSize;
+    private int rcvMsgNum;
+    private int rcvMsgSize;
     private BrokerStatsManager.StatsType rcvStat;
 
     private String commercialOwner;
@@ -159,20 +159,20 @@ public class ConsumeMessageContext {
         this.accountOwnerSelf = accountOwnerSelf;
     }
 
-    public int getRcvTimes() {
-        return rcvTimes;
+    public int getRcvMsgNum() {
+        return rcvMsgNum;
     }
 
-    public void setRcvTimes(int rcvTimes) {
-        this.rcvTimes = rcvTimes;
+    public void setRcvMsgNum(int rcvMsgNum) {
+        this.rcvMsgNum = rcvMsgNum;
     }
 
-    public int getRcvSize() {
-        return rcvSize;
+    public int getRcvMsgSize() {
+        return rcvMsgSize;
     }
 
-    public void setRcvSize(int rcvSize) {
-        this.rcvSize = rcvSize;
+    public void setRcvMsgSize(int rcvMsgSize) {
+        this.rcvMsgSize = rcvMsgSize;
     }
 
     public BrokerStatsManager.StatsType getRcvStat() {
