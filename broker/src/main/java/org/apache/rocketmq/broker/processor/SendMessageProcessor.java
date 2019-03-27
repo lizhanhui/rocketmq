@@ -16,6 +16,9 @@
  */
 package org.apache.rocketmq.broker.processor;
 
+import java.net.SocketAddress;
+import java.util.List;
+
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.rocketmq.broker.BrokerController;
 import org.apache.rocketmq.broker.mqtrace.ConsumeMessageContext;
@@ -52,9 +55,6 @@ import org.apache.rocketmq.store.MessageExtBrokerInner;
 import org.apache.rocketmq.store.PutMessageResult;
 import org.apache.rocketmq.store.config.StorePathConfigHelper;
 import org.apache.rocketmq.store.stats.BrokerStatsManager;
-
-import java.net.SocketAddress;
-import java.util.List;
 
 public class SendMessageProcessor extends AbstractSendMessageProcessor implements NettyRequestProcessor {
     private static final InternalLogger DLQ_LOG = InternalLoggerFactory.getLogger(LoggerName.DLQ_LOGGER_NAME);
@@ -121,9 +121,9 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
             context.setAccountOwnerParent(request.getExtFields().get(BrokerStatsManager.ACCOUNT_OWNER_PARENT));
             context.setAccountOwnerSelf(request.getExtFields().get(BrokerStatsManager.ACCOUNT_OWNER_SELF));
             context.setRcvStat(BrokerStatsManager.StatsType.SEND_BACK);
-            context.setRcvTimes(1);
+            context.setRcvMsgNum(1);
             //Set msg body size 0 when sent back by consumer.
-            context.setRcvSize(0);
+            context.setRcvMsgSize(0);
 
             this.executeConsumeMessageHookAfter(context);
         }
@@ -534,6 +534,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
 
                 int commercialBaseCount = brokerController.getBrokerConfig().getCommercialBaseCount();
                 int wroteSize = putMessageResult.getAppendMessageResult().getWroteBytes();
+                int msgNum = putMessageResult.getAppendMessageResult().getMsgNum();
                 int incValue = (int) Math.ceil(wroteSize / BrokerStatsManager.SIZE_PER_COUNT) * commercialBaseCount;
 
                 sendMessageContext.setCommercialSendStats(BrokerStatsManager.StatsType.SEND_SUCCESS);
@@ -545,8 +546,8 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
                 sendMessageContext.setAccountAuthType(authType);
                 sendMessageContext.setAccountOwnerParent(ownerParent);
                 sendMessageContext.setAccountOwnerSelf(ownerSelf);
-                sendMessageContext.setSendSize(wroteSize);
-                sendMessageContext.setSendTimes(1);
+                sendMessageContext.setSendMsgSize(wroteSize);
+                sendMessageContext.setSendMsgNum(msgNum);
             }
             return null;
         } else {
@@ -563,8 +564,8 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
                 sendMessageContext.setAccountAuthType(authType);
                 sendMessageContext.setAccountOwnerParent(ownerParent);
                 sendMessageContext.setAccountOwnerSelf(ownerSelf);
-                sendMessageContext.setSendSize(wroteSize);
-                sendMessageContext.setSendTimes(1);
+                sendMessageContext.setSendMsgSize(0);
+                sendMessageContext.setSendMsgNum(0);
             }
         }
         return response;

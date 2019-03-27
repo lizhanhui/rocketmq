@@ -16,15 +16,6 @@
  */
 package org.apache.rocketmq.broker.offset;
 
-import org.apache.rocketmq.broker.BrokerController;
-import org.apache.rocketmq.broker.BrokerPathConfigHelper;
-import org.apache.rocketmq.common.ConfigManager;
-import org.apache.rocketmq.common.UtilAll;
-import org.apache.rocketmq.common.constant.LoggerName;
-import org.apache.rocketmq.logging.InternalLogger;
-import org.apache.rocketmq.logging.InternalLoggerFactory;
-import org.apache.rocketmq.remoting.protocol.RemotingSerializable;
-
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -33,6 +24,15 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
+import org.apache.rocketmq.broker.BrokerController;
+import org.apache.rocketmq.broker.BrokerPathConfigHelper;
+import org.apache.rocketmq.common.ConfigManager;
+import org.apache.rocketmq.common.UtilAll;
+import org.apache.rocketmq.common.constant.LoggerName;
+import org.apache.rocketmq.logging.InternalLogger;
+import org.apache.rocketmq.logging.InternalLoggerFactory;
+import org.apache.rocketmq.remoting.protocol.RemotingSerializable;
 
 public class ConsumerOffsetManager extends ConfigManager {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
@@ -132,6 +132,28 @@ public class ConsumerOffsetManager extends ConfigManager {
         }
 
         return groups;
+    }
+
+    public Map<String, Set<String>> getGroupTopicMap() {
+        Map<String, Set<String>> retMap = new HashMap<String, Set<String>>(128);
+
+        for (String key : this.offsetTable.keySet()) {
+            String[] arr = key.split(TOPIC_GROUP_SEPARATOR);
+            if (arr.length == 2) {
+                String topic = arr[0];
+                String group = arr[1];
+
+                Set<String> topics = retMap.get(group);
+                if (topics == null) {
+                    topics = new HashSet<String>(8);
+                    retMap.put(group, topics);
+                }
+
+                topics.add(topic);
+            }
+        }
+
+        return retMap;
     }
 
     public void commitOffset(final String clientHost, final String group, final String topic, final int queueId,
