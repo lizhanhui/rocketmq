@@ -56,7 +56,6 @@ public class RMQNormalConsumer extends AbstractMQConsumer {
             e.printStackTrace();
         }
         consumer.setMessageListener(listener);
-        consumer.setUseTLS(useTLS);
     }
 
     public void start() {

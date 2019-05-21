@@ -34,9 +34,7 @@ import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
-import java.io.IOException;
 import java.net.SocketAddress;
-import java.security.cert.CertificateException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -127,18 +125,6 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
                 return new Thread(r, String.format("NettyClientSelector_%d", this.threadIndex.incrementAndGet()));
             }
         });
-
-        if (nettyClientConfig.isUseTLS()) {
-            try {
-                sslContext = TlsHelper.buildSslContext(true);
-                log.info("SSL enabled for client");
-            } catch (IOException e) {
-                log.error("Failed to create SSLContext", e);
-            } catch (CertificateException e) {
-                log.error("Failed to create SSLContext", e);
-                throw new RuntimeException("Failed to create SSLContext", e);
-            }
-        }
     }
 
     private static int initValueIndex() {
@@ -171,14 +157,6 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
                 @Override
                 public void initChannel(SocketChannel ch) throws Exception {
                     ChannelPipeline pipeline = ch.pipeline();
-                    if (nettyClientConfig.isUseTLS()) {
-                        if (null != sslContext) {
-                            pipeline.addFirst(defaultEventExecutorGroup, "sslHandler", sslContext.newHandler(ch.alloc()));
-                            log.info("Prepend SSL handler");
-                        } else {
-                            log.warn("Connections are insecure as SSLContext is null!");
-                        }
-                    }
                     pipeline.addLast(
                         defaultEventExecutorGroup,
                         new NettyEncoder(),

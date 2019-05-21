@@ -72,7 +72,6 @@ public class RMQNormalProducer extends AbstractMQProducer {
         producer = new DefaultMQProducer();
         producer.setProducerGroup(getProducerGroupName());
         producer.setInstanceName(getProducerInstanceName());
-        producer.setUseTLS(useTLS);
 
         if (nsAddr != null) {
             producer.setNamesrvAddr(nsAddr);

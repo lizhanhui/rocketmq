@@ -24,7 +24,6 @@ import org.apache.rocketmq.common.message.MessageQueue;
 import org.apache.rocketmq.common.protocol.NamespaceUtil;
 import org.apache.rocketmq.common.utils.NameServerAddressUtils;
 import org.apache.rocketmq.remoting.common.RemotingUtil;
-import org.apache.rocketmq.remoting.netty.TlsSystemConfig;
 import org.apache.rocketmq.remoting.protocol.LanguageCode;
 
 /**
@@ -54,8 +53,6 @@ public class ClientConfig {
     private boolean unitMode = false;
     private String unitName;
     private boolean vipChannelEnabled = Boolean.parseBoolean(System.getProperty(SEND_MESSAGE_WITH_VIP_CHANNEL_PROPERTY, "false"));
-
-    private boolean useTLS = TlsSystemConfig.tlsEnable;
 
     private LanguageCode language = LanguageCode.JAVA;
 
@@ -138,7 +135,6 @@ public class ClientConfig {
         this.unitMode = cc.unitMode;
         this.unitName = cc.unitName;
         this.vipChannelEnabled = cc.vipChannelEnabled;
-        this.useTLS = cc.useTLS;
         this.namespace = cc.namespace;
         this.language = cc.language;
     }
@@ -155,7 +151,6 @@ public class ClientConfig {
         cc.unitMode = unitMode;
         cc.unitName = unitName;
         cc.vipChannelEnabled = vipChannelEnabled;
-        cc.useTLS = useTLS;
         cc.namespace = namespace;
         cc.language = language;
         return cc;
@@ -232,14 +227,6 @@ public class ClientConfig {
         this.vipChannelEnabled = vipChannelEnabled;
     }
 
-    public boolean isUseTLS() {
-        return useTLS;
-    }
-
-    public void setUseTLS(boolean useTLS) {
-        this.useTLS = useTLS;
-    }
-
     public LanguageCode getLanguage() {
         return language;
     }
@@ -279,6 +266,6 @@ public class ClientConfig {
             + ", clientCallbackExecutorThreads=" + clientCallbackExecutorThreads + ", pollNameServerInterval=" + pollNameServerInterval
             + ", heartbeatBrokerInterval=" + heartbeatBrokerInterval + ", persistConsumerOffsetInterval="
             + persistConsumerOffsetInterval + ", unitMode=" + unitMode + ", unitName=" + unitName + ", vipChannelEnabled="
-            + vipChannelEnabled + ", useTLS=" + useTLS + ", language=" + language.name() + ", namespace=" + namespace + "]";
+            + vipChannelEnabled + ", language=" + language.name() + ", namespace=" + namespace + "]";
     }
 }
