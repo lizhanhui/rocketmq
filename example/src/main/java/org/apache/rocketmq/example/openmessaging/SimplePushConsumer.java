@@ -16,6 +16,7 @@
  */
 package org.apache.rocketmq.example.openmessaging;
 
+import io.openmessaging.KeyValue;
 import io.openmessaging.Message;
 import io.openmessaging.MessagingAccessPoint;
 import io.openmessaging.OMS;
@@ -28,8 +29,9 @@ public class SimplePushConsumer {
         final MessagingAccessPoint messagingAccessPoint = OMS
             .getMessagingAccessPoint("oms:rocketmq://localhost:9876/default:default");
 
-        final PushConsumer consumer = messagingAccessPoint.
-            createPushConsumer(OMS.newKeyValue().put(OMSBuiltinKeys.CONSUMER_ID, "OMS_CONSUMER"));
+        KeyValue config = OMS.newKeyValue().put(OMSBuiltinKeys.CONSUMER_ID, "OMS_CONSUMER");
+        config.put(OMSBuiltinKeys.CONSUME_MODEL, "BROADCASTING");
+        final PushConsumer consumer = messagingAccessPoint.createPushConsumer(config);
 
         messagingAccessPoint.startup();
         System.out.printf("MessagingAccessPoint startup OK%n");

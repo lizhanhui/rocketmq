@@ -36,6 +36,7 @@ import org.apache.rocketmq.client.impl.consumer.ProcessQueue;
 import org.apache.rocketmq.client.log.ClientLogger;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.message.MessageQueue;
+import org.apache.rocketmq.common.protocol.heartbeat.MessageModel;
 import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.remoting.protocol.LanguageCode;
 
@@ -70,6 +71,12 @@ public class PullConsumerImpl implements PullConsumer {
         }
 
         this.rocketmqPullConsumer.setConsumerGroup(consumerGroup);
+
+        boolean isBroadcasting = clientConfig.getConsumeModel() != null
+            && clientConfig.getConsumeModel().toLowerCase().contains("broadcast");
+        if (isBroadcasting) {
+            this.rocketmqPullConsumer.setMessageModel(MessageModel.BROADCASTING);
+        }
 
         int maxReDeliveryTimes = clientConfig.getRmqMaxRedeliveryTimes();
         this.rocketmqPullConsumer.setMaxReconsumeTimes(maxReDeliveryTimes);

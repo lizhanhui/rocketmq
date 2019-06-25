@@ -39,6 +39,7 @@ public class ClientConfig implements OMSBuiltinKeys, NonStandardKeys {
     private String rmqMessageDestination;
     private int rmqPullMessageBatchNums = 32;
     private int rmqPullMessageCacheCapacity = 1000;
+    private String consumeModel = "CLUSTERING"; // BROADCASTING
 
     public String getDriverImpl() {
         return driverImpl;
@@ -190,5 +191,13 @@ public class ClientConfig implements OMSBuiltinKeys, NonStandardKeys {
 
     public void setRoutingExpression(String routingExpression) {
         this.routingExpression = routingExpression;
+    }
+
+    public String getConsumeModel() {
+        return consumeModel;
+    }
+
+    public void setConsumeModel(String consumeModel) {
+        this.consumeModel = consumeModel;
     }
 }
