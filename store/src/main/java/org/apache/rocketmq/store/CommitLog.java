@@ -16,9 +16,12 @@
  */
 package org.apache.rocketmq.store;
 
+import com.google.protobuf.CodedOutputStream;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.net.Inet6Address;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -55,7 +58,6 @@ import org.apache.rocketmq.store.config.FlushDiskType;
 import org.apache.rocketmq.store.ha.HAService;
 import org.apache.rocketmq.store.logfile.MappedFile;
 import org.apache.rocketmq.common.attribute.CQType;
-
 
 /**
  * Store all metadata downtime for recovery, data protection reliability
@@ -769,7 +771,7 @@ public class CommitLog implements Swappable {
         // dynamically adjust maxMessageSize, but not support DLedger mode temporarily
         int newMaxMessageSize = this.defaultMessageStore.getMessageStoreConfig().getMaxMessageSize();
         if (newMaxMessageSize >= 10 &&
-                putMessageThreadLocal.getEncoder().getMaxMessageBodySize() != newMaxMessageSize) {
+            putMessageThreadLocal.getEncoder().getMaxMessageBodySize() != newMaxMessageSize) {
             putMessageThreadLocal.getEncoder().updateEncoderBufferCapacity(newMaxMessageSize);
         }
     }
@@ -970,7 +972,6 @@ public class CommitLog implements Swappable {
 
         int needAckNums = this.defaultMessageStore.getMessageStoreConfig().getInSyncReplicas();
         boolean needHandleHA = needHandleHA(messageExtBatch);
-
 
         if (needHandleHA && this.defaultMessageStore.getBrokerConfig().isEnableControllerMode()) {
             if (this.defaultMessageStore.getHaService().inSyncReplicasNums(currOffset) < this.defaultMessageStore.getMessageStoreConfig().getMinInSyncReplicas()) {
@@ -1681,7 +1682,7 @@ public class CommitLog implements Swappable {
             };
 
             // Record ConsumeQueue information
-            Long queueOffset = msgInner.getQueueOffset();
+            long queueOffset = msgInner.getQueueOffset();
 
             // this msg maybe a inner-batch msg.
             short messageNum = getMessageNum(msgInner);
@@ -1838,11 +1839,12 @@ public class CommitLog implements Swappable {
         private int maxMessageBodySize;
         // The maximum length of the full message.
         private int maxMessageSize;
+
         MessageExtEncoder(final int maxMessageBodySize) {
             ByteBufAllocator alloc = UnpooledByteBufAllocator.DEFAULT;
             //Reserve 64kb for encoding buffer outside body
             int maxMessageSize = Integer.MAX_VALUE - maxMessageBodySize >= 64 * 1024 ?
-                    maxMessageBodySize + 64 * 1024 : Integer.MAX_VALUE;
+                maxMessageBodySize + 64 * 1024 : Integer.MAX_VALUE;
             byteBuf = alloc.directBuffer(maxMessageSize);
             this.maxMessageBodySize = maxMessageBodySize;
             this.maxMessageSize = maxMessageSize;
@@ -1850,6 +1852,27 @@ public class CommitLog implements Swappable {
 
         protected PutMessageResult encode(MessageExtBrokerInner msgInner) {
             this.byteBuf.clear();
+
+            try {
+                MessageHeader.newBuilder().setQueueId(msgInner.getQueueId())
+                    .setQueueOffset(msgInner.getQueueOffset())
+                    .setFlag(msgInner.getFlag())
+                    .setSystemFlag(msgInner.getSysFlag())
+                    .setBornTimestamp(msgInner.getBornTimestamp())
+                    .setBornHost(msgInner.getBornHost().toString())
+                    .setStoreTimestamp(msgInner.getStoreTimestamp())
+                    .setStoreHost(msgInner.getStoreHost().toString())
+                    .setCommitLogOffset(msgInner.getCommitLogOffset())
+                    .build().writeTo(new OutputStream() {
+                        @Override
+                        public void write(int b) throws IOException {
+                            byteBuf.writeByte(b);
+                        }
+                    });
+            } catch (IOException ignore) {
+                // Should never throw
+            }
+
             /**
              * Serialize message
              */
@@ -2058,7 +2081,7 @@ public class CommitLog implements Swappable {
             this.maxMessageBodySize = newMaxMessageBodySize;
             //Reserve 64kb for encoding buffer outside body
             this.maxMessageSize = Integer.MAX_VALUE - newMaxMessageBodySize >= 64 * 1024 ?
-                    this.maxMessageBodySize + 64 * 1024 : Integer.MAX_VALUE;
+                this.maxMessageBodySize + 64 * 1024 : Integer.MAX_VALUE;
             this.byteBuf.capacity(this.maxMessageSize);
         }
     }
