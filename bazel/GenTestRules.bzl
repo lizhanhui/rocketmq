@@ -64,7 +64,7 @@ def GenTestRules(
         package = java_class[:java_class.rfind(".")]
         java_junit5_test(
             name = prefix + test,
-            runtime_deps = deps,
+            runtime_deps = deps + JUNIT5_VINTAGE_DEPS,
             resources = resources,
             size = test_size,
             jvm_flags = jvm_flags,
