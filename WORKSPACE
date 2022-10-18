@@ -91,6 +91,8 @@ maven_install(
         "org.junit.jupiter:junit-jupiter-api:5.9.1",
         "org.junit.jupiter:junit-jupiter-engine:5.9.1",
         "org.junit.jupiter:junit-jupiter-params:5.9.1",
+        "org.junit.platform:junit-platform-launcher:1.9.1",
+        "org.junit.platform:junit-platform-reporting:1.9.1",
     ],
     fetch_sources = True,
     repositories = [

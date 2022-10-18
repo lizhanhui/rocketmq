@@ -23,7 +23,7 @@ files.
 
 """
 
-load("@contrib_rules_jvm//java:defs.bzl", "java_junit5_test")
+load("@contrib_rules_jvm//java:defs.bzl", "JUNIT5_VINTAGE_DEPS", "java_junit5_test")
 
 def GenTestRules(
         name,
