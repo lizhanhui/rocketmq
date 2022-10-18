@@ -100,6 +100,26 @@ maven_install(
 )
 
 http_archive(
+    name = "contrib_rules_jvm",
+    sha256 = "59af045d288ad3e2d9000b1cddb1135f889d798830f7106a4792cc95427bcd99",
+    strip_prefix = "rules_jvm-0.7.0",
+    url = "https://github.com/bazel-contrib/rules_jvm/archive/refs/tags/v0.7.0.zip",
+)
+
+# Fetches the contrib_rules_jvm dependencies.
+# If you want to have a different version of some dependency,
+# you should fetch it *before* calling this.
+load("@contrib_rules_jvm//:repositories.bzl", "contrib_rules_jvm_deps")
+
+contrib_rules_jvm_deps()
+
+# Now ensure that the downloaded deps are properly configured
+load("@contrib_rules_jvm//:setup.bzl", "contrib_rules_jvm_setup")
+
+contrib_rules_jvm_setup()
+
+# RBE
+http_archive(
     name = "io_buildbuddy_buildbuddy_toolchain",
     sha256 = "a2a5cccec251211e2221b1587af2ce43c36d32a42f5d881737db3b546a536510",
     strip_prefix = "buildbuddy-toolchain-829c8a574f706de5c96c54ca310f139f4acda7dd",

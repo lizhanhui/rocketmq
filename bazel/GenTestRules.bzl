@@ -23,6 +23,8 @@ files.
 
 """
 
+load("@contrib_rules_jvm//java:defs.bzl", "java_junit5_test")
+
 def GenTestRules(
         name,
         test_files,
@@ -60,7 +62,7 @@ def GenTestRules(
             native.package_name() + "/" + _strip_right(test, ".java"),
         )
         package = java_class[:java_class.rfind(".")]
-        native.java_test(
+        java_junit5_test(
             name = prefix + test,
             runtime_deps = deps,
             resources = resources,
