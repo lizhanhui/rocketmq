@@ -87,6 +87,10 @@ maven_install(
         "io.grpc:grpc-api:1.47.0",
         "io.grpc:grpc-testing:1.47.0",
         "org.springframework:spring-core:5.3.23",
+        "org.junit.vintage:junit-vintage-engine:5.9.1",
+        "org.junit.jupiter:junit-jupiter-api:5.9.1",
+        "org.junit.jupiter:junit-jupiter-engine:5.9.1",
+        "org.junit.jupiter:junit-jupiter-params:5.9.1",
     ],
     fetch_sources = True,
     repositories = [
