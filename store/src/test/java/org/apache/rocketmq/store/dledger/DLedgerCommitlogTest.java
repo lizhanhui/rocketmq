@@ -37,7 +37,9 @@ import org.apache.rocketmq.store.GetMessageStatus;
 import org.apache.rocketmq.store.PutMessageResult;
 import org.apache.rocketmq.store.PutMessageStatus;
 import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
+import org.junit.jupiter.api.Test;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.rocketmq.store.StoreTestUtil.releaseMmapFilesOnWindows;
@@ -234,6 +236,7 @@ public class DLedgerCommitlogTest extends MessageStoreTestBase {
         messageStore.shutdown();
     }
 
+    @DisabledOnOs(OS.WINDOWS)
     @Test
     public void testAsyncPutAndGetMessage() throws Exception {
         String base = createBaseDir();

@@ -36,8 +36,10 @@ import org.apache.rocketmq.store.queue.CqUnit;
 import org.apache.rocketmq.store.queue.ReferredIterator;
 import org.apache.rocketmq.store.stats.BrokerStatsManager;
 import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.condition.OS;
 import org.mockito.Mockito;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -281,6 +283,7 @@ public class ConsumeQueueTest {
 
     }
 
+    @DisabledOnOs(OS.WINDOWS)
     @Test
     public void testPutMessagePositionInfoWrapper_MultiQueue() throws Exception {
         DefaultMessageStore messageStore = null;

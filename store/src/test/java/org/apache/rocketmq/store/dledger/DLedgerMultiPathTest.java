@@ -27,12 +27,16 @@ import org.apache.rocketmq.store.config.FlushDiskType;
 import org.apache.rocketmq.store.config.MessageStoreConfig;
 import org.apache.rocketmq.store.stats.BrokerStatsManager;
 import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 
 import static org.awaitility.Awaitility.await;
 
 public class DLedgerMultiPathTest extends MessageStoreTestBase {
 
+
+    @DisabledOnOs(OS.WINDOWS)
     @Test
     public void multiDirsStorageTest() throws Exception {
         String base = createBaseDir();

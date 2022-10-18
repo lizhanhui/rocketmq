@@ -22,12 +22,15 @@ import org.apache.rocketmq.store.DefaultMessageStore;
 import org.apache.rocketmq.store.StoreTestBase;
 import org.apache.rocketmq.store.config.StorePathConfigHelper;
 import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 
 import static org.awaitility.Awaitility.await;
 
 public class MixCommitlogTest extends MessageStoreTestBase {
 
+    @DisabledOnOs(OS.WINDOWS)
     @Test
     public void testFallBehindCQ() throws Exception {
         String base = createBaseDir();

@@ -50,10 +50,12 @@ import org.apache.rocketmq.store.PutMessageStatus;
 import org.apache.rocketmq.store.config.FlushDiskType;
 import org.apache.rocketmq.store.config.MessageStoreConfig;
 import org.apache.rocketmq.store.stats.BrokerStatsManager;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -77,7 +79,7 @@ public class TimerMessageStoreTest {
 
     public static MessageStoreConfig storeConfig;
 
-    @Before
+    @BeforeEach
     public void init() throws Exception {
         String baseDir = StoreTestUtils.createBaseDir();
         baseDirs.add(baseDir);
@@ -162,6 +164,7 @@ public class TimerMessageStoreTest {
         return null;
     }
 
+    @DisabledOnOs(OS.WINDOWS)
     @Test
     public void testPutTimerMessage() throws Exception {
         String topic = "TimerTest_testPutTimerMessage";
@@ -525,7 +528,7 @@ public class TimerMessageStoreTest {
         }
     }
 
-    @After
+    @AfterEach
     public void clear() {
         for (TimerMessageStore store : timerStores) {
             store.shutdown();
