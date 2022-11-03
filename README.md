@@ -1,6 +1,7 @@
 ## Apache RocketMQ
 
-[![Build Status][maven-build-image]][maven-build-url]
+[![Build and Run Tests by Maven](https://github.com/apache/rocketmq/actions/workflows/maven.yaml/badge.svg)](https://github.com/apache/rocketmq/actions/workflows/maven.yaml)
+[![Build and Run Tests by Bazel](https://github.com/apache/rocketmq/actions/workflows/bazel.yml/badge.svg)](https://github.com/apache/rocketmq/actions/workflows/bazel.yml)
 [![CodeCov][codecov-image]][codecov-url]
 [![Maven Central][maven-central-image]][maven-central-url]
 [![Release][release-image]][release-url]
