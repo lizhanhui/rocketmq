@@ -18,6 +18,10 @@ Build Instructions for Apache RocketMQ
 
     $ mvn test
 
+    To run tests of a specific module, say remoting
+
+    $ mvn test -pl remoting -am
+
 
 (3) Import projects to Eclipse IDE
 

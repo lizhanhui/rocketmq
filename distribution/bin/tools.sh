@@ -52,5 +52,6 @@ export CLASSPATH=.:${BASE_DIR}/conf:${BASE_DIR}/lib/*:${CLASSPATH}
 #===========================================================================================
 JAVA_OPT="${JAVA_OPT} -server -Xms1g -Xmx1g -Xmn256m -XX:MetaspaceSize=128m -XX:MaxMetaspaceSize=128m"
 JAVA_OPT="${JAVA_OPT} -cp ${CLASSPATH}"
+JAVA_OPT="${JAVA_OPT} -Dlogback.configurationFile=${ROCKETMQ_HOME}/conf/logback_tool.xml"
 
 $JAVA ${JAVA_OPT} "$@"

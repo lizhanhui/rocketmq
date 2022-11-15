@@ -42,4 +42,6 @@ fi
 
 export ROCKETMQ_HOME
 
-sh ${ROCKETMQ_HOME}/bin/runserver.sh org.apache.rocketmq.proxy.ProxyStartup $@
+sh ${ROCKETMQ_HOME}/bin/runserver.sh                                       \
+   -Dlogback.configurationFile=${ROCKETMQ_HOME}/conf/logback_broker.xml    \
+   org.apache.rocketmq.proxy.ProxyStartup "$@"
