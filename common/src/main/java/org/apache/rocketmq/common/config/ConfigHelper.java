@@ -16,8 +16,8 @@
  */
 package org.apache.rocketmq.common.config;
 
+import com.google.common.base.Strings;
 import java.io.File;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.common.UtilAll;
 import org.rocksdb.BlockBasedTableConfig;
 import org.rocksdb.BloomFilter;
@@ -110,12 +110,24 @@ public class ConfigHelper {
     }
 
     public static String getDBLogDir() {
-        String rootPath = System.getProperty("user.home");
-        if (StringUtils.isEmpty(rootPath)) {
-            return "";
+        String[] rootPaths = new String[] {
+            System.getProperty("user.home"),
+            System.getProperty("java.io.tmpdir"),
+            File.separator + "data" + File.separator
+        };
+        for (String rootPath : rootPaths) {
+            if (Strings.isNullOrEmpty(rootPath)) {
+                continue;
+            }
+            rootPath = rootPath + File.separator + "logs";
+            UtilAll.ensureDirOK(rootPath);
+            String logDirectory = rootPath + File.separator + "rocketmqlogs";
+            File logDirectoryFile = new File(logDirectory);
+            if (!logDirectoryFile.canWrite()) {
+                continue;
+            }
+            return logDirectory;
         }
-        rootPath = rootPath + File.separator + "logs";
-        UtilAll.ensureDirOK(rootPath);
-        return rootPath + File.separator + "rocketmqlogs" + File.separator;
+        throw new RuntimeException("Failed to get log directory");
     }
 }
