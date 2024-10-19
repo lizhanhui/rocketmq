@@ -113,7 +113,7 @@ public class ConfigHelper {
         String[] rootPaths = new String[] {
             System.getProperty("user.home"),
             System.getProperty("java.io.tmpdir"),
-            File.separator + "data" + File.separator
+            File.separator + "data"
         };
         for (String rootPath : rootPaths) {
             if (Strings.isNullOrEmpty(rootPath)) {
