@@ -44,11 +44,20 @@ import org.rocksdb.WriteBatch;
  */
 public class ConsumerOffsetManagerV2 extends ConsumerOffsetManager {
 
-    private final ConfigStorage configStorage;
+    final ConfigStorage configStorage;
+
+    final ConcurrentMap<String/*Group*/, ConcurrentMap<String/*Topic*/, ConcurrentMap<Byte, Long>>> inflightConsumerOffset;
+
+    final ConcurrentMap<String/*Group*/, ConcurrentMap<String/*Topic*/, ConcurrentMap<Byte, Long>>> inflightPullOffset;
+
+    private final GroupCommitOffsetService groupCommitOffsetService;
 
     public ConsumerOffsetManagerV2(BrokerController brokerController, ConfigStorage configStorage) {
         super(brokerController);
         this.configStorage = configStorage;
+        this.inflightConsumerOffset = new ConcurrentHashMap<>(1024);
+        this.inflightPullOffset = new ConcurrentHashMap<>(1024);
+        this.groupCommitOffsetService = new GroupCommitOffsetService(this);
     }
 
     @Override
@@ -178,7 +187,7 @@ public class ConsumerOffsetManagerV2 extends ConsumerOffsetManager {
             if (offsetTable.containsKey(key)) {
                 offsetTable.get(key).put(queueId, offset);
             } else {
-                ConcurrentMap<Integer, Long> map = new ConcurrentHashMap<>();
+                ConcurrentMap<Integer, Long> map = new ConcurrentHashMap<>(8, 1.0F);
                 ConcurrentMap<Integer, Long> prev = offsetTable.putIfAbsent(key, map);
                 if (null != prev) {
                     map = prev;
@@ -186,25 +195,11 @@ public class ConsumerOffsetManagerV2 extends ConsumerOffsetManager {
                 map.put(queueId, offset);
             }
         }
-
-        ByteBuf keyBuf = keyOfConsumerOffset(group, topic, queueId);
-        ByteBuf valueBuf = ConfigStorage.POOLED_ALLOCATOR.buffer(Long.BYTES);
-        try (WriteBatch writeBatch = new WriteBatch()) {
-            valueBuf.writeLong(offset);
-            writeBatch.put(keyBuf.nioBuffer(), valueBuf.nioBuffer());
-            MessageStore messageStore = brokerController.getMessageStore();
-            long stateMachineVersion = messageStore != null ? messageStore.getStateMachineVersion() : 0;
-            ConfigHelper.stampDataVersion(writeBatch, TableId.CONSUMER_OFFSET, dataVersion, stateMachineVersion);
-            configStorage.write(writeBatch);
-        } catch (RocksDBException e) {
-            LOG.error("Failed to commit consumer offset", e);
-        } finally {
-            keyBuf.release();
-            valueBuf.release();
-        }
+        cacheInflightOffsetUpdate(group, topic, (byte)queueId, offset, inflightConsumerOffset);
+        groupCommitOffsetService.wakeup();
     }
 
-    private ByteBuf keyOfConsumerOffset(String group, String topic, int queueId) {
+    ByteBuf keyOfOffset(String group, String topic, int queueId, TableId tableId) {
         byte[] groupBytes = group.getBytes(StandardCharsets.UTF_8);
         byte[] topicBytes = topic.getBytes(StandardCharsets.UTF_8);
         int keyLen = 1 /*table prefix*/ + Short.BYTES /*table-id*/ + 1 /*record-prefix*/
@@ -213,28 +208,7 @@ public class ConsumerOffsetManagerV2 extends ConsumerOffsetManager {
             + Integer.BYTES /*queue-id*/;
         ByteBuf keyBuf = ConfigStorage.POOLED_ALLOCATOR.buffer(keyLen);
         keyBuf.writeByte(TablePrefix.TABLE.getValue());
-        keyBuf.writeShort(TableId.CONSUMER_OFFSET.getValue());
-        keyBuf.writeByte(RecordPrefix.DATA.getValue());
-        keyBuf.writeShort(groupBytes.length);
-        keyBuf.writeBytes(groupBytes);
-        keyBuf.writeByte(AbstractRocksDBStorage.CTRL_1);
-        keyBuf.writeShort(topicBytes.length);
-        keyBuf.writeBytes(topicBytes);
-        keyBuf.writeByte(AbstractRocksDBStorage.CTRL_1);
-        keyBuf.writeInt(queueId);
-        return keyBuf;
-    }
-
-    private ByteBuf keyOfPullOffset(String group, String topic, int queueId) {
-        byte[] groupBytes = group.getBytes(StandardCharsets.UTF_8);
-        byte[] topicBytes = topic.getBytes(StandardCharsets.UTF_8);
-        int keyLen = 1 /*table prefix*/ + Short.BYTES /*table-id*/ + 1 /*record-prefix*/
-            + Short.BYTES /*group-len*/ + groupBytes.length + 1 /*CTRL_1*/
-            + 2 /*topic-len*/ + topicBytes.length + 1 /* CTRL_1*/
-            + Integer.BYTES /*queue-id*/;
-        ByteBuf keyBuf = ConfigStorage.POOLED_ALLOCATOR.buffer(keyLen);
-        keyBuf.writeByte(TablePrefix.TABLE.getValue());
-        keyBuf.writeShort(TableId.PULL_OFFSET.getValue());
+        keyBuf.writeShort(tableId.getValue());
         keyBuf.writeByte(RecordPrefix.DATA.getValue());
         keyBuf.writeShort(groupBytes.length);
         keyBuf.writeBytes(groupBytes);
@@ -248,6 +222,8 @@ public class ConsumerOffsetManagerV2 extends ConsumerOffsetManager {
 
     @Override
     public boolean load() {
+        groupCommitOffsetService.setDaemon(true);
+        groupCommitOffsetService.start();
         return loadDataVersion() && loadConsumerOffsets();
     }
 
@@ -366,8 +342,7 @@ public class ConsumerOffsetManagerV2 extends ConsumerOffsetManager {
         if (!MixAll.isLmq(topic)) {
             return super.queryOffset(group, topic, queueId);
         }
-
-        ByteBuf keyBuf = keyOfConsumerOffset(group, topic, queueId);
+        ByteBuf keyBuf = keyOfOffset(group, topic, queueId, TableId.CONSUMER_OFFSET);
         try {
             byte[] slice = configStorage.get(keyBuf.nioBuffer());
             if (null == slice) {
@@ -387,22 +362,8 @@ public class ConsumerOffsetManagerV2 extends ConsumerOffsetManager {
         if (!MixAll.isLmq(topic)) {
             super.commitPullOffset(clientHost, group, topic, queueId, offset);
         }
-
-        ByteBuf keyBuf = keyOfPullOffset(group, topic, queueId);
-        ByteBuf valueBuf = AbstractRocksDBStorage.POOLED_ALLOCATOR.buffer(8);
-        valueBuf.writeLong(offset);
-        try (WriteBatch writeBatch = new WriteBatch()) {
-            writeBatch.put(keyBuf.nioBuffer(), valueBuf.nioBuffer());
-            long stateMachineVersion = brokerController.getMessageStore() != null ? brokerController.getMessageStore().getStateMachineVersion() : 0;
-            ConfigHelper.stampDataVersion(writeBatch, TableId.PULL_OFFSET, dataVersion, stateMachineVersion);
-            configStorage.write(writeBatch);
-        } catch (RocksDBException e) {
-            LOG.error("Failed to commit pull offset. group={}, topic={}, queueId={}, offset={}",
-                group, topic, queueId, offset);
-        } finally {
-            keyBuf.release();
-            valueBuf.release();
-        }
+        cacheInflightOffsetUpdate(group, topic, (byte)queueId, offset, inflightPullOffset);
+        groupCommitOffsetService.wakeup();
     }
 
     @Override
@@ -411,7 +372,7 @@ public class ConsumerOffsetManagerV2 extends ConsumerOffsetManager {
             return super.queryPullOffset(group, topic, queueId);
         }
 
-        ByteBuf keyBuf = keyOfPullOffset(group, topic, queueId);
+        ByteBuf keyBuf = keyOfOffset(group, topic, queueId, TableId.PULL_OFFSET);
         try {
             byte[] valueBytes = configStorage.get(keyBuf.nioBuffer());
             if (null == valueBytes) {
@@ -424,5 +385,42 @@ public class ConsumerOffsetManagerV2 extends ConsumerOffsetManager {
             keyBuf.release();
         }
         return -1;
+    }
+
+    public BrokerController getBrokerController() {
+        return brokerController;
+    }
+
+    private static void cacheInflightOffsetUpdate(String group, String topic, int queueId, long offset,
+        ConcurrentMap<String, ConcurrentMap<String, ConcurrentMap<Byte, Long>>> cache) {
+        ConcurrentMap<String/*Topic*/, ConcurrentMap<Byte/*QueueID*/, Long>> topicMap = cache.get(group);
+        if (null == topicMap) {
+            /*
+             * Most of the groups subscribes only 1 topic
+             */
+            ConcurrentMap<String, ConcurrentMap<Byte, Long>> map = new ConcurrentHashMap<>(1, 1.0F);
+            topicMap = cache.putIfAbsent(group, map);
+            if (null == topicMap) {
+                topicMap = map;
+            }
+        }
+
+        ConcurrentMap<Byte/*Queue ID*/, Long/*Offset*/> queueOffsetMap = topicMap.get(topic);
+        if (null == queueOffsetMap) {
+            ConcurrentMap<Byte, Long> map;
+            if (MixAll.isLmq(topic)) {
+                map = new ConcurrentHashMap<>(1, 1.0F);
+            } else {
+                map = new ConcurrentHashMap<>(8, 1.0F);
+            }
+            queueOffsetMap = topicMap.putIfAbsent(topic, map);
+            if (null == queueOffsetMap) {
+                queueOffsetMap = map;
+            }
+        }
+        Long prev = queueOffsetMap.put((byte) queueId, offset);
+        if (null != prev && prev > offset) {
+            LOG.info("Offset of {}:{}:{} regressed, {} --> {}", group, topic, queueId, prev, offset);
+        }
     }
 }
